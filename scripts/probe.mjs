@@ -19,32 +19,18 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { createRegistry } from '../dist/sources/index.js';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 const UA = 'plant-omics-mcp-probe/0.1';
 const TIMEOUT_MS = 20_000;
-
-const args = process.argv.slice(2);
-const only = args.includes('--source') ? args[args.indexOf('--source') + 1] : undefined;
-const asJson = args.includes('--json');
-
-const registry = createRegistry();
-const sources = registry
-  .listSources()
-  .map((bundle) => bundle.manifest)
-  .filter((manifest) => (only ? manifest.id === only : true));
-
-if (sources.length === 0) {
-  process.stderr.write(`没有匹配的源${only ? `：${only}` : ''}\n`);
-  process.exit(2);
-}
 
 /**
  * 业务信封判定。只认两种**明确失败**的写法，其余不强求：
  *  - `success === false`（WheatOmics / Strawberry 系）
  *  - `code` 存在且不是 200 / "200"（NGDC 系，注意它的 code 是字符串）
  */
-function businessFailure(payload) {
+export function businessFailure(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
   if (payload.success === false) return `success=false：${payload.message ?? payload.error ?? '未给原因'}`;
   if ('code' in payload) {
@@ -54,7 +40,8 @@ function businessFailure(payload) {
   return null;
 }
 
-async function probe(manifest) {
+export async function probe(bundle, { fetch: fetcher = globalThis.fetch } = {}) {
+  const manifest = bundle.manifest ?? bundle;
   const url = `${manifest.apiBase}${manifest.probe.path}`;
   const expected = manifest.probe.expectStatus ?? 200;
   // T1 要求是能解析、且业务信封不报错的 JSON；T2 可能返回 HTML，只看状态码（解析正确性交给离线 fixture）。
@@ -62,7 +49,7 @@ async function probe(manifest) {
   const started = Date.now();
 
   try {
-    const response = await fetch(url, {
+    const response = await fetcher(url, {
       headers: { 'user-agent': UA, accept: 'application/json, text/html;q=0.9, */*;q=0.5' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -86,7 +73,12 @@ async function probe(manifest) {
     const failure = businessFailure(payload);
     if (failure) return { ...base, ok: false, note: `业务信封报错（${failure}）` };
 
-    return { ...base, ok: true, note: `${body.length} B JSON，业务信封正常` };
+    try {
+      await bundle.validateProbe?.(payload);
+    } catch (error) {
+      return { ...base, ok: false, note: `源级断言失败：${error instanceof Error ? error.message : String(error)}` };
+    }
+    return { ...base, ok: true, note: `${Buffer.byteLength(body, 'utf8')} B JSON，业务信封及源级断言正常` };
   } catch (error) {
     return {
       id: manifest.id,
@@ -100,31 +92,54 @@ async function probe(manifest) {
   }
 }
 
-const results = [];
-for (const manifest of sources) results.push(await probe(manifest));
-
-const today = new Date().toISOString().slice(0, 10);
-writeFileSync(
-  'probe-report.json',
-  `${JSON.stringify({ date: today, results }, null, 2)}\n`,
-  'utf8',
-);
-
-if (asJson) {
-  process.stdout.write(`${JSON.stringify({ date: today, results }, null, 2)}\n`);
-} else {
-  process.stdout.write(`# 可达性实测 ${today}\n\n`);
-  process.stdout.write('| 源 | 端点 | HTTP | 期望 | 耗时 | 结论 |\n|---|---|---|---|---|---|\n');
-  for (const r of results) {
-    process.stdout.write(
-      `| ${r.id} | ${r.url.replace(/^https?:\/\//, '')} | ${r.status} | ${r.expected} | ${r.ms} ms | ${r.ok ? `✅ ${r.note}` : `❌ ${r.note}`} |\n`,
-    );
-  }
-  process.stdout.write('\n> 本表只证明「一个探活端点可用」，**不等于六个工具都能用**；工具正确性由离线 fixture 测试保证。\n');
+/** No imports of dist, network requests or writes occur until called. */
+export async function runProbe({ registry, fetch: fetcher = globalThis.fetch, only } = {}) {
+  registry ??= (await import('../dist/sources/index.js')).createRegistry();
+  const sources = registry.listSources().filter(({ manifest }) => !only || manifest.id === only);
+  const results = [];
+  for (const bundle of sources) results.push(await probe(bundle, { fetch: fetcher }));
+  return { date: new Date().toISOString().slice(0, 10), results };
 }
 
-const failed = results.filter((r) => !r.ok);
-if (failed.length > 0) {
-  process.stderr.write(`\n${failed.length}/${results.length} 个源实测失败：${failed.map((r) => r.id).join(', ')}\n`);
-  process.exitCode = 1;
+export async function main({
+  args = process.argv.slice(2), registry, fetch: fetcher = globalThis.fetch,
+  writer = writeFileSync,
+  stdout = (text) => process.stdout.write(text),
+  stderr = (text) => process.stderr.write(text),
+} = {}) {
+  const sourceIndex = args.indexOf('--source');
+  const only = sourceIndex < 0 ? undefined : args[sourceIndex + 1];
+  if (sourceIndex >= 0 && (!only || only.startsWith('--'))) {
+    stderr('--source 需要源 id\n');
+    return 2;
+  }
+  const report = await runProbe({ registry, fetch: fetcher, only });
+  const { date, results } = report;
+  if (!results.length) {
+    stderr(`没有匹配的源${only ? `：${only}` : ''}\n`);
+    return 2;
+  }
+  const json = `${JSON.stringify(report, null, 2)}\n`;
+  await writer('probe-report.json', json, 'utf8');
+  if (args.includes('--json')) stdout(json);
+  else {
+    stdout(`# 可达性实测 ${date}\n\n`);
+    stdout('| 源 | 端点 | HTTP | 期望 | 耗时 | 结论 |\n|---|---|---|---|---|---|\n');
+    for (const r of results) {
+      stdout(`| ${r.id} | ${r.url.replace(/^https?:\/\//, '')} | ${r.status} | ${r.expected} | ${r.ms} ms | ${r.ok ? `✅ ${r.note}` : `❌ ${r.note}`} |\n`);
+    }
+    stdout('\n> 本表只证明所列探活端点及其断言通过，不代表全部工具可用；工具正确性由离线 fixture 测试保证。\n');
+  }
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length) stderr(`\n${failed.length}/${results.length} 个源实测失败：${failed.map((r) => r.id).join(', ')}\n`);
+  return failed.length ? 1 : 0;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  try {
+    process.exitCode = await main();
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
 }

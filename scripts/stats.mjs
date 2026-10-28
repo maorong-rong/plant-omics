@@ -21,9 +21,9 @@ import { createRegistry } from '../dist/sources/index.js';
 /** 与 当前工程预算 保持一致；改这里必须同时改文档。 */
 const MAX_SOURCES = 20;
 const MAX_TOOLS = 40;
-/** §二.1：每源 4–8 个工具 */
-const MIN_TOOLS_PER_SOURCE = 4;
-const MAX_TOOLS_PER_SOURCE = 8;
+/** 仅用于情景估算；不是每源最低/最高数量校验。能力较窄可少于4，须另经审查。 */
+const ASSUMED_TOOLS_LOW = 4;
+const ASSUMED_TOOLS_HIGH = 8;
 
 const asJson = process.argv.includes('--json');
 const registry = createRegistry();
@@ -38,9 +38,9 @@ const toolCount = registry.listTools().length;
 
 const toolRoom = Math.max(0, MAX_TOOLS - toolCount);
 const sourceRoom = Math.max(0, MAX_SOURCES - perSource.length);
-/** 按每源最多 8 个工具算的**保守**可加源数；按每源最少 4 个算的乐观值。 */
-const sourcesByToolsMin = Math.floor(toolRoom / MAX_TOOLS_PER_SOURCE);
-const sourcesByToolsMax = Math.floor(toolRoom / MIN_TOOLS_PER_SOURCE);
+/** 仅计算工具余量在每源8/4工具假设下能容纳多少源；实际还受sourceRoom约束。 */
+const sourcesByToolsMin = Math.floor(toolRoom / ASSUMED_TOOLS_HIGH);
+const sourcesByToolsMax = Math.floor(toolRoom / ASSUMED_TOOLS_LOW);
 
 const report = {
   sources: perSource.length,
@@ -53,8 +53,10 @@ const report = {
   sourcesByToolsMax,
   /** 40 以内可以全量暴露；超过就必须先做检索层（§10.2） */
   needsRetrievalLayer: toolCount > MAX_TOOLS,
-  /** 紧约束是工具额度，不是源额度 */
-  bindingConstraint: toolRoom / MAX_TOOLS_PER_SOURCE < sourceRoom ? 'tools' : 'sources',
+  /** 保留既有字段；其判定只在每源8工具假设下成立，不是硬门禁。 */
+  bindingConstraint: toolRoom / ASSUMED_TOOLS_HIGH < sourceRoom ? 'tools' : 'sources',
+  capacityEstimateAssumption: { toolsPerSourceLow: ASSUMED_TOOLS_LOW, toolsPerSourceHigh: ASSUMED_TOOLS_HIGH,
+    isMinimumRequirement: false, bindingConstraintToolsPerSource: ASSUMED_TOOLS_HIGH },
   perSource,
   overBudget: perSource.length > MAX_SOURCES || toolCount > MAX_TOOLS,
 };
@@ -81,12 +83,12 @@ if (asJson) {
 
   if (!report.overBudget && !report.needsRetrievalLayer) {
     lines.push(
-      `✅ 第 1 阶段（全量暴露）。工具余量 ${toolRoom} 个 —— 这是**紧约束**：`
-        + `按每源 4–8 个工具算，还能加约 ${sourcesByToolsMin}–${sourcesByToolsMax} 个源；`,
+      `✅ 第 1 阶段（全量暴露）。实际工具余量 ${toolRoom} 个，实际源余量 ${sourceRoom} 个。`,
     );
     lines.push(
-      `   距源上限还差 ${sourceRoom} 个，但按工具额度算**到不了 20 个源**——`
-        + `铺到约 ${perSource.length + sourcesByToolsMin} 个源时，检索层就是下一件必须做的事。`,
+      `   情景估算：仅假设新增源各有4–8工具，工具余量可容纳约 ${sourcesByToolsMin}–${sourcesByToolsMax} 个源（另受源余量限制）。`,
+      `   4不是每源最低工具数；较窄能力可少于4个，须说明理由并独立审查，不凑数。`,
+      `   按每源8工具假设的紧约束：${report.bindingConstraint === 'tools' ? '工具额度' : '源额度'}；接入门禁只按实际源≤20、工具≤40检查。`,
     );
   }
 
