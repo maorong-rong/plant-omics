@@ -27,10 +27,18 @@ const goodTool = {
 };
 
 describe('注册表硬校验', () => {
-  it('默认注册表能装配出 wheatomics 的 6 个工具', () => {
+  it('默认注册表装配四源15工具并保留源级断言', () => {
     const built = createRegistry();
-    expect(built.listSources().map((bundle) => bundle.manifest.id)).toEqual(['wheatomics']);
-    expect(built.listTools()).toHaveLength(6);
+    expect(built.listSources().map((bundle) => bundle.manifest.id)).toEqual(['wheatomics', 'strawberry', 'gwh', 'icg']);
+    expect(built.listTools()).toHaveLength(15);
+    const source = built.getSource('strawberry');
+    expect(typeof source?.validateProbe).toBe('function');
+    expect(() => source?.validateProbe?.({})).toThrow();
+    for (const id of ['gwh', 'icg']) {
+      const check = built.getSource(id)?.validateProbe;
+      expect(typeof check).toBe('function');
+      expect(() => check!({})).toThrow();
+    }
     // 导出的单例与工厂结果一致（避免两处装配漂移）
     expect(registry.listTools().map((t) => t.name)).toEqual(built.listTools().map((t) => t.name));
   });
@@ -83,7 +91,7 @@ describe('注册表硬校验', () => {
  */
 describe('按需启用源子集', () => {
   it('不传 enabled = 全部启用', () => {
-    expect(createRegistry().listSources()).toHaveLength(1);
+    expect(createRegistry().listSources()).toHaveLength(4);
   });
 
   it('传 enabled = 只启用指定的源', () => {
@@ -93,8 +101,15 @@ describe('按需启用源子集', () => {
   });
 
   it('空数组按「全启用」处理，不当成「一个都不要」', () => {
-    expect(createRegistry({ enabled: [] }).listTools()).toHaveLength(6);
-    expect(createRegistry({ enabled: ['  '] }).listTools()).toHaveLength(6);
+    expect(createRegistry({ enabled: [] }).listTools()).toHaveLength(15);
+    expect(createRegistry({ enabled: ['  '] }).listTools()).toHaveLength(15);
+    expect(createRegistry({ enabled: ['strawberry'] }).listTools()).toHaveLength(5);
+  });
+
+  it('GWH/ICG子集仅暴露四个约定工具', () => {
+    expect(createRegistry({ enabled: ['gwh', 'icg'] }).listTools().map(t => t.name)).toEqual([
+      'gwh_assembly_lookup', 'gwh_project_sample_lookup', 'icg_lookup', 'icg_species_list',
+    ]);
   });
 
   it('未知 id 直接抛，并在错误里列出可用源', () => {

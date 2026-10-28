@@ -93,6 +93,10 @@ export interface HttpResult<T = unknown> {
   status: number;
   durationMs: number;
   attempts: number;
+  /** 实际响应类型；可选以兼容已有fixture和自定义Fetcher。 */
+  contentType?: string;
+  /** empty仅指读取后零长度正文；json表示解析成功。缺字段表示未知，不等于empty。 */
+  bodyKind?: 'empty' | 'json';
 }
 
 export type Fetcher = <T = unknown>(url: string, opts?: HttpOptions) => Promise<HttpResult<T>>;
@@ -135,4 +139,6 @@ export interface ToolDefinition {
 export interface SourceBundle {
   manifest: SourceManifest;
   tools: ToolDefinition[];
+  /** 源专属探活断言；失败必须抛错，不替代各业务工具验证。 */
+  validateProbe?: (payload: unknown) => void;
 }

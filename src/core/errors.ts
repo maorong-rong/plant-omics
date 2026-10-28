@@ -20,6 +20,9 @@ export class UpstreamError extends PlantOmicsError {
       attempts?: number;
       bodySnippet?: string;
       retryAfter?: string | null;
+      contentType?: string;
+      /** 完整请求及本地呈现参数，不用响应正文替代证据。 */
+      request?: string;
     },
   ) {
     super(message, meta as unknown as Record<string, unknown>);
@@ -43,7 +46,8 @@ export class InvalidArgumentError extends PlantOmicsError {}
 /** 把任意异常压成一行给人看的话，避免把栈糊进工具输出。 */
 export function describeError(error: unknown): string {
   if (error instanceof UpstreamError) {
-    const bits = [error.message, `url=${error.meta.url}`];
+    const bits = [error.message, error.meta.request ? `request=${error.meta.request}` : `url=${error.meta.url}`];
+    if (error.meta.contentType) bits.push(`content-type=${error.meta.contentType}`);
     if (error.meta.status !== undefined) bits.push(`status=${error.meta.status}`);
     if (error.meta.attempts !== undefined) bits.push(`attempts=${error.meta.attempts}`);
     return bits.join(' | ');

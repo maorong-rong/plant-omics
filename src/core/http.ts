@@ -191,14 +191,26 @@ export function createFetcher(
 
         const body = await response.text();
         const durationMs = Date.now() - started;
+        const contentType = response.headers.get('content-type') ?? '';
 
         if (!response.ok) {
-          const error = new UpstreamError(httpMessage(response.status), {
+          const message = response.status === 404 && contentType.toLowerCase().includes('text/html')
+            ? '上游404 HTML兜底：未找到或路径不支持，无法据此判断基因是否存在'
+            : httpMessage(response.status);
+          let detail = '';
+          if (response.status === 400 && /application\/(?:[\w.-]+\+)?json/i.test(contentType)) {
+            try {
+              const payload = JSON.parse(body) as { message?: unknown } | null;
+              if (payload && typeof payload.message === 'string') detail = `：${snippet(payload.message, 180)}`;
+            } catch { /* 无效JSON按HTTP失败处理，不猜错误体。 */ }
+          }
+          const error = new UpstreamError(message + detail, {
             url,
             status: response.status,
             attempts: attempt,
             bodySnippet: snippet(body),
             retryAfter: response.headers.get('retry-after'),
+            contentType,
           });
           if (isRetryableStatus(response.status) && attempt < attemptsAllowed) {
             lastError = error;
@@ -216,10 +228,12 @@ export function createFetcher(
             status: response.status,
             attempts: attempt,
             bodySnippet: snippet(body),
+            contentType,
           });
         }
 
-        return { data: parsed, url, status: response.status, durationMs, attempts: attempt };
+        return { data: parsed, url, status: response.status, durationMs, attempts: attempt, contentType,
+          bodyKind: body.length === 0 ? 'empty' : 'json' };
       } catch (error) {
         if (error instanceof UpstreamError) throw error;
 

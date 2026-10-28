@@ -106,14 +106,6 @@ export function provenance(input: {
 }): string {
   const when = input.at ? `｜${input.at}` : '';
   const extra = input.extra ? `\n版本/口径：${input.extra}` : '';
-  // 查询串本身可能很长（id-conversion 一次 200 个 ID ≈ 5 KB）。
-  // 出处要可复现，但不许吃掉正文预算——超长时截断并标注总长度。
-  const shown =
-    input.request.length <= MAX_REQUEST_CHARS
-      ? input.request
-      : `${input.request.slice(0, MAX_REQUEST_CHARS)}…（共 ${input.request.length} 字符）`;
-  return `\n——\n源：${input.sourceName}｜${shown}｜HTTP ${input.status}｜${input.durationMs} ms${when}${extra}`;
+  // 请求证据不能省略：调用前由 request.ts 按UTF-8字节预检，超限拒绝。
+  return `\n——\n源：${input.sourceName}｜${input.request}｜HTTP ${input.status}｜${input.durationMs} ms${when}${extra}`;
 }
-
-/** 出处里最多展示多少字符的请求串。 */
-const MAX_REQUEST_CHARS = 300;

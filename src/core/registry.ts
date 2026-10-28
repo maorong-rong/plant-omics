@@ -41,7 +41,7 @@ export class ToolRegistry {
     }
 
     for (const tool of tools) this.#tools.set(tool.name, tool);
-    this.#sources.set(manifest.id, { manifest, tools });
+    this.#sources.set(manifest.id, { manifest, tools, validateProbe: bundle.validateProbe });
   }
 
   #assertManifest(manifest: SourceManifest): void {
