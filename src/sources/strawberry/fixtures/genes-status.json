@@ -1,0 +1,437 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:01.196Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/genes/status",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 12374,
+    "trimmed": []
+  },
+  "payload": {
+    "enabled": true,
+    "available": true,
+    "message": "Available",
+    "examples": [
+      {
+        "species": "Botrytis cinerea",
+        "version": "B05.10 GCA_000143535.4(Molecular Plant Pathology. 2017)",
+        "geneId": "BCIN_01g00010",
+        "displaySpecies": "Botrytis cinerea",
+        "displayVersion": "B05.10 GCA_000143535.4 (Molecular Plant Pathology, 2017)"
+      },
+      {
+        "species": "Colletotrichum fructicola",
+        "version": "CGMCC3.17371 GCA_009771025.1(Microbiology Resource Announcements. 2020)",
+        "geneId": "CGMCC3_g1",
+        "displaySpecies": "Colletotrichum fructicola",
+        "displayVersion": "CGMCC3.17371 GCA_009771025.1 (Microbiology Resource Announcements, 2020)"
+      },
+      {
+        "species": "Fragaria chiloensis",
+        "version": "KIB-CAS v1.0(Nature Plants. 2023)",
+        "geneId": "maker-1A-augustus-gene-0.6-mRNA-1",
+        "displaySpecies": "Fragaria chiloensis",
+        "displayVersion": "KIB-CAS v1.0 (Nature Plants, 2023)"
+      },
+      {
+        "species": "Fragaria chiloensis",
+        "version": "KIB-CAS v2.0(Genome Biology. 2025)",
+        "geneId": "maker-1A-augustus-gene-0.6-mRNA-1",
+        "displaySpecies": "Fragaria chiloensis",
+        "displayVersion": "KIB-CAS v2.0 (Genome Biology, 2025)"
+      },
+      {
+        "species": "Fragaria chiloensis",
+        "version": "v1.0(G3. 2022)",
+        "geneId": "Fchi_10g00030",
+        "displaySpecies": "Fragaria chiloensis",
+        "displayVersion": "v1.0 (G3, 2022)"
+      },
+      {
+        "species": "Fragaria chinensis",
+        "version": "v1.0(Horticulture Research. 2024)",
+        "geneId": "Fch02g2828",
+        "displaySpecies": "Fragaria chinensis",
+        "displayVersion": "v1.0 (Horticulture Research, 2024)"
+      },
+      {
+        "species": "Fragaria corymbosa",
+        "version": "v1.0(Horticulture Research. 2024)",
+        "geneId": "Fco05g2s1209",
+        "displaySpecies": "Fragaria corymbosa",
+        "displayVersion": "v1.0 (Horticulture Research, 2024)"
+      },
+      {
+        "species": "Fragaria daltoniana",
+        "version": "YUN v1.0(PNAS. 2021)",
+        "geneId": "FDA.Chr1.03962",
+        "displaySpecies": "Fragaria daltoniana",
+        "displayVersion": "YNU v1.0 (PNAS, 2021)"
+      },
+      {
+        "species": "Fragaria iinumae",
+        "version": "KIB-CAS v2.0(BMC Genomics. 2025)",
+        "geneId": "EVM0019896.1",
+        "displaySpecies": "Fragaria iinumae",
+        "displayVersion": "KIB-CAS v2.0 (BMC Genomics, 2025)"
+      },
+      {
+        "species": "Fragaria iinumae",
+        "version": "r1.1(DNA Research. 2014)",
+        "geneId": "FII_iscf00000001.1.g00001.1",
+        "displaySpecies": "Fragaria iinumae",
+        "displayVersion": "r1.1 (DNA Research, 2014)"
+      },
+      {
+        "species": "Fragaria iinumae",
+        "version": "v1.0(Nature Genetics. 2020)",
+        "geneId": "FII_63.121",
+        "displaySpecies": "Fragaria iinumae",
+        "displayVersion": "v1.0 (Nature Genetics, 2020)"
+      },
+      {
+        "species": "Fragaria mandshurica",
+        "version": "YUN v1.0(PNAS. 2021)",
+        "geneId": "Fman_chr6.2463",
+        "displaySpecies": "Fragaria mandschurica",
+        "displayVersion": "YNU v1.0 (PNAS, 2021)"
+      },
+      {
+        "species": "Fragaria moschata",
+        "version": "v1.0",
+        "geneId": "ENSFDBP00000004713",
+        "displaySpecies": "Fragaria moschata",
+        "displayVersion": "v1.0"
+      },
+      {
+        "species": "Fragaria moupinensis",
+        "version": "v1.0(Horticulture Research. 2024)",
+        "geneId": "Fmo03g4s1516",
+        "displaySpecies": "Fragaria moupinensis",
+        "displayVersion": "v1.0 (Horticulture Research, 2024)"
+      },
+      {
+        "species": "Fragaria nilgerrensis",
+        "version": "v1.0(Plant biotechnology journal. 2020)",
+        "geneId": "FNil_000001",
+        "displaySpecies": "Fragaria nilgerrensis",
+        "displayVersion": "v1.0 (Plant biotechnology journal, 2020)"
+      },
+      {
+        "species": "Fragaria nilgerrensis",
+        "version": "YUN v1.0(PNAS. 2021)",
+        "geneId": "evm.model.chr4.819",
+        "displaySpecies": "Fragaria nilgerrensis",
+        "displayVersion": "YNU v1.0 (PNAS, 2021)"
+      },
+      {
+        "species": "Fragaria nipponica",
+        "version": "r1.1(DNA Research. 2014)",
+        "geneId": "FNI_iscf00000002.1.1.1",
+        "displaySpecies": "Fragaria nipponica",
+        "displayVersion": "r1.1 (DNA Research, 2014)"
+      },
+      {
+        "species": "Fragaria nubicola",
+        "version": "r1.1(DNA Research. 2014)",
+        "geneId": "FNU_iscf00000002.1.g00001.1",
+        "displaySpecies": "Fragaria bucharica",
+        "displayVersion": "CFRA 522 · FNU_r1.1 (DNA Research, 2014)"
+      },
+      {
+        "species": "Fragaria nubicola",
+        "version": "v1.0(Molecular Biology and Evolution. 2021)",
+        "geneId": "FNub_672.1",
+        "displaySpecies": "Fragaria nubicola",
+        "displayVersion": "v1.0 (Molecular Biology and Evolution, 2021)"
+      },
+      {
+        "species": "Fragaria orientalis",
+        "version": "r1.1(DNA Research. 2014)",
+        "geneId": "FOR_iscf00000002.1.1.1",
+        "displaySpecies": "Fragaria orientalis",
+        "displayVersion": "r1.1 (DNA Research, 2014)"
+      },
+      {
+        "species": "Fragaria pentaphylla",
+        "version": "YUN v1.0(PNAS. 2021)",
+        "geneId": "Fpen_chr0.10",
+        "displaySpecies": "Fragaria pentaphylla",
+        "displayVersion": "YNU v1.0 (PNAS, 2021)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "CFRA 2339 v1.0 (Frontiers in Genetics. 2021)",
+        "geneId": "Fv2339_1g00200-mRNA-1",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "CFRA 2339 · v1.0"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "Ruegen(Fruit Research. 2025)",
+        "geneId": "FvRG_U0000020",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "Ruegen (Fruit Research, 2025)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v1.0(Nature Genetics. 2011)",
+        "geneId": "gene00001-v1.0-hybrid",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v1.0 (Nature Genetics, 2011)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v1.1.a1(Nature Genetics. 2011)",
+        "geneId": "mrna19521.1-v1.0-hybrid",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v1.1.a1 (Nature Genetics, 2011)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v1.1.a2(BMC Genomics. 2015)",
+        "geneId": "maker-LG1-augustus-gene-0.172-mRNA-1",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v1.1.a2 (BMC Genomics, 2015)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v2.0.a1(Genome Biology and Evolution. 2014)",
+        "geneId": "mrna19872.1-v1.0-hybrid",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v2.0.a1 (Genome Biology and Evolution, 2014)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v2.0.a2(DNA Research. 2018)",
+        "geneId": "gene10171-v2.0.a2-hybrid.t1",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v2.0.a2 (DNA Research, 2018)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v4.0.a1(GigaScience. 2018)",
+        "geneId": "FvH4_c10g00030.1",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v4.0.a1 (GigaScience, 2018)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v4.0.a2(Horticulture Research. 2021)",
+        "geneId": "FvH4_1g00010",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "v4.0.a2 (Horticulture Research, 2019)"
+      },
+      {
+        "species": "Fragaria vesca",
+        "version": "v6.0(Horticulture Research. 2023)",
+        "geneId": "FvesChr1G00279070.1",
+        "displaySpecies": "Fragaria vesca",
+        "displayVersion": "Hawaii-4 T2T v6.0 (Zhou et al., 2023)"
+      },
+      {
+        "species": "Fragaria virginiana",
+        "version": "KIB-CAS v1.0(Nature Plants. 2023)",
+        "geneId": "maker-1A-augustus-gene-0.96-mRNA-1",
+        "displaySpecies": "Fragaria virginiana",
+        "displayVersion": "KIB-CAS v1.0 (Nature Plants, 2023)"
+      },
+      {
+        "species": "Fragaria virginiana",
+        "version": "KIB-CAS v2.0",
+        "geneId": "maker-1A-augustus-gene-0.96-mRNA-1",
+        "displaySpecies": "Fragaria virginiana",
+        "displayVersion": "KIB-CAS v2.0"
+      },
+      {
+        "species": "Fragaria viridis",
+        "version": "v1.0(Molecular biology and evolution. 2021)",
+        "geneId": "FVir_167.3",
+        "displaySpecies": "Fragaria viridis",
+        "displayVersion": "v1.0 (Molecular biology and evolution, 2021)"
+      },
+      {
+        "species": "Fragaria viridis",
+        "version": "YUN v1.0(PNAS. 2021)",
+        "geneId": "evm.model.chr0.1",
+        "displaySpecies": "Fragaria viridis",
+        "displayVersion": "YNU v1.0 (PNAS, 2021)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Benihoppe HZAU v1.0.a1 hap1 (Genome Research. 2024)",
+        "geneId": "Hap1_FxaB_1Ag00001.t1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Benihoppe · HZAU v1.0 · annotation a1 · haplotype 1"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Benihoppe HZAU v1.0.a1 hap2 (Genome Research. 2024)",
+        "geneId": "Hap2_FxaB_1Ag00001.t1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Benihoppe · HZAU v1.0 · annotation a1 · haplotype 2"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Benihoppe HZAU v1.0.a1 primary (Genome Research. 2024)",
+        "geneId": "FxaB_1Ag00001.t1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Benihoppe · HZAU v1.0 · annotation a1 · primary"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Benihoppe v1.0.a1(Horticulture Research. 2023)",
+        "geneId": "Fxa1Ag00001",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Benihoppe · Song v1.0 · annotation a1 (Horticulture Research, 2024)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Chulian v1.0(Plant Biotechnology Journal. 2025)",
+        "geneId": "FxaCL_111g0000010.1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Chulian v1.0 (Plant Biotechnology Journal, 2025)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "EA78 KIB-CAS v1.0(Genome Biology. 2025)",
+        "geneId": "Fxa1Ag100001.1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "EA78 KIB-CAS v1.0 (Genome Biology, 2025)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "FL15.89-25 v1.0",
+        "geneId": "maker-Fvb1-1_F-exonerate_est2genome-gene-0.12-mRNA-1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "FL15.89-25 v1.0"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "FL17.68-110 Hap1 v1.0",
+        "geneId": "Fa.00g000010.m01",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "FL17.68-110 Hap1 v1.0"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "FL17.68-110 Hap2 v1.0",
+        "geneId": "Fa.00g000010.m01",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "FL17.68-110 Hap2 v1.0"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "FL20.82-27 v1.0.a1 FL11 (HortScience. 2024)",
+        "geneId": "Fxa5Dg54836",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "FL20.82-27 · v1.0 · annotation a1 · FL11 haplotype"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "FL20.82-27 v1.0.a1 FVC11 (HortScience. 2024)",
+        "geneId": "Fxa5Dg48740",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "FL20.82-27 · v1.0 · annotation a1 · FVC11 haplotype"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Florida Brilliance v1.0.a1(GigaScience. 2025)",
+        "geneId": "Fxa4Cg503470.m01",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Florida Brilliance v1.0.a1 (GigaScience, 2025)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Florida Medallion v1.0.a1(New Phytologist. 2026)",
+        "geneId": "Fxa1A_h1_g1.t1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Florida Medallion v1.0.a1 (New Phytologist, 2026)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Reikou FANhybrid_r1.2 (DNA Research. 2014)",
+        "geneId": "FANhyb_rscf00000001.1.g00001.1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Reikou · FANhybrid_r1.2 · virtual reference"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Reikou FAN_r1.1 (DNA Research. 2014)",
+        "geneId": "FAN_iscf00000001.1.g00001.1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Reikou · FAN_r1.1 · draft scaffolds"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Royal Royce v1.0(bioRxiv. 2021)",
+        "geneId": "Fxa1Ag100001.1",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Royal Royce v1.0 (bioRxiv, 2021)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Seolhyang v1.0(Scientific Data. 2025)",
+        "geneId": "Fxa1Ag000010.m01",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Seolhyang v1.0 (Scientific Data, 2025)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "v1.0.a2(Horticulture Research. 2021)",
+        "geneId": "FxaC_10g00030",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Camarosa v1.0.a2 (Liu et al., 2021)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Yanli(Horticulture Research. 2023)",
+        "geneId": "FxaYL_111g0845400",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Yanli (Horticulture Research, 2023)"
+      },
+      {
+        "species": "Fragaria × ananassa",
+        "version": "Yuexin(Scientific Data. 2025)",
+        "geneId": "FyxA01g00001",
+        "displaySpecies": "Fragaria × ananassa",
+        "displayVersion": "Yuexin (Scientific Data, 2025)"
+      },
+      {
+        "species": "Phytophthora cactorum",
+        "version": "10300 GCA_003287315.1(PLoS ONE. 2018)",
+        "geneId": "PC110_g1",
+        "displaySpecies": "Phytophthora cactorum",
+        "displayVersion": "10300 GCA_003287315.1 (PLoS ONE, 2018)"
+      },
+      {
+        "species": "Phytophthora fragariae",
+        "version": "BC-16 GCA_009729455.1(Frontiers in Microbiology. 2020)",
+        "geneId": "PF003_g1",
+        "displaySpecies": "Phytophthora fragariae",
+        "displayVersion": "BC-16 GCA_009729455.1 (Frontiers in Microbiology, 2020)"
+      },
+      {
+        "species": "Podosphaera aphanis",
+        "version": "DRCT72020 GCA_022627015.2(Phytopathology. 2023 annotation snapshot)",
+        "geneId": "K3495_g100",
+        "displaySpecies": "Podosphaera aphanis",
+        "displayVersion": "DRCT72020 GCA_022627015.2 (Phytopathology, 2023 annotation snapshot)"
+      },
+      {
+        "species": "Verticillium dahliae",
+        "version": "12008 GCA_002892985.1(PLoS ONE. 2018)",
+        "geneId": "BJF96_g1",
+        "displaySpecies": "Verticillium dahliae",
+        "displayVersion": "12008 GCA_002892985.1 (PLoS ONE, 2018)"
+      },
+      {
+        "species": "Xanthomonas fragariae",
+        "version": "PD885 GCF_900183975.1(Genome Announcements. 2017)",
+        "geneId": "PD885_RS00005",
+        "displaySpecies": "Xanthomonas fragariae",
+        "displayVersion": "PD885 GCF_900183975.1 (Genome Announcements, 2017)"
+      }
+    ]
+  }
+}

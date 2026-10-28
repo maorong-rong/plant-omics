@@ -1,0 +1,84 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:11.332Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/tf/search",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 22576,
+    "trimmed": [
+      "summary collections first 2 entries (release retained)"
+    ]
+  },
+  "payload": {
+    "mode": "summary",
+    "total": 166947,
+    "page": 1,
+    "pageSize": 0,
+    "totalPages": 0,
+    "matches": [],
+    "summary": {
+      "release": {
+        "id": "tfv2_20260908_gdr8",
+        "displayName": "Fragaria TF v2 (PlantTFDB v5 rules / Pfam 38.0)",
+        "methodVersion": "fragaria-tf-hybrid-1.0",
+        "plantTfdbVersion": "5.0",
+        "pfamVersion": "38.0",
+        "createdAt": "2026-09-08T10:48:25Z",
+        "activatedAt": "2026-09-08T10:48:55Z"
+      },
+      "totalTfGenes": 166947,
+      "species": [
+        {
+          "slug": "fragaria-x-ananassa",
+          "scientificName": "Fragaria × ananassa",
+          "assemblyCount": 20,
+          "analyzedAssemblyCount": 20,
+          "tfCount": 98456
+        },
+        {
+          "slug": "fragaria-bucharica",
+          "scientificName": "Fragaria bucharica",
+          "assemblyCount": 1,
+          "analyzedAssemblyCount": 1,
+          "tfCount": 1530
+        }
+      ],
+      "assemblies": [
+        {
+          "id": "f_xananassa_fxa_benihoppe_hzau_v1_a1_hap1",
+          "speciesSlug": "fragaria-x-ananassa",
+          "scientificName": "Fragaria × ananassa",
+          "label": "Benihoppe · HZAU v1.0 · annotation a1 · haplotype 1",
+          "representativeProteins": 115961,
+          "tfCount": 5077,
+          "familyCount": 58,
+          "analysisStatus": "review",
+          "analysisNotes": "Analysis completed; QC review required. 34 inferred gene groups contain more than 20 protein isoforms"
+        },
+        {
+          "id": "f_xananassa_fxa_benihoppe_hzau_v1_a1_hap2",
+          "speciesSlug": "fragaria-x-ananassa",
+          "scientificName": "Fragaria × ananassa",
+          "label": "Benihoppe · HZAU v1.0 · annotation a1 · haplotype 2",
+          "representativeProteins": 116317,
+          "tfCount": 5070,
+          "familyCount": 58,
+          "analysisStatus": "review",
+          "analysisNotes": "Analysis completed; QC review required. 25 inferred gene groups contain more than 20 protein isoforms"
+        }
+      ],
+      "families": [
+        {
+          "name": "AP2",
+          "tfCount": 2011,
+          "assemblyCount": 52
+        },
+        {
+          "name": "ARF",
+          "tfCount": 2051,
+          "assemblyCount": 52
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:35:56.351Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/catalog",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 98703,
+    "trimmed": [
+      "assemblies.items first 3; original count in capture",
+      "studyResources/genomeDownloads omitted"
+    ],
+    "originalAssemblyCount": 60,
+    "originalResourceCount": 104
+  },
+  "payload": {
+    "name": "Strawberry Data Hub",
+    "apiVersion": "v1",
+    "generatedAt": "2026-10-28T07:35:55.057360717Z",
+    "openapi": "api/v1/openapi.json",
+    "documentation": "api.html",
+    "terms": "license.html",
+    "urlBase": "URLs without a scheme are relative to the portal root, not this endpoint.",
+    "modules": [
+      {
+        "catalog": "api/v1/genes/status",
+        "name": "Genome and sequence records",
+        "query": "api/v1/genes/search",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "genomes"
+      },
+      {
+        "catalog": "api/v1/downloads",
+        "name": "Registered genome files",
+        "query": "api/v1/downloads",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "downloads"
+      },
+      {
+        "catalog": "api/v1/gwas/studies",
+        "name": "Association studies",
+        "query": "api/v1/gwas/plot",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "gwas"
+      },
+      {
+        "catalog": "api/v1/transcriptome/status",
+        "name": "Expression matrices and column metadata",
+        "query": "api/v1/transcriptome/search",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "transcriptome"
+      },
+      {
+        "catalog": "api/v1/coexpression/status",
+        "name": "Published co-expression networks",
+        "query": "api/v1/coexpression/network",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "coexpression"
+      },
+      {
+        "catalog": "api/v1/epigenomics/catalog",
+        "name": "Projects, runs and gene evidence",
+        "query": "api/v1/epigenomics/gene",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "epigenomics"
+      },
+      {
+        "catalog": "api/v1/metabolomics/catalog",
+        "name": "Studies, assays and abundance matrices",
+        "query": "api/v1/metabolomics/features",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "metabolomics"
+      },
+      {
+        "catalog": "api/v1/single-cell/catalog",
+        "name": "Single-cell expression and annotations",
+        "query": "api/v1/single-cell/markers",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "single-cell"
+      },
+      {
+        "catalog": "api/v1/pangenome/status",
+        "name": "Orthogroups, graph regions and candidate evidence",
+        "query": "api/v1/pangenome/genes",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "pangenome"
+      },
+      {
+        "catalog": "api/v1/families/status",
+        "name": "Gene-family memberships",
+        "query": "api/v1/families/search",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "families"
+      },
+      {
+        "catalog": "api/v1/tf/status",
+        "name": "Transcription-factor memberships",
+        "query": "api/v1/tf/search",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "tf"
+      },
+      {
+        "catalog": "api/v1/mirna/status",
+        "name": "MicroRNA annotations",
+        "query": "api/v1/mirna/loci",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "mirna"
+      },
+      {
+        "catalog": "api/v1/synteny/status",
+        "name": "Assembly-specific synteny",
+        "query": "api/v1/synteny/search",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "synteny"
+      },
+      {
+        "catalog": "api/v1/batch-sequences/status",
+        "name": "Batch CDS and protein export",
+        "query": "api/v1/downloads/sequences",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "sequences"
+      },
+      {
+        "catalog": "api/v1/publications",
+        "name": "Publication metadata and linked data",
+        "query": "api/v1/publications/data",
+        "availability": "Check the module catalog; module registration alone does not assert data availability.",
+        "id": "publications"
+      }
+    ],
+    "assemblies": {
+      "items": [
+        {
+          "species": "Botrytis cinerea",
+          "version": "B05.10 GCA_000143535.4(Molecular Plant Pathology. 2017)",
+          "geneId": "BCIN_01g00010",
+          "displaySpecies": "Botrytis cinerea",
+          "displayVersion": "B05.10 GCA_000143535.4 (Molecular Plant Pathology, 2017)"
+        },
+        {
+          "species": "Colletotrichum fructicola",
+          "version": "CGMCC3.17371 GCA_009771025.1(Microbiology Resource Announcements. 2020)",
+          "geneId": "CGMCC3_g1",
+          "displaySpecies": "Colletotrichum fructicola",
+          "displayVersion": "CGMCC3.17371 GCA_009771025.1 (Microbiology Resource Announcements, 2020)"
+        },
+        {
+          "species": "Fragaria chiloensis",
+          "version": "KIB-CAS v1.0(Nature Plants. 2023)",
+          "geneId": "maker-1A-augustus-gene-0.6-mRNA-1",
+          "displaySpecies": "Fragaria chiloensis",
+          "displayVersion": "KIB-CAS v1.0 (Nature Plants, 2023)"
+        }
+      ],
+      "status": "available"
+    },
+    "limits": {
+      "maxBatchIds": 100,
+      "maxSequenceSymbols": 2000000,
+      "maxRequestBytes": 65536,
+      "exportsPerMinute": 12,
+      "maxExportBytes": 33554432,
+      "requestsPerMinute": 120
+    }
+  }
+}

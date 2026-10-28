@@ -1,0 +1,180 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:06.748Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/synteny/search?sourceAssembly=fxa_benihoppe&geneId=Fxa1Ag00001&targetAssembly=fxa_camarosa",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 7561,
+    "trimmed": [
+      "each block.context first 1; all blocks retained"
+    ]
+  },
+  "payload": {
+    "analysisId": "fragaria-synteny-v2-seolhyang-20260914",
+    "requestedGeneId": "Fxa1Ag00001",
+    "queryGene": {
+      "canonicalId": "Fxa1Ag00001",
+      "displayId": "Fxa1Ag00001",
+      "seqId": "chr_1A",
+      "start": 10645,
+      "end": 15011,
+      "strand": "+",
+      "order": 1
+    },
+    "sourceAssembly": {
+      "id": "fxa_benihoppe",
+      "species": "Fragaria × ananassa",
+      "label": "Benihoppe v1.0.a1",
+      "version": "Benihoppe v1.0.a1(Horticulture Research. 2023)",
+      "ploidy": 8,
+      "geneCount": 109320,
+      "exampleGene": "Fxa1Ag00001"
+    },
+    "targetAssembly": {
+      "id": "fxa_camarosa",
+      "species": "Fragaria × ananassa",
+      "label": "Camarosa v1.0.a2",
+      "version": "v1.0.a2(Horticulture Research. 2021)",
+      "ploidy": 8,
+      "geneCount": 108439,
+      "exampleGene": "FxaC_4g00010"
+    },
+    "anchored": true,
+    "totalBlockCount": 3,
+    "truncated": false,
+    "blocks": [
+      {
+        "pairId": "fxa_benihoppe__fxa_camarosa",
+        "blockId": 6,
+        "sourceSeq": "chr_1A",
+        "targetSeq": "Fvb1-1",
+        "orientation": "-",
+        "score": 45058,
+        "evalue": 0,
+        "anchorCount": 926,
+        "matchedTargetGene": {
+          "canonicalId": "FxaC_4g40040",
+          "displayId": "FxaC_4g40040",
+          "seqId": "Fvb1-1",
+          "start": 27535639,
+          "end": 27540304,
+          "strand": "-",
+          "order": 3061
+        },
+        "context": [
+          {
+            "order": 0,
+            "sourceGene": {
+              "canonicalId": "Fxa1Ag00001",
+              "displayId": "Fxa1Ag00001",
+              "seqId": "chr_1A",
+              "start": 10645,
+              "end": 15011,
+              "strand": "+",
+              "order": 1
+            },
+            "targetGene": {
+              "canonicalId": "FxaC_4g40040",
+              "displayId": "FxaC_4g40040",
+              "seqId": "Fvb1-1",
+              "start": 27535639,
+              "end": 27540304,
+              "strand": "-",
+              "order": 3061
+            },
+            "queryAnchor": true,
+            "evalue": 0
+          }
+        ]
+      },
+      {
+        "pairId": "fxa_benihoppe__fxa_camarosa",
+        "blockId": 32,
+        "sourceSeq": "chr_1A",
+        "targetSeq": "Fvb1-3",
+        "orientation": "+",
+        "score": 13163,
+        "evalue": 0,
+        "anchorCount": 272,
+        "matchedTargetGene": {
+          "canonicalId": "FxaC_3g00480",
+          "displayId": "FxaC_3g00480",
+          "seqId": "Fvb1-3",
+          "start": 210870,
+          "end": 213628,
+          "strand": "+",
+          "order": 47
+        },
+        "context": [
+          {
+            "order": 0,
+            "sourceGene": {
+              "canonicalId": "Fxa1Ag00001",
+              "displayId": "Fxa1Ag00001",
+              "seqId": "chr_1A",
+              "start": 10645,
+              "end": 15011,
+              "strand": "+",
+              "order": 1
+            },
+            "targetGene": {
+              "canonicalId": "FxaC_3g00480",
+              "displayId": "FxaC_3g00480",
+              "seqId": "Fvb1-3",
+              "start": 210870,
+              "end": 213628,
+              "strand": "+",
+              "order": 47
+            },
+            "queryAnchor": true,
+            "evalue": 1e-299
+          }
+        ]
+      },
+      {
+        "pairId": "fxa_benihoppe__fxa_camarosa",
+        "blockId": 22,
+        "sourceSeq": "chr_1A",
+        "targetSeq": "Fvb1-2",
+        "orientation": "+",
+        "score": 542,
+        "evalue": 1e-14,
+        "anchorCount": 11,
+        "matchedTargetGene": {
+          "canonicalId": "FxaC_2g11630",
+          "displayId": "FxaC_2g11630",
+          "seqId": "Fvb1-2",
+          "start": 5177656,
+          "end": 5181990,
+          "strand": "+",
+          "order": 1031
+        },
+        "context": [
+          {
+            "order": 0,
+            "sourceGene": {
+              "canonicalId": "Fxa1Ag00001",
+              "displayId": "Fxa1Ag00001",
+              "seqId": "chr_1A",
+              "start": 10645,
+              "end": 15011,
+              "strand": "+",
+              "order": 1
+            },
+            "targetGene": {
+              "canonicalId": "FxaC_2g11630",
+              "displayId": "FxaC_2g11630",
+              "seqId": "Fvb1-2",
+              "start": 5177656,
+              "end": 5181990,
+              "strand": "+",
+              "order": 1031
+            },
+            "queryAnchor": true,
+            "evalue": 0
+          }
+        ]
+      }
+    ]
+  }
+}

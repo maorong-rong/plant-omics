@@ -1,0 +1,13 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:03.433Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/genes/search?geneId=NOT_A_REAL_GENE_999",
+    "status": 404,
+    "contentType": "text/html",
+    "originalBytes": 4689,
+    "trimmed": [
+      "HTML first 600 characters; not interpreted as biological absence"
+    ]
+  },
+  "payload": "<!DOCTYPE html>\r\n<html lang=\"zh-CN\">\r\n<head>\r\n    <meta charset=\"UTF-8\">\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n    <title>404 - 页面未找到</title>\r\n    <style>\r\n        * {\r\n            margin: 0;\r\n            padding: 0;\r\n            box-sizing: border-box;\r\n            font-family: 'Arial', sans-serif;\r\n        }\r\n        body {\r\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\r\n            height: 100vh;\r\n            display: flex;\r\n            flex-direction: column;\r\n            justify-content: center;\r\n            align-items: "
+}

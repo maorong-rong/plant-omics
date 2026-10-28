@@ -1,0 +1,19 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:14.046Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/tf/search?family=NOT_A_FAMILY&page=1&pageSize=20",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 94,
+    "trimmed": []
+  },
+  "payload": {
+    "mode": "matches",
+    "total": 0,
+    "page": 1,
+    "pageSize": 20,
+    "totalPages": 0,
+    "matches": [],
+    "summary": null
+  }
+}

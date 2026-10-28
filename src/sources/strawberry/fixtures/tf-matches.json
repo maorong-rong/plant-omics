@@ -1,0 +1,48 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:12.434Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/tf/search?family=ERF&page=1&pageSize=2",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 1007,
+    "trimmed": []
+  },
+  "payload": {
+    "mode": "matches",
+    "total": 10677,
+    "page": 1,
+    "pageSize": 2,
+    "totalPages": 5339,
+    "matches": [
+      {
+        "geneId": "Hap1_FxaB_1Ag01217.t2",
+        "proteinId": "Hap1_FxaB_1Ag01217.t2",
+        "family": "ERF",
+        "confidence": "domain_confirmed",
+        "arabidopsisGene": "AT5G64750",
+        "arabidopsisProtein": "AT5G64750.1",
+        "assemblyId": "f_xananassa_fxa_benihoppe_hzau_v1_a1_hap1",
+        "speciesSlug": "fragaria-x-ananassa",
+        "scientificName": "Fragaria × ananassa",
+        "assemblyLabel": "Benihoppe · HZAU v1.0 · annotation a1 · haplotype 1",
+        "analysisStatus": "review",
+        "geneSearchId": "Hap1_FxaB_1Ag01217.t2"
+      },
+      {
+        "geneId": "Hap1_FxaB_1Ag01449.t1",
+        "proteinId": "Hap1_FxaB_1Ag01449.t1",
+        "family": "ERF",
+        "confidence": "domain_confirmed",
+        "arabidopsisGene": "AT1G78080",
+        "arabidopsisProtein": "AT1G78080.1",
+        "assemblyId": "f_xananassa_fxa_benihoppe_hzau_v1_a1_hap1",
+        "speciesSlug": "fragaria-x-ananassa",
+        "scientificName": "Fragaria × ananassa",
+        "assemblyLabel": "Benihoppe · HZAU v1.0 · annotation a1 · haplotype 1",
+        "analysisStatus": "review",
+        "geneSearchId": "Hap1_FxaB_1Ag01449.t1"
+      }
+    ],
+    "summary": null
+  }
+}

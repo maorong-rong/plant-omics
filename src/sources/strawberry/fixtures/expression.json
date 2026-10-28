@@ -1,0 +1,134 @@
+{
+  "capture": {
+    "at": "2026-10-28T07:36:04.521Z",
+    "url": "https://sci.hainanu.edu.cn/strawberry/api/v1/transcriptome/search?geneId=FvesChr1G00279070.1",
+    "status": 200,
+    "contentType": "application/json",
+    "originalBytes": 31260,
+    "trimmed": [
+      "samples first 2; all 9 tissue aggregates retained"
+    ],
+    "originalSampleCount": 233
+  },
+  "payload": {
+    "dataset": "fragaria-vesca-strawberry-atlas-2026",
+    "profileType": "replicate_matrix",
+    "geneId": "FvesChr1G00279070.1",
+    "unit": "batch-corrected TPM",
+    "maximum": 82.1016,
+    "detectedSamples": 233,
+    "topTissue": "Carpel",
+    "tissues": [
+      {
+        "code": "anthers",
+        "label": "Anther",
+        "sampleCount": 9,
+        "detectedSamples": 9,
+        "mean": 42.33732222222222,
+        "median": 39.4733,
+        "minimum": 26.2158,
+        "maximum": 66.4086
+      },
+      {
+        "code": "carpels",
+        "label": "Carpel",
+        "sampleCount": 8,
+        "detectedSamples": 8,
+        "mean": 47.988075,
+        "median": 49.202799999999996,
+        "minimum": 37.0743,
+        "maximum": 58.5806
+      },
+      {
+        "code": "early_fruit",
+        "label": "Early fruit",
+        "sampleCount": 28,
+        "detectedSamples": 28,
+        "mean": 36.81948214285715,
+        "median": 38.983149999999995,
+        "minimum": 22.5865,
+        "maximum": 47.409
+      },
+      {
+        "code": "flower",
+        "label": "Flower bud",
+        "sampleCount": 11,
+        "detectedSamples": 11,
+        "mean": 37.948181818181816,
+        "median": 37.3597,
+        "minimum": 32.8039,
+        "maximum": 44.7275
+      },
+      {
+        "code": "late_fruit",
+        "label": "Late fruit",
+        "sampleCount": 62,
+        "detectedSamples": 62,
+        "mean": 30.846890322580645,
+        "median": 29.754649999999998,
+        "minimum": 20.8544,
+        "maximum": 82.1016
+      },
+      {
+        "code": "leaf",
+        "label": "Leaf",
+        "sampleCount": 39,
+        "detectedSamples": 39,
+        "mean": 27.08445128205128,
+        "median": 26.1075,
+        "minimum": 13.6514,
+        "maximum": 51.294
+      },
+      {
+        "code": "root",
+        "label": "Root",
+        "sampleCount": 46,
+        "detectedSamples": 46,
+        "mean": 26.000226086956523,
+        "median": 25.76885,
+        "minimum": 17.3082,
+        "maximum": 42.8245
+      },
+      {
+        "code": "seed",
+        "label": "Seed",
+        "sampleCount": 19,
+        "detectedSamples": 19,
+        "mean": 28.231610526315787,
+        "median": 25.9332,
+        "minimum": 16.8132,
+        "maximum": 48.484
+      },
+      {
+        "code": "stem",
+        "label": "Stem",
+        "sampleCount": 11,
+        "detectedSamples": 11,
+        "mean": 39.050172727272724,
+        "median": 31.9905,
+        "minimum": 29.4445,
+        "maximum": 74.0737
+      }
+    ],
+    "samples": [
+      {
+        "index": 1,
+        "code": "SRR1106125",
+        "tissueCode": "anthers",
+        "tissueLabel": "Anther",
+        "stageCode": "",
+        "stageLabel": "",
+        "value": 26.2158
+      },
+      {
+        "index": 2,
+        "code": "SRR1107179",
+        "tissueCode": "anthers",
+        "tissueLabel": "Anther",
+        "stageCode": "",
+        "stageLabel": "",
+        "value": 28.9168
+      }
+    ]
+  }
+}
