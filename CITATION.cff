@@ -9,8 +9,7 @@ abstract: >-
   只有通过实测的源才进入实现；工具输出带出处尾注，便于溯源。
 authors:
   - family-names: maorong-rong
-version: 0.2.0
-date-released: "2026-10-28"
+version: 0.5.0
 license: MIT
 keywords:
   - plant omics

@@ -17,9 +17,12 @@
 
 | 源 | 等级 | 覆盖 | 工具数 | 鉴权 |
 |---|---|---|---|---|
-| **WheatOmics**（山东农大，小麦多组学） | T1 | 小麦族：基因 / 表达 / 共表达 / PPI / 比较基因组 / 变异 / 文献 | 6 | 无 |
+| **WheatOmics**（山东农大，小麦多组学） | T1 | 本仓已封装：小麦族基因、表达、文献、注释ID换算；不代表网站全部模块已接入 | 6 | 无 |
+| **Strawberry Data Hub**（海南大学） | T1 | 草莓及相关病原：目录和精确基因注释；表达仅已证实草莓数据集、TF仅Fragaria、共线仅已证实装配 | 5 | 无 |
+| **GWH**（NGDC） | T1 | 精确基因组/组装、项目/样本元数据；物种示例非穷尽，不提供物种搜索 | 2 | 无 |
+| **ICG**（NGDC） | T1 | 物种目录及研究验证的内参基因/引物；不提供名称搜索，不作通用推荐 | 2 | 无 |
 
-> 完整清单与实测记录见 [`docs/源登记表.md`](docs/源登记表.md)。**只有这里列出的源才真的能用。**
+> 0.5.0：4源、15工具。候选包已完成隔离安装、四源探活及MCP调用验证；真实DSH问答验收仍单列。GitHub源码不等于已有tgz下载入口，本项目尚未发布到npm。源等级和实测以[源登记表](docs/源登记表.md)为准。
 
 ---
 
@@ -33,20 +36,52 @@
 | `wheatomics_expression_query` | 查基因在指定项目里的表达量：**均值 ± 标准差**；条件 ≤20 个时全部列出，可用 `condition` 精确看某类、`top` 控制条数 |
 | `wheatomics_search_papers` | 检索小麦族文献元数据（关键词 / 条数 / `sinceDays` 时间窗） |
 | `wheatomics_convert_gene_ids` | 基因 ID 跨注释版本换算，统一转成上游所称的 02G（IWGSC v1.1）格式；**只是 ID 表映射，不等于确认了组装版本** |
+| `strawberry_catalog` | 目录发现：模块、装配和限流；`module`仅本地过滤，不代表已支持所有目录模块 |
+| `strawberry_gene_lookup` | `geneId`精确查询；可选`species`/`version`消歧；`includeSequence=true`仅显示最多120 aa的**非完整蛋白前缀**，不能用于完整序列分析 |
+| `strawberry_expression` | 草莓组织表达：`geneId`、可选`dataset`/`top`；保留响应原单位batch-corrected TPM，不跨数据集比较 |
+| `strawberry_synteny` | `geneId`、`sourceAssembly`、`targetAssembly`查询共线块；`maxBlocks`控制展示，不将共线解释为功能等价 |
+| `strawberry_tf_members` | 至少给`family`/`species`/`assembly`/`type`一个筛选；`page`/`pageSize`分页，分别报告total/返回数/展示数；release未声明则未知 |
+| `gwh_assembly_lookup` | `entity=genome/assembly` + 精确 `id`，取基因组或GWH组装；下载路径不代表已验证可下载 |
+| `gwh_project_sample_lookup` | `entity=project/sample` + PRJCA/SAMC；项目与样本为平行入口，不提供关联样本列表 |
+| `icg_lookup` | 显式 `entity=species/project/gene/publication` + `id`；逐层取研究、完整引物或题录，预算不足整块省略 |
+| `icg_species_list` | `offset`/`limit` 分页浏览目录，不能按名称搜索；本次返回条数不等于全库总数 |
+
+分类分三轴：物种覆盖、数据类型、查询意图；官方MCP/公开API是接入方式，本仓工具是封装层，不重复计源。Strawberry首版仅GET，不包含批量序列、导出、单细胞、表观或GWAS实际查询。HTML404仅说明未获业务响应，不能断定基因不存在。
 
 每个工具的输出末尾都带出处：`源 / 完整请求（含参数）/ HTTP 状态 / 耗时 / 查询时刻`，
-数据版本口径另起一行，未知就写未知。单次输出上限 **4 KB（UTF-8 字节）**，超出会截断正文但**保留出处**。
+数据版本口径另起一行，未知就写未知。单次输出上限 **4 KB（UTF-8 字节）**，超出会截断正文但**保留完整出处**。
+
+### 0.4.0迁移：长请求先拒绝，不省略出处
+
+完整实际URL（含编码后的所有参数）及本地呈现选项合计超过1536 UTF-8字节时，工具在联网前明确拒绝；尾注预留2560B，正文最多1408B。已发布WheatOmics参数名、类型、名义ID数量上限不改，但达到数量上限并不保证能满足字节预算。
+
+例如一次200个长转录本ID的换算可能不再接受：请按原顺序拆成更小批次（如先试10个），若仍超预算继续减小；中文筛选按URL编码后字节计算。不要通过删掉species/version等消歧参数绕过预算。新错误属于兼容性收紧，不能把它当上游无记录。返回完整请求的错误已分别验证MCP文本和DSH工具错误（离线装配，不等同宿主会话）。
 
 ---
 
 ## 安装
 
-### 1. 构建
+### 前置环境与获取源码
+
+- Git、Node.js **≥20**、npm；本次验证环境为Windows、Node **24.14.0**、npm **11.9.0**，未实测其他系统/版本组合。环境代理支持另见下方代理说明。
+- MCP客户端需支持本地stdio进程；**不需要DSH**。DSH桌面插件契约按44.7.0核对，宿主升级兼容性须另验。
+- 安装依赖需要访问npm registry；实际查询需要访问各数据库。没有API key要求，但不保证各地区网络均可达。
 
 ```bash
-npm install
-npm run build
+git clone https://github.com/maorong-rong/plant-omics.git
+cd plant-omics
+npm ci
+npm run check
 ```
+
+`check`包含构建及全离线测试；数据库可达性另运行 `npm run probe`。确认 `node -p "require('./package.json').version"` 为预期版本，并保存 `git rev-parse HEAD`；main会继续变化，复现时使用自己已验证的提交，不假定存在版本tag。
+
+### 1. 按用途选择
+
+- **只用MCP**：完成上述构建后按第2节配置stdio，无需安装DSH或tgz。
+- **DSH桌面用户**：按第3节生成/取得可信tgz并从插件页安装；不要把GitHub源码ZIP当作插件包。当前没有承诺可下载的Release附件，也不能使用 `npm install dsh-plugin-plant-omics` 从npm获取本项目。
+
+源码构建产物仅位于本地，不会自动更新已经安装的插件。验证范围详见[安装验证说明](docs/安装验证.md)。
 
 ### 2. 作为 MCP server
 
@@ -71,6 +106,23 @@ claude mcp add plant-omics -- node "<仓库路径>/dist/mcp/cli.js"
 
 ### 3. 作为 DSH 插件
 
+没有现成tgz时，在已完成构建的源码目录生成自己的包，并放到长期保留的目录（不要留在系统临时目录）：
+
+```powershell
+# Windows PowerShell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.dsh\plugin-archives" | Out-Null
+npm pack --pack-destination "$env:USERPROFILE\.dsh\plugin-archives"
+Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\.dsh\plugin-archives\dsh-plugin-plant-omics-0.5.0.tgz"
+```
+
+```bash
+# macOS/Linux：命令写法供参考；本轮未实测这两个系统
+mkdir -p "$HOME/.dsh/plugin-archives"
+npm pack --pack-destination "$HOME/.dsh/plugin-archives"
+```
+
+文件名取实际package版本；本地构建的哈希不保证与维护者候选包相同。收到别人提供的tgz时先核对对方公布的完整SHA256；仅计算本地哈希不构成来源认证。无源码用户可直接把可信tgz放入长期目录，在插件页粘贴其绝对路径。
+
 ⚠️ **`dsh plugin --profile desktop add …` 一定失败**（2026-10-27 实测）：
 
 ```
@@ -79,25 +131,32 @@ error: profile "desktop" is managed exclusively by the Electron application
 
 desktop profile 由桌面端**独占管理**，CLI 连碰都不碰。所以装了也不会成功，别试。
 
-**正确做法：走侧边栏的「插件」页**
+请保留tgz原件与完整SHA256，将包存放在长期目录；不要覆盖同版本的旧包，内容不同时使用另一个目录保留两份及其校验值。
 
-```powershell
-# 1) 打包（产物放 ~/.dsh/plugin-archives/，与 dsh-plugin-workbuddy 同惯例）
-#    PowerShell 不会替你展开 ~，必须写 $env:USERPROFILE
-npm run build
-npm pack --pack-destination "$env:USERPROFILE\.dsh\plugin-archives"
-```
+**然后手动点这三步：**
 
-2. DSH 侧边栏 → **插件** → 右上 **添加插件** → 在输入框**粘贴 tgz 完整路径**：
+1. DSH 侧边栏 → **插件** → 右上 **添加插件** → 粘贴已保存tgz的完整路径：
 
    ```
-   C:\Users\<你>\.dsh\plugin-archives\dsh-plugin-plant-omics-0.2.0.tgz
+   C:\Users\<你>\.dsh\plugin-archives\dsh-plugin-plant-omics-0.5.0.tgz
    ```
 
    该输入框接受**包名 / Git 地址 / 压缩包 / 本地绝对路径**四种写法；
    **没有文件选择器**，是黏路径或打路径（打了会即时判定类型并显示「压缩包」）。
-3. 装完它出现在 **已安装插件** 列表；页面提示重启就重启 DSH（托盘退出再打开）。
-4. **新开一个会话**再验证工具——已开着的会话不会因为装插件而重排工具清单。
+2. 装完它出现在 **已安装插件** 列表；页面提示重启就重启 DSH（托盘退出再打开）。
+   ⚠️ 只关窗口不算重启——版本号会变，但内存里跑的还是旧代码。
+3. **新开一个会话**再验证工具——已开着的会话不会因为装插件而重排工具清单。
+
+装好后侧边栏底部会多一个 **组学** 入口（收起到窄轨时只显示徽标），点开是面板：
+
+| 面板里有什么 | 口径 |
+|---|---|
+| 源、等级、物种、覆盖盲区、版本口径 | 来自各源 `manifest`，构建时生成 |
+| 工具名、何时使用、必填参数 | 来自注册表，与模型实际看到的一致 |
+| MCP 配置片段 | 一份定义两个出口，复制即用（替换 `<安装目录>`） |
+
+⚠️ **面板是构建期静态快照，不是运行状态。** 顶部固定写「静态快照 · 构建于 … · 不表示上游当前可用」；
+上游是否活着只由 `npm run probe` 回答。面板也不会反映运行时的 `sources` 子集配置（改配置后仍显示全量清单）。
 
 装完自查两件事（**缺任何一条都会"装了但没反应"**）：
 
@@ -118,6 +177,14 @@ dsh 对 unknown name 的 Loader 行是**静默跳过**的，不报错——这�
 
 ---
 
+## 升级、验证与回滚
+
+升级前保留旧tgz、旧源码提交及客户端配置。DSH使用插件管理页升级，按提示重启并新开会话；模型应能调用 `gwh_assembly_lookup`（entity=assembly，id=GWHAAAA00000000）或 `icg_lookup`（entity=species，id=ICG00115），并保留查询出处。另问一个未覆盖问题，确认不会用错误物种的数据凑答案。静态面板可见不等于查询成功。
+
+MCP更新源码后重新 `npm ci && npm run check`，重启客户端的MCP进程；若调用失败，区分参数错误、上游故障与本地启动路径。先检查命令中的Node及入口**绝对路径**，Windows JSON路径须用正斜杠或双反斜杠；`mcpServers`示例是通用格式，具体客户端的配置文件位置/键名以其官方文档为准。
+
+回滚DSH：通过同一插件管理页重新选择保留的旧tgz，按宿主提示操作、重启并新开会话；若管理器不接受降版，先停用插件，按该宿主官方卸载/重装流程处理，不手改profile依赖或删除数据。回滚MCP：在单独目录checkout已验证旧提交，`npm ci && npm run check`，把客户端命令指回旧目录并重启。没有保留旧包/旧提交时不要承诺可一键恢复。
+
 ## 开发
 
 ```bash
@@ -125,10 +192,45 @@ npm run typecheck   # 类型
 npm test            # 单元 + MCP 协议测试（全离线，不联网）
 npm run probe       # 可达性实测（联网；任一源失败则非零退出）
 npm run stats       # 预算自检（源 ≤20 / 工具 ≤40，超了非零退出）
+npm run doctor      # 装机快照自检（已装插件 vs 仓库构建，有实质漂移则非零退出）
 npm run check       # typecheck + test + build + stats，提交前最低门槛
 ```
 
+`npm run build` 除了 `tsc`，还会跑 `scripts/build-client.mjs` 产出 **客户端半边** `dist/client/panel.js`：
+它把包名（= 客户端模块 id）与构建期工具清单注入 `src/client/bundle.js`，并在构建期断言
+「id 与包名一致、`exports["./client"]` 与 `dsh.client.platform` 已声明、产物语法正确」——
+这三件错了在浏览器里的表现都是「装了但没入口」，很难查。清单与注册表漂移由 `test/client.test.ts` 兜住。
+
 **`npm test` 里不许出现真实网络请求。** 上游是否活着由 `probe` 单独回答——两者的红必须能一眼分开。
+
+### `npm run doctor`：为什么需要它
+
+DSH 装插件是 **tgz 解包后的物理拷贝**，不是软链。所以同一份代码同时存在两处：
+
+| 你看到的 | 实际跑的是 |
+|---|---|
+| 会话里调工具 | 已装快照（`~/.dsh/profiles/<profile>/node_modules/…`） |
+| `npm test` / `npm run probe` | 仓库 `dist/` |
+
+两者一分叉，最危险的动作就是「改完代码 → 用工具调用验证 → 以为验过了」，而实际验的是旧拷贝
+（§五：静默失效比报错危险）。`doctor` 把这个隐式风险变成随时可查的事实：
+
+```bash
+npm run build && npm run doctor     # 实质漂移 → 退出码 1
+npm run doctor -- --allow-drift     # 明知未重装，只看报告 → 退出码 0
+npm run doctor -- --json            # 机器可读
+```
+
+判定口径（2026-10-28 首次实跑后定）：
+
+- **`.js` 先剥注释再比哈希**。只改注释或注释里的引用文字不算漂移——否则每次整理注释都亮红灯，红灯一多就会被 `--skip`。
+- 只在一侧存在的文件、`.js` 实质内容不同 → 算漂移，退出码 1。
+- **刻意不进 `npm run check`**：开发期未重装是常态，把常态做成红灯等于逼人跳过检查。
+
+> **为什么不用软链省掉这一步？** desktop profile 由 pnpm 托管（`package.json` 里记 `file:…tgz`、
+> lockfile 记 integrity），手工把 `node_modules/dsh-plugin-plant-omics` 换成软链有两个后果：
+> ① 等于热更新，与本项目「攒一批再装」的做法相反；② pnpm 下次 install 按 lockfile 对账，
+> 软链会被静默还原成拷贝。所以选择「不改变安装方式，但让差异可见」。
 
 ---
 
@@ -165,6 +267,10 @@ PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
 
 ---
 
+## raw 与隐私边界
+
+`ToolResult.raw` 不进入 MCP/DSH 模型上下文。WheatOmics/Strawberry 保留上游结构；GWH/ICG 的 raw 是源级白名单投影，不是原始响应，也不承诺完整字段或条目。两源对已识别联系人键及邮箱模式做删除/省略，邮箱字符串在投影中置 null；无标签电话、微信及自由文本人名不在自动检查范围，不能视为全面脱敏保证。
+
 ## 已知限制
 
 - **上游会间歇性挂。** 2026-10-27 实测：WheatOmics 静态首页 200，而 `/api/*` 在 22:12 之后全部 503（Apache 反向代理返回）。工具会按 `Retry-After` 退避重试（单次调用总时长上限 45 s），但**不能保证每次都成功**。
@@ -173,7 +279,8 @@ PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
 - **不做数据镜像。** 要批量下载数据，请回各自的科研项目按那边规则走。
 - **⚠️ 真实 DSH 会话尚未验收。** 已验证的是：适配器能取数、MCP 协议握手正常、包能干净安装、插件装配形状正确。
   **还没验证**的是：在 DSH 里提问 → 模型自主选工具 → 取数 → 带出处作答，这条完整链路。别把前者当成后者。
-- **⚠️ 渐进式发现问题检索尚未实现。** 现在 6 个工具全量暴露（规则允许到 40 个）。「按问题先找源、再找工具」仍属未实现项。
+- **⚠️ 渐进式发现问题检索尚未实现。** 当前源码候选15个工具全量暴露（规则允许到40个）；实际安装快照可能仍只有6个。「按问题先找源、再找工具」仍属未实现项。
+- **侧边栏面板是静态清单。** 只显示构建时的源/工具/盲区，不显示探活或调用统计，也不反映运行时的 `sources` 子集配置；它不能用来判断上游是否可用。
 - **上游限流。** Strawberry Data Hub 的公开额度是 120 请求/分钟（导出 12/分钟），超出返 429 带 `Retry-After`。本仓不内置全局限流器，密集调用需自行节流。
 - **工具输出里的上游文本按数据处理。** 数据库内容可能包含看起来像指令的文字，本仓不做过滤；请在客户端侧把工具输出当数据、不当指令。
 
@@ -190,11 +297,15 @@ PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
 ⚠️ dsh 对 `cordis.patch.yml` 里**未知的 `name` 是静默跳过**的。升级 dsh 后若工具消失，
 第一件事是核对 `name` 与安装后的包名是否仍一致。
 
+侧边栏入口同理：它依赖宿主的 `sidebar.footer.action` 槽位与 `react` / `react-dom` 平台模块表
+（按本机已装 `@deepseek-ai/dsh-client-ui-sidebar` 的实际声明核对，2026-10-28）。宿主升级若改了槽位名，
+表现是**入口静默消失而工具还在**——先看 `dist/client/panel.js` 是否仍随包安装，再查槽位声明。
+
 ---
 
 ## 加一个源
 
-照 [`docs/新增一个源.md`](docs/新增一个源.md) 的清单做。核心是三步：**实测定级 → 写 manifest + 4–8 个意图级工具 → 抓 fixture 写离线测试**。
+照 [`docs/新增一个源.md`](docs/新增一个源.md) 的清单做。核心是三步：**实测定级 → 按实际能力写 manifest 与意图级工具（数量规则见新增源指引） → 抓 fixture 写离线测试**。
 
 ---
 
