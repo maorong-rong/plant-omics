@@ -1,0 +1,97 @@
+{
+  "success": true,
+  "message": "ok",
+  "data": {
+    "projects": [
+      {
+        "id": "ABA_JA_6BA_DMSO3h_mean_tbl",
+        "description": "Fielder - ABA/6-BA/SA hormone-treated leaf",
+        "categories": [
+          "DMSO3h",
+          "6BA3h",
+          "ABA3h",
+          "SA3h"
+        ],
+        "citation": "Description: Publication:Cloning of wheat keto-acyl thiolase 2B reveals a role of jasmonic acid in grain weight determination.PubMed Link:https://pmc.ncbi.nlm.nih.gov/articles/PMC7722888/;DOI Link:https://doi.org/10.1038/s41467-020-20133-z",
+        "group": "wheat abiotic stresses",
+        "subgroup": "Chemical / exogenous treatment",
+        "sub_subgroup": ""
+      },
+      {
+        "id": "CRA020462_tbl",
+        "description": "228 wheat, sampled at sealed sand plots for 3 weeks",
+        "categories": [],
+        "citation": "Description:In this study, transcriptome data of 110 wheat accessions under varying water conditions (3' RNA-Seq) and TaMYB7-A1 overexpression lines under drought treatment were generated. Further, integrating association analysis with genotype and phenotype data, we provided a comprehensive genomic regulatory landscape and offered valuable insights into wheat's adaptive response to water stress. Publication:Integrative omics of the genetic basis for wheat WUE and drought resilience reveal the function of TaMYB7-A1.Nature communications PubMed Link:https://pubmed.ncbi.nlm.nih.gov/41022763/;DOI Link:https://doi.org/10.1038/s41467-025-63642-5<a href=\"https://www.ebi.ac.uk/ena/browser/view/CRA020462\">CRA020462</a>",
+        "group": "wheat population",
+        "subgroup": "wheat population",
+        "sub_subgroup": ""
+      },
+      {
+        "id": "PRJEB12358_tbl",
+        "description": "Wheat - Fusarium graminearum (FHB) head infection transcriptome - 3-46h",
+        "categories": [
+          "NIL38_M3",
+          "NIL38_F3",
+          "NIL38_M6",
+          "NIL38_F6",
+          "NIL38_M12",
+          "NIL38_F12",
+          "NIL38_M24",
+          "NIL38_F24",
+          "NIL38_M36",
+          "NIL38_F36",
+          "NIL38_M48",
+          "NIL38_F48",
+          "NIL51_M3",
+          "NIL51_F3",
+          "NIL51_M6",
+          "NIL51_F6",
+          "NIL51_M12",
+          "NIL51_F12",
+          "NIL51_M24",
+          "NIL51_F24",
+          "NIL51_M36",
+          "NIL51_F36",
+          "NIL51_M48",
+          "NIL51_F48"
+        ],
+        "citation": "Description:Near isogenic wheat lines, differing in the presence of both or none of the FHB-resistance QTL Fhb1 and Qfhs.ifa-5A, have been sequenced using Illumina HiSeq2000 under disease pressure (3, 6, 12, 24, 36, 48 hai) as well as with mock-inoculation, to discern transcriptional differences induced by Fusarium graminearum. The NILs are BC5F2 lines generated from the Mexican Spring wheat line CM-82036, the resistance QTL donor line, as recurrent background and the susceptible German Spring wheat line Remus as the donor of the susceptible QTL alleles. Publication:Phylogeny of the plant receptor-like kinase (RLK) gene family and expression analysis of wheat RLK genes in response to biotic and abiotic stresses.DOI Link:https://doi.org/10.1186/s12864-023-09303-7",
+        "group": "wheat biotic interaction",
+        "subgroup": "Fusarium head blight",
+        "sub_subgroup": ""
+      },
+      {
+        "id": "PRJEB22854_tbl",
+        "description": "Luozhen No.1 - purple-grain pericarp (15-20 DPA)",
+        "categories": [
+          "Grain_15dpa",
+          "Grain_15dpa_dark",
+          "Grain_20dpa",
+          "Grain_20dpa_dark"
+        ],
+        "citation": "Description:Purple-grain wheat are caused by anthocyanin accumulation in the seed coat. But little is known about molecular mechanism of anthocyanin biosynthesis. The anthocyanin biosynthesis and accumulation were affected by light in purple-grain wheat. The spikes of purple-grain wheat Luozhen No.1 were bagged with four-layer Kraft paper bags after pollination. To identify genes involved in the anthocyanin biosynthesis, we sequenced four pericarp cDNA libraries, D15 (15 DAP), D20 (20 DAP) of shading treatment, and L15 (15 DAP), L20 (20 DAP) of untreated control using an Illumina HiSeqTM 2000. After quality control, raw reads are filtered into clean reads which will be aligned to the reference sequences. The alignment data is utilized to calculate distribution of reads on reference genes and mapping ratio, and proceed with downstream analysis including gene and isoform expression, deep analysis based on gene expression (PCA/correlation/screening differentially expressed genes and so on),exon expression, gene structure refinement, alternative splicing, novel transcript prediction and annotation, SNP detection, Indel detection. Further, we also perform deep analysis based on different expression genes, including Gene Ontology (GO) enrichment analysis, Pathway enrichment analysis, cluster analysis, and finding transcriptor factor. . <a href='https://www.ncbi.nlm.nih.gov/bioproject/PRJEB22854'>PRJEB22854</a>",
+        "group": "wheat developmental tissues",
+        "subgroup": "Single-stage or single-organ transcriptomes",
+        "sub_subgroup": "pericarp"
+      },
+      {
+        "id": "PRJEB24686_tbl",
+        "description": "2618/2890 - F. graminearum NIL disease response transcriptome",
+        "categories": [
+          "2618H2ORACH",
+          "2618_FG_RACH",
+          "2618_H2O_SP",
+          "2618_FG_SP",
+          "2890_H2O_SP",
+          "2890_FG_SP",
+          "2890_H2O_RACH",
+          "2890_FG_RACH"
+        ],
+        "citation": "Description:Fusarium graminearum causes Fusarium head blight (FHB), which represents one of the major wheat diseases worldwide, determining reduction in grain quality, yield and the accumulation of mycotoxins. To mine the molecular response associated to the wheat 2DL FHB resistance quantitative trait locus (QTL), derived from the cultivar Wuhan-1, and to identify candidate genes implicated in such resistance, a comprehensive transcriptomic analysis of the early response to F. graminearum infection at 3 days post inoculation of spikelet and rachis was performed with the RNA-Seq and miRNA-Seq techniques. The analyses were conducted on two Near Isogenic Lines (NILs) differing for the presence of the 2DL QTL (2-2618, resistant 2DL+ and 2-2890, susceptible null).Publications:An in ???³a??a?? silico perspective on the role of methylation-related genes in wheat ???³a??a?? Fusarium graminearum interaction. DOI Link:https://doi.org/10.1007/s13205-024-04179-0<a href='https://www.ncbi.nlm.nih.gov/bioproject/PRJEB24686'>PRJEB24686</a>",
+        "group": "wheat genetic material",
+        "subgroup": "QTL / NIL / introgression",
+        "sub_subgroup": ""
+      }
+    ]
+  }
+}

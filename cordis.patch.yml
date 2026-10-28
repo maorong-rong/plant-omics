@@ -1,0 +1,20 @@
+# ============================================================================
+# dsh-plugin-plant-omics —— bundle patch
+#
+# 只做一件事：把本插件自己的 Loader 条目插进 dsh 的配置树。
+#
+#   id   —— 条目 id。用户可在自己的
+#           $DSH_HOME/profiles/<profile>/cordis.patch.yml 里用同一个 id 覆盖 config。
+#   name —— 必须是**实际安装后的包名**。dsh 对 unknown name 的 Loader 行会
+#           静默跳过而不报错，所以名字写错的表现是「插件装了但工具没出现」。
+#
+# 装法：**不要用 `dsh plugin --profile desktop add`** —— 2026-10-27 实测被硬拦截：
+#   error: profile "desktop" is managed exclusively by the Electron application
+# 正确做法：DSH 侧边栏「插件」页 → 右上「添加插件」→ 粘贴本仓库 npm pack 出来的 tgz
+# 的完整路径（该输入框接受包名/Git 地址/压缩包/本地绝对路径，没有文件选择器）。
+# 详见 README「作为 DSH 插件」一节。
+# ============================================================================
+
+- insert:
+    - id: plant-omics
+      name: dsh-plugin-plant-omics

@@ -1,0 +1,47 @@
+{
+  "success": true,
+  "message": "ok",
+  "timestamp": "2026-10-27T14:00:59.427396+00:00",
+  "data": {
+    "query": "VRN1",
+    "total": 16,
+    "records": [
+      {
+        "clone_id": 17,
+        "gene_id": "TraesCS5A02G391700",
+        "gene_name": "TaVRN1-5A",
+        "chrom_pos": "CS(Refseq v1.0)chr5A:587.411-587.423",
+        "phenotype": "Vernalization; Flowering",
+        "species": "Triticum aestivum",
+        "publication_year": null,
+        "dois": [
+          "10.1073/pnas.0937399100"
+        ]
+      },
+      {
+        "clone_id": 164,
+        "gene_id": "EF567062",
+        "gene_name": "Lr1",
+        "chrom_pos": "5DL",
+        "phenotype": "Leaf rust resistance",
+        "species": "Triticum aestivum",
+        "publication_year": null,
+        "dois": [
+          "10.1007/s00122-007-0551-z;10.1007/s11103-007-9201-8"
+        ]
+      },
+      {
+        "clone_id": 210,
+        "gene_id": "TraesCS4B02G020300",
+        "gene_name": "TaGRP2",
+        "chrom_pos": "chr4B:14.388-14.389Mb",
+        "phenotype": "heading date, flowering times",
+        "species": "wheat",
+        "publication_year": null,
+        "dois": [
+          "10.1038/ncomms5572"
+        ]
+      }
+    ]
+  }
+}

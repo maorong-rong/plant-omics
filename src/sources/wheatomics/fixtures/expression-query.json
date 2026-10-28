@@ -1,0 +1,154 @@
+{
+  "success": true,
+  "message": "ok",
+  "timestamp": "2026-10-27T14:00:57.609423+00:00",
+  "data": {
+    "project": "PRJEB5314_paired_tbl",
+    "genes_found": 1,
+    "genes_not_found": [],
+    "genes_converted": {},
+    "results": [
+      {
+        "gene_id": "TraesCS5A02G391700",
+        "project": "PRJEB5314_paired_tbl",
+        "points": [
+          {
+            "label": "root_Z10",
+            "value": 0.020154,
+            "std": 0.020154,
+            "error_bar": [
+              0,
+              0.04
+            ]
+          },
+          {
+            "label": "root_Z13",
+            "value": 33.0778,
+            "std": 33.0778,
+            "error_bar": [
+              0,
+              66.16
+            ]
+          },
+          {
+            "label": "root_Z39",
+            "value": 37.6563,
+            "std": 37.6306,
+            "error_bar": [
+              0.03,
+              75.29
+            ]
+          },
+          {
+            "label": "stem_Z30",
+            "value": 57.6577,
+            "std": 4.35347,
+            "error_bar": [
+              53.3,
+              62.01
+            ]
+          },
+          {
+            "label": "stem_Z32",
+            "value": 58.6292,
+            "std": 1.45392,
+            "error_bar": [
+              57.18,
+              60.08
+            ]
+          },
+          {
+            "label": "stem_Z65",
+            "value": 53.2364,
+            "std": 0.342734,
+            "error_bar": [
+              52.89,
+              53.58
+            ]
+          },
+          {
+            "label": "leaf_Z10",
+            "value": 0,
+            "std": 0,
+            "error_bar": [
+              0,
+              0
+            ]
+          },
+          {
+            "label": "leaf_Z23",
+            "value": 1.70803,
+            "std": 0.182024,
+            "error_bar": [
+              1.53,
+              1.89
+            ]
+          },
+          {
+            "label": "leaf_Z71",
+            "value": 127.978,
+            "std": 1.67166,
+            "error_bar": [
+              126.31,
+              129.65
+            ]
+          },
+          {
+            "label": "spike_Z32",
+            "value": 41.133,
+            "std": 2.19349,
+            "error_bar": [
+              38.94,
+              43.33
+            ]
+          },
+          {
+            "label": "spike_Z39",
+            "value": 57.8203,
+            "std": 3.34859,
+            "error_bar": [
+              54.47,
+              61.17
+            ]
+          },
+          {
+            "label": "spike_Z65",
+            "value": 45.421,
+            "std": 2.94858,
+            "error_bar": [
+              42.47,
+              48.37
+            ]
+          },
+          {
+            "label": "grain_Z71",
+            "value": 13.0072,
+            "std": 0.305377,
+            "error_bar": [
+              12.7,
+              13.31
+            ]
+          },
+          {
+            "label": "grain_Z75",
+            "value": 0.312542,
+            "std": 0.007065,
+            "error_bar": [
+              0.31,
+              0.32
+            ]
+          },
+          {
+            "label": "grain_Z85",
+            "value": 0.0388,
+            "std": 0.0388,
+            "error_bar": [
+              0,
+              0.08
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

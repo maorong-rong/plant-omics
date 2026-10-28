@@ -1,0 +1,56 @@
+# 依赖与构建产物（可重新生成，不入库）
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.tgz
+
+# 内部工作记录与规划（保留本机文件，不对外发布）
+/记录/
+/00_工作区总览.md
+/AGENTS.md
+/docs/规划草案.md
+
+# AI 助手的本地规则、记忆与会话配置
+/.agents/
+/.claude/
+/.codex/
+/.dsh/
+/_bots/
+/skills/
+/.mcp.json
+/mcp.local.json
+
+# 本机探测结果与临时文件
+probe-report.json
+*.log
+.env
+.env.*
+*.local
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# 本机认证配置与私钥（可公开的模板应另行脱敏）
+/.npmrc
+/.netrc
+/_netrc
+/credentials.json
+/secrets.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# WorkBuddy 本地记忆（工具产生，不入库）
+.workbuddy/

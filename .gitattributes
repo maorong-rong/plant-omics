@@ -1,0 +1,37 @@
+# ==========================================
+# 植物组学数据接口 — .gitattributes
+# 目的：统一行尾，保证 fixture（真实响应快照）跨机 md5 可复现
+# 建立：2026-10-27（统一文本行尾）
+# 背景：本机 core.autocrlf=true；若不显式声明，Linux 侧 clone 后
+#       fixture 的 CRLF 会与 Windows 侧不同，导致测试断言出现幽灵差异。
+# 说明：.gitattributes 的 eol 声明**优先于** core.autocrlf。
+# ==========================================
+
+# 默认：自动判定文本，仓库内统一 LF
+* text=auto eol=lf
+
+# --- 文本类：强制 LF ---
+*.md          text eol=lf
+*.json        text eol=lf
+*.ts          text eol=lf
+*.mts         text eol=lf
+*.js          text eol=lf
+*.mjs         text eol=lf
+*.cjs         text eol=lf
+*.yaml        text eol=lf
+*.yml         text eol=lf
+*.txt         text eol=lf
+.gitignore    text eol=lf
+.gitattributes text eol=lf
+
+# --- 二进制：禁止行尾转换 ---
+*.png         -text
+*.jpg         -text
+*.ico         -text
+*.gz          -text
+*.tgz         -text
+*.zip         -text
+
+# --- 语言统计：第三方与生成物不计入本仓构成 ---
+package-lock.json  linguist-generated
+dist/**            linguist-generated

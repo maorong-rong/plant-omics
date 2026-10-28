@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "message": "ok",
+  "timestamp": "2026-10-27T14:00:59.227322+00:00",
+  "data": {
+    "version": "IWGSCv1_result",
+    "mappings": [
+      {
+        "query_gene": "TraesCS6B01G342500.1",
+        "reference_gene": "TraesCS6B02G342500.1",
+        "code": "=",
+        "length": "3452"
+      }
+    ],
+    "not_found": []
+  }
+}

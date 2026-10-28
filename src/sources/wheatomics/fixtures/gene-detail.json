@@ -1,0 +1,48 @@
+{
+  "success": true,
+  "message": "ok",
+  "timestamp": "2026-10-27T14:00:59.965435+00:00",
+  "data": {
+    "query_gene": "TraesCS5A02G391700",
+    "gene_ids": [
+      "TraesCS5A02G391700",
+      "TraesCS5A01G391700",
+      "TraesCS5A03G0935400"
+    ],
+    "description": null,
+    "genome": "Chinese_Spring1.0",
+    "chromosome": "chr5A",
+    "start": 587411454,
+    "end": 587423416,
+    "strand": "-",
+    "protein_length": "245",
+    "molecular_weight": "27838.39",
+    "isoelectric_point": "9.05",
+    "functions": [],
+    "jbrowse_links": {
+      "structure_center": "http://wheatomics.sdau.edu.cn/jbrowse-1.12.3-release/?data=Chinese_Spring1.0&loc=chr5A:587411254..587423616&tracks=IWGSCv1.1_HC_LC&tracklist=0&nav=0&overview=0&fullviewlink=0"
+    },
+    "external_links": {
+      "ensembl": "https://ensembl.gramene.org/Triticum_aestivum/Gene/Summary?g=TraesCS5A02G391700"
+    },
+    "phase_separation": {
+      "any_psp": false,
+      "any_prd": false,
+      "transcripts": [
+        {
+          "seq_id": "PanRefChrChr5A_007003-P1",
+          "gene_id": "PanRefChrChr5A_007003",
+          "cs_gene_id": "TraesCS5A02G391700",
+          "ps_score": 0.0393,
+          "is_psp": 0,
+          "molphase_score": 0.9999037,
+          "has_prd": 0,
+          "plaac_llr": -4.557,
+          "plaac_core_score": null,
+          "plaac_papa_prop": -0.081,
+          "plaac_papa_fi": -0.002
+        }
+      ]
+    }
+  }
+}

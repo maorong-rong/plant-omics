@@ -1,0 +1,74 @@
+{
+  "name": "dsh-plugin-plant-omics",
+  "version": "0.2.0",
+  "private": true,
+  "description": "把国内植物组学数据库的公开接口聚合成一套工具，一次维护、两个出口：stdio MCP server（Claude Code / Codex / Reasonix 可用）与 DSH 原生插件。",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/dsh/index.js",
+  "types": "./dist/dsh/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/dsh/index.d.ts",
+      "default": "./dist/dsh/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/server.d.ts",
+      "default": "./dist/mcp/server.js"
+    },
+    "./registry": {
+      "types": "./dist/core/registry.d.ts",
+      "default": "./dist/core/registry.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "plant-omics-mcp": "./dist/mcp/cli.js"
+  },
+  "files": [
+    "dist",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "probe": "node scripts/probe.mjs",
+    "stats": "node scripts/stats.mjs",
+    "check": "npm run typecheck && npm run test && npm run build && npm run stats",
+    "mcp": "node dist/mcp/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "mcp",
+    "model-context-protocol",
+    "plant-omics",
+    "bioinformatics",
+    "wheatomics",
+    "ngdc",
+    "cngbdb"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
