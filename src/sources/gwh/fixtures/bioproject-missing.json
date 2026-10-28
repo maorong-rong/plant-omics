@@ -1,0 +1,29 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/bioProject/PRJCA999999999",
+    "at": "2026-10-28T08:44:46.260Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 440,
+    "note": "submitter 为 null，保留以便断言 null 提交者不被展示"
+  },
+  "payload": {
+    "biomaterialProvider": null,
+    "dataTypes": null,
+    "description": null,
+    "fourLevels": null,
+    "listConsortium": null,
+    "listDataProviders": null,
+    "listExternalLinks": null,
+    "listGrants": null,
+    "listPublication": null,
+    "listRefProjects": null,
+    "message": "Nonentity",
+    "prjAccession": "PRJCA999999999",
+    "releaseTime": null,
+    "sampleScope": null,
+    "submitter": null,
+    "taxons": null,
+    "title": null
+  }
+}

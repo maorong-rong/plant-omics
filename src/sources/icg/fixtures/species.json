@@ -1,0 +1,50 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/icg/api/json/species/ICG00115",
+    "at": "2026-10-28T08:44:47.966Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 2757,
+    "trimmed": "projectList 3→2 条并删除每条的 contactName/contactEmail/hostInstitution；删除 result.image；其余字段与实际一致",
+    "note": "projectList 原始 3 条，本文件保留前 2 条"
+  },
+  "payload": {
+    "code": "200",
+    "message": "Success!",
+    "result": {
+      "id": 113,
+      "accession": "ICG00115",
+      "latinName": "Zea mays",
+      "commonName": "Corn, Maize",
+      "description": "Zea mays subsp. mays is a large grain plant first domesticated by indigenous peoples in southern Mexico about 10,000 years ago. The leafy stalk of the plant produces separate pollen and ovuliferous inflorescences or ears, which are fruits, yielding kernels or seeds. It is one of the most important cereal crops, also plays a growing role in industry and energy resources. However, major global abiotic stresses such as drought, heat, cold, and salinity cause huge reductions in the production every year. Additionally, hormones have been implicated in the plant response to numerous abiotic and biotic stresses, as well as developmental processes.",
+      "taxonomyId": "4577",
+      "category": "Plants",
+      "pmid": "24810581",
+      "isFeatured": 1,
+      "status": 1,
+      "studyNumber": 3,
+      "lastModified": "2022-03-30 11:46:13",
+      "createDate": "2022-03-30 11:46:13",
+      "projectList": [
+        {
+          "accession": "ICG00115-1",
+          "name": "Abiotic Stresses@@Hormone Treatments@@Tissues@@Temperature Conditions",
+          "molecularType": "mRNA",
+          "evaluationMethods": "geNorm @@ NormFinder @@ BestKeeper",
+          "species": "Zea mays",
+          "pmid": "24810581",
+          "country": "China"
+        },
+        {
+          "accession": "ICG00115-2",
+          "name": "Developmental Stage",
+          "molecularType": "mRNA",
+          "evaluationMethods": "geNorm @@ NormFinder",
+          "species": "Zea mays",
+          "pmid": "24013792",
+          "country": "Brazil"
+        }
+      ]
+    }
+  }
+}

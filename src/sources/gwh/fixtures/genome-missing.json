@@ -1,0 +1,23 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/genome/999999999",
+    "at": "2026-10-28T08:44:44.085Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 364
+  },
+  "payload": {
+    "id": null,
+    "organism": null,
+    "organismType": null,
+    "taxId": null,
+    "representativeAssemblyAccession": null,
+    "representativeAssemblyLink": null,
+    "representativeAssemblyName": null,
+    "representativeAssemblyId": null,
+    "representativeAssemblyLevel": null,
+    "otherAssembliesCount": "0",
+    "otherAssemblies": null,
+    "releaseTime": null
+  }
+}

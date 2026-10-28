@@ -1,0 +1,42 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/icg/api/json/publication/24810581",
+    "at": "2026-10-28T08:44:49.578Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 2828,
+    "trimmed": "删除 result.abst（摘要）；projectList 1 条并删除 contactName/contactEmail/hostInstitution"
+  },
+  "payload": {
+    "code": "200",
+    "message": "Success!",
+    "result": {
+      "id": 174,
+      "pmid": "24810581",
+      "title": "Validation of potential reference genes for qPCR in maize across abiotic stresses, hormone treatments, and tissue types.",
+      "author": "Lin Y, Zhang C, Lan H, Gao S, Liu H, Liu J, Cao M, Pan G, Rong T, Zhang S.",
+      "journal": "PloS one",
+      "pubYear": 2014,
+      "issue": "5",
+      "volume": "9",
+      "citation": 53,
+      "pubDate": "2014-05-08",
+      "doi": "10.1371/journal.pone.0095445",
+      "citationDate": "2022-03-30",
+      "lastModified": "2022-03-30 00:02:37",
+      "createDate": "2022-03-30 00:02:37",
+      "curated": 1,
+      "projectList": [
+        {
+          "accession": "ICG00115-1",
+          "name": "Abiotic Stresses@@Hormone Treatments@@Tissues@@Temperature Conditions",
+          "molecularType": "mRNA",
+          "evaluationMethods": "geNorm @@ NormFinder @@ BestKeeper",
+          "species": "Zea mays",
+          "pmid": "24810581",
+          "country": "China"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/icg/api/json/project/ICG00115-1",
+    "at": "2026-10-28T08:44:48.511Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 4238,
+    "simulated": true,
+    "note": "模拟反例：在真实结构上注入虚构 contactName/contactEmail（@example.org）与摘要，用于断言输出/raw/错误文本不含联系方式"
+  },
+  "payload": {
+    "code": "200",
+    "message": "Success!",
+    "result": {
+      "id": 722,
+      "accession": "ICG00115-1",
+      "category": null,
+      "projectType": null,
+      "name": "Abiotic Stresses@@Hormone Treatments@@Tissues@@Temperature Conditions",
+      "molecularType": "mRNA",
+      "evaluationMethods": "geNorm @@ NormFinder @@ BestKeeper",
+      "lastModified": "2022-06-22 23:06:11",
+      "createDate": "2022-03-30 11:46:13",
+      "species": "Zea mays",
+      "status": 1,
+      "pmid": "24810581",
+      "icgAccession": "ICG00115",
+      "geneList": [
+        {
+          "id": 491,
+          "accession": "ICG00115-1-EF1a",
+          "geneAccession": "NM_001112117",
+          "geneName": "EF1a",
+          "geneModel": "Elongation Factor",
+          "applicationScope": "High Temperature Condition@@Low Temperature Condition@@Salinity Stress@@Polyethylene Glycol (Peg) Stress@@Abscisic Acid (Aba) Treatment@@Salicylic Acid (Sa) Treatment@@Jasmonic Acid (Ja) Treatment@@Ethylene Treatment@@Gibberellins (Gas) Treatment@@Root@@Stem@@Leaf",
+          "primersForward": "TGGGCCTACTGGTCTTACTACTGA",
+          "primersReverse": "ACATACCCACGCTTCAGATCCT",
+          "size": "135",
+          "tm": "61.37~62.13",
+          "species": "Zea mays",
+          "detection": "SYBR",
+          "projectAccession": "ICG00115-1",
+          "status": 1,
+          "molecularType": "mRNA",
+          "lastModified": "2022-06-22 23:07:03",
+          "createDate": "2022-03-30 12:20:21"
+        },
+        {
+          "id": 492,
+          "accession": "ICG00115-1-A-TUB",
+          "geneAccession": "NM_001111987",
+          "geneName": "A-TUB",
+          "geneModel": "Tubulin",
+          "applicationScope": "High Temperature Condition@@Low Temperature Condition@@Salinity Stress@@Polyethylene Glycol (Peg) Stress@@Abscisic Acid (Aba) Treatment@@Salicylic Acid (Sa) Treatment@@Jasmonic Acid (Ja) Treatment@@Ethylene Treatment@@Gibberellins (Gas) Treatment@@Root@@Stem@@Leaf",
+          "primersForward": "CTACCTCACGGCATCTGCTATGT",
+          "primersReverse": "GTCACACACACTCGACTTCACG",
+          "size": "139",
+          "tm": "61.84~62.74",
+          "species": "Zea mays",
+          "detection": "SYBR",
+          "projectAccession": "ICG00115-1",
+          "status": 1,
+          "molecularType": "mRNA",
+          "lastModified": "2022-06-22 23:07:03",
+          "createDate": "2022-03-30 12:20:21"
+        }
+      ],
+      "publication": {
+        "id": 174,
+        "pmid": "24810581",
+        "title": "Validation of potential reference genes for qPCR in maize across abiotic stresses, hormone treatments, and tissue types.",
+        "author": "Lin Y, Zhang C, Lan H, Gao S, Liu H, Liu J, Cao M, Pan G, Rong T, Zhang S.",
+        "journal": "PloS one",
+        "pubYear": 2014,
+        "issue": "5",
+        "volume": "9",
+        "citation": 53,
+        "pubDate": "2014-05-08",
+        "doi": "10.1371/journal.pone.0095445",
+        "citationDate": "2022-03-30",
+        "lastModified": "2022-03-30 00:02:37",
+        "createDate": "2022-03-30 00:02:37",
+        "curated": 1,
+        "abst": "SIMULATED ABSTRACT. Contact: fake.person@example.org"
+      },
+      "country": "China",
+      "contactName": "Fake Person",
+      "contactEmail": "fake.person@example.org",
+      "hostInstitution": "Fake Institute"
+    }
+  }
+}

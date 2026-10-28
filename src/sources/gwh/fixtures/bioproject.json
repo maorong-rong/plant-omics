@@ -1,0 +1,83 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/bioProject/PRJCA000437",
+    "at": "2026-10-28T08:44:45.718Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 20905,
+    "trimmed": "删除 submitter（email/phone/firstName/lastName 等）；listPublication 13→2 条，并删除每条的 project 嵌套对象；taxons 1 条不变。测试不得把 2 当上游总数",
+    "note": "listPublication 原始 13 条，本文件保留前 2 条"
+  },
+  "payload": {
+    "biomaterialProvider": "",
+    "dataTypes": [
+      {
+        "dataTypeId": 1,
+        "dataTypeName": "Whole genome sequencing",
+        "isOther": 0
+      }
+    ],
+    "description": "As a potential economic crop for NR production and an ideal model plant for studying rubber biosynthesis, elucidation of the TKS genome will be of great value. In this study, we present a first draft genome of T. kok-saghyz assembled using the PacBio and Illumina sequence data. The assembly has a length of 1.29 Gb (N50 = 100.21 kb), containing 46,731 protein-coding genes. We also present a comprehensive analysis of the genome and the transcriptome, providing new insights into the NR biosynthetic pathways and fundamental information to facilitate the isolation, characterization, and application of key genes in developing new NR-producing.",
+    "fourLevels": null,
+    "listConsortium": [],
+    "listDataProviders": [],
+    "listExternalLinks": [],
+    "listGrants": [],
+    "listPublication": [
+      {
+        "articleTitle": "Extensive sequence divergence between the reference genomes of Taraxacum kok-saghyz and Taraxacum mongolicum",
+        "authorList": null,
+        "deleteTime": null,
+        "doi": "10.1007/s11427-021-2033-2",
+        "empty": false,
+        "isDeletedByUser": 0,
+        "issue": "3",
+        "journalTitle": "Science China Life Sciences",
+        "pagefrom": null,
+        "pageto": null,
+        "publicationId": 3366,
+        "pubmedId": "34939160",
+        "volume": "65",
+        "year": "2022"
+      },
+      {
+        "articleTitle": "Phytochemical and comparative transcriptome analyses reveal different regulatory mechanisms in the terpenoid biosynthesis pathways between Matricaria recutita L. and Chamaemelum nobile L .",
+        "authorList": "Tai Y, Hou X, Liu C, Sun J, Guo C, Su L, Jiang W, Ling C, Wang C, Wang H, Pan G, Si X, Yuan Y",
+        "deleteTime": null,
+        "doi": "10.1186/s12864-020-6579-z",
+        "empty": false,
+        "isDeletedByUser": 0,
+        "issue": "3",
+        "journalTitle": "BMC Genomics",
+        "pagefrom": null,
+        "pageto": null,
+        "publicationId": 15799,
+        "pubmedId": "32070270",
+        "volume": "21",
+        "year": "2020"
+      }
+    ],
+    "listRefProjects": [],
+    "message": "SUCCESS",
+    "prjAccession": "PRJCA000437",
+    "releaseTime": "2023-04-23T00:00:00",
+    "sampleScope": {
+      "isOther": 0,
+      "sampleScopeId": 1,
+      "sampleScopeName": "Monoisolate"
+    },
+    "taxons": [
+      {
+        "ancestors": null,
+        "commonNames": null,
+        "genBankCommonName": null,
+        "name": "Taraxacum kok-saghyz",
+        "ranks": null,
+        "sampleTypeId": null,
+        "synonymNames": null,
+        "taxonId": 333970
+      }
+    ],
+    "title": "Genomic sequence of Taraxacum kok-saghyz Rodin"
+  }
+}

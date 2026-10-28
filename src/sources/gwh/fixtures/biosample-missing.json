@@ -1,0 +1,21 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/bioSample/SAMC999999999",
+    "at": "2026-10-28T08:44:47.423Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 211
+  },
+  "payload": {
+    "accession": null,
+    "message": "Nonentity",
+    "name": null,
+    "sampleAttribute": null,
+    "sampleId": 0,
+    "sampletype": null,
+    "submitter": null,
+    "taxon": null,
+    "title": null,
+    "userId": 0
+  }
+}

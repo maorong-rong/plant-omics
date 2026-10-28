@@ -1,0 +1,34 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/assembly/GWHZZZ00000000",
+    "at": "2026-10-28T08:55:08.517Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 588
+  },
+  "payload": {
+    "id": null,
+    "organism": null,
+    "organismType": null,
+    "taxId": null,
+    "assemblyAccession": null,
+    "assemblyName": null,
+    "assemblyLevel": null,
+    "genomeRepresentation": null,
+    "bioprojectAccession": null,
+    "bioprojectLink": null,
+    "biosampleAccession": null,
+    "biosampleLink": null,
+    "submitterOrganization": null,
+    "contacts": null,
+    "ftpPathDna": null,
+    "ftpPathGff": null,
+    "ftpPathRna": null,
+    "ftpPathCds": null,
+    "ftpPathProtein": null,
+    "ftpPathFeature": null,
+    "releaseTime": null,
+    "publication": null,
+    "publicationLink": null
+  }
+}

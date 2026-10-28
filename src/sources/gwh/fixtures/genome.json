@@ -1,0 +1,23 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/genome/1",
+    "at": "2026-10-28T08:44:43.518Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 422
+  },
+  "payload": {
+    "id": "1",
+    "organism": "Taraxacum kok-saghyz",
+    "organismType": "Plants",
+    "taxId": "333970",
+    "representativeAssemblyAccession": "GWHAAAA00000000",
+    "representativeAssemblyLink": null,
+    "representativeAssemblyName": "TKS",
+    "representativeAssemblyId": "1",
+    "representativeAssemblyLevel": "Contig",
+    "otherAssembliesCount": "0",
+    "otherAssemblies": [],
+    "releaseTime": "2017-09-20 00:00:00"
+  }
+}

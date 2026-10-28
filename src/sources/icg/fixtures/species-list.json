@@ -1,0 +1,52 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/icg/rest/species/category/?draw=1&start=0&length=3",
+    "at": "2026-10-28T08:44:50.713Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 4515,
+    "trimmed": "data 3 行，每行删除 description/projectList/image/isFeatured/createDate/lastModified；draw/recordsTotal=540/recordsFiltered 保留原值",
+    "note": "length=3 是本次请求参数，不是上游上限；recordsTotal=540 才是上游总数字段"
+  },
+  "payload": {
+    "draw": 1,
+    "recordsTotal": 540,
+    "recordsFiltered": 540,
+    "data": [
+      {
+        "id": 1,
+        "accession": "ICG00001",
+        "latinName": "Actinidia chinensis",
+        "commonName": "Kiwifruit",
+        "taxonomyId": "3625",
+        "category": "Plants",
+        "pmid": "26897117",
+        "studyNumber": 1,
+        "status": 1
+      },
+      {
+        "id": 2,
+        "accession": "ICG00002",
+        "latinName": "Agrostis stolonifera",
+        "commonName": "Creeping bentgrass, Creeping bent, Fiorin, Spreading bent",
+        "taxonomyId": "63632",
+        "category": "Plants",
+        "pmid": "26179072",
+        "studyNumber": 1,
+        "status": 1
+      },
+      {
+        "id": 3,
+        "accession": "ICG00003",
+        "latinName": "Ammopiptanthus mongolicus",
+        "commonName": "Leguminosae",
+        "taxonomyId": "126911",
+        "category": "Plants",
+        "pmid": "22451089",
+        "studyNumber": 1,
+        "status": 1
+      }
+    ],
+    "error": null
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/assembly/GWHAAAA00000000",
+    "at": "2026-10-28T08:44:44.603Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 1803,
+    "simulated": true,
+    "note": "模拟反例：在真实响应结构上注入虚构的联系人姓名与 @example.org 邮箱，仅用于断言输出/raw/错误文本不含联系方式；不是上游真实响应"
+  },
+  "payload": {
+    "id": "1",
+    "organism": "Taraxacum kok-saghyz",
+    "organismType": "Plants",
+    "taxId": "333970",
+    "assemblyAccession": "GWHAAAA00000000",
+    "assemblyName": "TKS",
+    "assemblyLevel": "Contig",
+    "genomeRepresentation": "0",
+    "bioprojectAccession": "PRJCA000437",
+    "bioprojectLink": "https://ngdc.cncb.ac.cn/bioproject/browse/PRJCA000437",
+    "biosampleAccession": "SAMC012932",
+    "biosampleLink": "https://ngdc.cncb.ac.cn/biosample/browse/SAMC012932",
+    "ftpPathDna": "https://download.cncb.ac.cn/gwh/Plants/Taraxacum_kok-saghyz_TKS_GWHAAAA00000000/GWHAAAA00000000.genome.fasta.gz",
+    "ftpPathGff": "https://download.cncb.ac.cn/gwh/Plants/Taraxacum_kok-saghyz_TKS_GWHAAAA00000000/GWHAAAA00000000.gff.gz",
+    "ftpPathRna": "https://download.cncb.ac.cn/gwh/Plants/Taraxacum_kok-saghyz_TKS_GWHAAAA00000000/GWHAAAA00000000.RNA.fasta.gz",
+    "ftpPathCds": "https://download.cncb.ac.cn/gwh/Plants/Taraxacum_kok-saghyz_TKS_GWHAAAA00000000/GWHAAAA00000000.CDS.fasta.gz",
+    "ftpPathProtein": "https://download.cncb.ac.cn/gwh/Plants/Taraxacum_kok-saghyz_TKS_GWHAAAA00000000/GWHAAAA00000000.Protein.faa.gz",
+    "ftpPathFeature": "https://download.cncb.ac.cn/gwh/Plants/Taraxacum_kok-saghyz_TKS_GWHAAAA00000000/GWHAAAA00000000.feature.gz",
+    "releaseTime": "2017-09-20 00:00:00.0",
+    "publication": "Tao Lin, et al. Genome analysis of Taraxacum kok-saghyz Rodin provides new insights into rubber biosynthesis. National Science Review. 2018, 5(1): 78- 87. ",
+    "publicationLink": "https://doi.org/10.1093/nsr/nwx101",
+    "contacts": "Fake Person   fake.person@example.org<br>Another Person   fake2@example.org",
+    "submitterOrganization": "Fake Person, Example Institute"
+  }
+}

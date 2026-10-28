@@ -1,0 +1,35 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/assembly/NOT_AN_ACCESSION",
+    "at": "2026-10-28T08:44:45.130Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 588,
+    "note": "非 GWH 形态（NOT_AN_ACCESSION）上游同样回全 null，与“查无”不可区分；本仓因此在本地拒绝非 GWH 形态。此文件即该判定的证据"
+  },
+  "payload": {
+    "id": null,
+    "organism": null,
+    "organismType": null,
+    "taxId": null,
+    "assemblyAccession": null,
+    "assemblyName": null,
+    "assemblyLevel": null,
+    "genomeRepresentation": null,
+    "bioprojectAccession": null,
+    "bioprojectLink": null,
+    "biosampleAccession": null,
+    "biosampleLink": null,
+    "submitterOrganization": null,
+    "contacts": null,
+    "ftpPathDna": null,
+    "ftpPathGff": null,
+    "ftpPathRna": null,
+    "ftpPathCds": null,
+    "ftpPathProtein": null,
+    "ftpPathFeature": null,
+    "releaseTime": null,
+    "publication": null,
+    "publicationLink": null
+  }
+}

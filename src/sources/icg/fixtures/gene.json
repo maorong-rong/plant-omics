@@ -1,0 +1,50 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/icg/api/json/gene/ICG00115-1-EF1a",
+    "at": "2026-10-28T08:44:49.046Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 1414,
+    "note": "嵌套 project 对象保留以证明结构确实存在；联系人字段已按白名单删除。primersForward/Reverse 为完整短序列",
+    "trimmed": "删除嵌套 result.project 中的 contactName/contactEmail/hostInstitution；其余字段（含 project 对象本身）与实际响应一致。工具选择平铺 projectAccession，不读取嵌套 project"
+  },
+  "payload": {
+    "code": "200",
+    "message": "Success!",
+    "result": {
+      "id": 491,
+      "accession": "ICG00115-1-EF1a",
+      "geneAccession": "NM_001112117",
+      "geneName": "EF1a",
+      "geneModel": "Elongation Factor",
+      "applicationScope": "High Temperature Condition@@Low Temperature Condition@@Salinity Stress@@Polyethylene Glycol (Peg) Stress@@Abscisic Acid (Aba) Treatment@@Salicylic Acid (Sa) Treatment@@Jasmonic Acid (Ja) Treatment@@Ethylene Treatment@@Gibberellins (Gas) Treatment@@Root@@Stem@@Leaf",
+      "primersForward": "TGGGCCTACTGGTCTTACTACTGA",
+      "primersReverse": "ACATACCCACGCTTCAGATCCT",
+      "size": "135",
+      "tm": "61.37~62.13",
+      "species": "Zea mays",
+      "detection": "SYBR",
+      "projectAccession": "ICG00115-1",
+      "status": 1,
+      "molecularType": "mRNA",
+      "project": {
+        "id": 722,
+        "accession": "ICG00115-1",
+        "category": null,
+        "projectType": null,
+        "name": "Abiotic Stresses@@Hormone Treatments@@Tissues@@Temperature Conditions",
+        "molecularType": "mRNA",
+        "evaluationMethods": "geNorm @@ NormFinder @@ BestKeeper",
+        "lastModified": "2022-06-22 23:06:11",
+        "createDate": "2022-03-30 11:46:13",
+        "species": "Zea mays",
+        "status": 1,
+        "pmid": "24810581",
+        "icgAccession": "ICG00115",
+        "country": "China"
+      },
+      "lastModified": "2022-06-22 23:07:03",
+      "createDate": "2022-03-30 12:20:21"
+    }
+  }
+}

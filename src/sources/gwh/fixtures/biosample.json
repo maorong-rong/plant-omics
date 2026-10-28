@@ -1,0 +1,37 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/gwh/api/public/bioSample/SAMC012932",
+    "at": "2026-10-28T08:44:46.853Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 5488,
+    "trimmed": "删除 submitter（姓名/邮箱/电话）与 taxon.ancestors（23 层）；sampleAttribute 只保留白名单 7 键；sampleAttribute.sample 嵌套对象删除；sampleId/userId 保留以便断言不输出"
+  },
+  "payload": {
+    "accession": "SAMC012932",
+    "message": "SUCCESS",
+    "name": "Taraxacum kok-saghyz Rodin",
+    "sampleAttribute": {
+      "tissue": "leaf",
+      "cultivar": "Taraxacum kok-saghyz Rodin",
+      "devStage": "",
+      "collectionDate": null,
+      "geographicLocation": null,
+      "temperature": "",
+      "treatment": ""
+    },
+    "sampleId": 13668,
+    "sampletype": {
+      "attributeTable": "sample_attr_plant",
+      "sampleTypeId": 6,
+      "sampleTypeName": "Plant sample"
+    },
+    "taxon": {
+      "name": "Taraxacum kok-saghyz",
+      "ranks": "species",
+      "taxonId": 333970
+    },
+    "title": "Genomic sequence of Taraxacum kok-saghyz Rodin",
+    "userId": 344
+  }
+}

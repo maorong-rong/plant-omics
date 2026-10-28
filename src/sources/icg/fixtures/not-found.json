@@ -1,0 +1,15 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/icg/api/json/project/ICG00115-Pro-1",
+    "at": "2026-10-28T08:44:50.120Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 55,
+    "note": "payload 为逐字节原样（55 B，末字节 }，无尾随 LF）。另有独立观测记录为 55 B 且含行尾 LF——两次响应不合并，判据只看解析后的 code/result"
+  },
+  "payload": {
+    "code": "300",
+    "message": "No valid data!",
+    "result": null
+  }
+}
