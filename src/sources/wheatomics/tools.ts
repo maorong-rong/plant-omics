@@ -1,5 +1,6 @@
 import { InvalidArgumentError, UpstreamError } from '../../core/errors.js';
-import { DEFAULT_MAX_BYTES, provenance, renderFields, renderTable, truncateToBytes, utf8Bytes } from '../../core/format.js';
+import { renderFields, renderTable } from '../../core/format.js';
+import { fetchPrepared, finishResult, prepareRequest } from '../../core/request.js';
 import {
   objectsOf,
   optionalArrayField,
@@ -59,35 +60,14 @@ function unwrap<T>(payload: unknown, url: string): T {
   return envelope.data;
 }
 
-/**
- * 统一收尾：正文按 **UTF-8 字节**预算截断，出处尾注永远保留。
- *
- * 出处必须带完整查询（含参数）与查询时刻——只有 pathname 的话，
- * `searchid=A` 与 `searchid=B` 的出处一模一样，等于没有出处（审查 R06 / A7）。
- */
-function result(body: string, res: HttpResult, raw: unknown, extra?: string): ToolResult {
-  const at = new Date().toISOString();
-  const parsed = new URL(res.url);
-  const request = `GET ${parsed.pathname}${parsed.search}`;
-  const tail = provenance({
-    sourceName: manifest.displayName,
-    request,
-    status: res.status,
-    durationMs: res.durationMs,
-    at,
-    extra: [manifest.versionNote, extra].filter(Boolean).join('；') || undefined,
-  });
-
-  // 先扣掉尾注与截断提示，剩下的才是正文预算：出处不许被挤掉。
-  const budget = Math.max(256, DEFAULT_MAX_BYTES - utf8Bytes(tail) - 120);
-  const { text, truncated } = truncateToBytes(body, budget);
-  const marker = truncated ? '\n…（正文已按 4 KB 上限截断；请缩小查询范围或分批查询）' : '';
-
-  return {
-    text: `${text}${marker}${tail}`,
-    raw,
-    meta: { sourceId: manifest.id, request, url: res.url, status: res.status, durationMs: res.durationMs, at },
-  };
+/** 预检在网络之前；局部result闭包保证收尾使用同一份完整请求证据。 */
+async function query(ctx: ToolContext, url: string, presentation: Record<string, unknown> = {}) {
+  const prepared = prepareRequest({ url, sourceName: manifest.displayName, presentation });
+  const res = await fetchPrepared(ctx, prepared);
+  const result = (body: string, response: HttpResult, raw: unknown, extra?: string): ToolResult =>
+    finishResult({ body, res: response, raw, prepared, sourceId: manifest.id,
+      extra: [manifest.versionNote, extra].filter(Boolean).join('；') });
+  return { res, result };
 }
 
 function num(value: unknown, digits = 3): string {
@@ -146,7 +126,7 @@ const searchKnownGenes: ToolDefinition = {
     const searchid = requireStringArg(args, 'searchid', 200);
     const limit = optionalIntArg(args, 'limit', 15, 1, 50);
     const url = endpoint('/genes/known/search', { searchid });
-    const res = await ctx.http(url, { signal: ctx.signal });
+    const { res, result } = await query(ctx, url, { limit });
     const data = unwrap<unknown>(res.data, url);
 
     // 字段缺失 = 契约变了，不许退化成「没有匹配」
@@ -203,7 +183,7 @@ const geneDetail: ToolDefinition = {
   async run(args, ctx) {
     const geneId = requireStringArg(args, 'gene_id', 200);
     const url = endpoint(`/genes/detail/${encodeURIComponent(geneId)}`);
-    const res = await ctx.http(url, { signal: ctx.signal });
+    const { res, result } = await query(ctx, url);
     const data = unwrap<Record<string, unknown>>(res.data, url);
 
     const start = data.start;
@@ -253,7 +233,7 @@ const expressionProjects: ToolDefinition = {
   async run(args, ctx) {
     const keyword = optionalStringArg(args, 'keyword', 200);
     const url = endpoint('/expression/projects');
-    const res = await ctx.http(url, { signal: ctx.signal });
+    const { res, result } = await query(ctx, url, { keyword: keyword ?? null });
     const data = unwrap<unknown>(res.data, url);
     const projects = objectsOf(requireArrayField(data, 'projects', url, '表达项目列表'));
 
@@ -344,7 +324,7 @@ const expressionQuery: ToolDefinition = {
     const top = optionalIntArg(args, 'top', DEFAULT_TOP_CONDITIONS, 1, 30);
 
     const url = endpoint('/expression/query', { gene_ids: ids.join(','), project });
-    const res = await ctx.http(url, { signal: ctx.signal });
+    const { res, result } = await query(ctx, url, { condition: condition ?? null, top });
     const data = unwrap<Record<string, unknown>>(res.data, url);
 
     const results = objectsOf(requireArrayField(data, 'results', url, '表达查询'));
@@ -451,7 +431,7 @@ const searchPapers: ToolDefinition = {
     const limit = optionalIntArg(args, 'limit', 10, 1, 50);
     const sinceDays = optionalIntArg(args, 'sinceDays', 0, 0, 3_650) || undefined;
     const url = endpoint('/papers', { q, limit, since_days: sinceDays });
-    const res = await ctx.http(url, { signal: ctx.signal });
+    const { res, result } = await query(ctx, url);
     const data = unwrap<Record<string, unknown>>(res.data, url);
     const papers = objectsOf(requireArrayField(data, 'papers', url, '文献检索'));
     const total = Number(data.total);
@@ -512,7 +492,7 @@ const convertGeneIds: ToolDefinition = {
       ID: list.join('\r\n'),
       gene_version: geneVersion,
     });
-    const res = await ctx.http(url, { signal: ctx.signal });
+    const { res, result } = await query(ctx, url);
     const data = unwrap<Record<string, unknown>>(res.data, url);
     const mappings = objectsOf(requireArrayField(data, 'mappings', url, 'ID 换算'));
 

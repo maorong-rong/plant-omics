@@ -67,7 +67,7 @@ describe('DSH 插件出口', () => {
 
     expect(registered).toHaveLength(registry.listTools().length);
     for (const tool of registered) {
-      expect(tool.name.startsWith('wheatomics_')).toBe(true);
+      expect(/^(wheatomics|strawberry|gwh|icg)_/.test(tool.name)).toBe(true);
       expect(tool.parameters.type).toBe('object');
       expect(typeof tool.execute).toBe('function');
     }
@@ -96,6 +96,12 @@ describe('DSH 插件出口', () => {
     expect(registered).toHaveLength(6);
   });
 
+  it('sources可仅启用新增的两源', () => {
+    const { ctx, registered } = fakeContext();
+    apply(ctx, { sources: ['gwh', 'icg'] });
+    expect(registered.map(t => t.name)).toEqual(['gwh_assembly_lookup', 'gwh_project_sample_lookup', 'icg_lookup', 'icg_species_list']);
+  });
+
   it('sources 写错 id 时**抛错**，且一个都不注册（审查 R04）', () => {
     const { ctx, registered } = fakeContext();
     expect(() => apply(ctx, { sources: ['wheatomic'] })).toThrow(/未知的源 id/);
@@ -108,13 +114,13 @@ describe('DSH 插件出口', () => {
     });
     apply(ctx);
 
-    expect(registered).toHaveLength(5);
-    expect(warnings.join('\n')).toContain('1/6 个工具注册失败');
+    expect(registered).toHaveLength(14);
+    expect(warnings.join('\n')).toContain('1/15 个工具注册失败');
   });
 
   it('全部工具注册失败时抛错（插件等于没装，不许静默）', () => {
     const { ctx } = fakeContext({ throwOn: () => true });
-    expect(() => apply(ctx)).toThrow(/6\/6 个工具注册失败/);
+    expect(() => apply(ctx)).toThrow(/15\/15 个工具注册失败/);
   });
 
   it('拿不到 tools 服务：有 logger 就告警，不炸宿主', () => {

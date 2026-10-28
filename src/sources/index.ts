@@ -13,9 +13,22 @@ import { ToolRegistry } from '../core/registry.js';
 import type { SourceBundle } from '../core/types.js';
 import { manifest as wheatomicsManifest } from './wheatomics/manifest.js';
 import { tools as wheatomicsTools } from './wheatomics/tools.js';
+import { manifest as strawberryManifest } from './strawberry/manifest.js';
+import { tools as strawberryTools } from './strawberry/tools.js';
+import { validateProbe as validateStrawberryProbe } from './strawberry/probe.js';
+
+import { manifest as gwhManifest } from './gwh/manifest.js';
+import { tools as gwhTools } from './gwh/tools.js';
+import { validateProbe as validateGwhProbe } from './gwh/probe.js';
+import { manifest as icgManifest } from './icg/manifest.js';
+import { tools as icgTools } from './icg/tools.js';
+import { validateProbe as validateIcgProbe } from './icg/probe.js';
 
 const bundles: SourceBundle[] = [
   { manifest: wheatomicsManifest, tools: wheatomicsTools },
+  { manifest: strawberryManifest, tools: strawberryTools, validateProbe: validateStrawberryProbe },
+  { manifest: gwhManifest, tools: gwhTools, validateProbe: validateGwhProbe },
+  { manifest: icgManifest, tools: icgTools, validateProbe: validateIcgProbe },
 ];
 
 export interface RegistryOptions {

@@ -24,7 +24,7 @@ import type { ToolRegistry } from '../core/registry.js';
 export const SERVER_INFO = {
   name: 'plant-omics',
   // 与 package.json 的 version 必须一致；test/core.test.ts 有断言盯着，改一处漏一处会红
-  version: '0.2.0',
+  version: '0.5.0',
 } as const;
 
 const INSTRUCTIONS = [
