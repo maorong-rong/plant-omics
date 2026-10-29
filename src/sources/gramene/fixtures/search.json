@@ -1,0 +1,96 @@
+{
+  "capture": {
+    "url": "https://data.gramene.org/v69/search?q=Oryza&rows=2",
+    "at": "2026-10-28T13:08:49.613Z",
+    "status": 200,
+    "originalBytes": 1759,
+    "contentType": "text/plain",
+    "note": "关键：content-type 是 text/plain，正文才是 JSON；本仓按正文解析，不按 content-type 判断"
+  },
+  "payload": {
+    "responseHeader": {
+      "status": 0,
+      "QTime": 0,
+      "params": {
+        "q": "Oryza",
+        "stats": "true",
+        "rows": "2",
+        "facet": "true"
+      }
+    },
+    "response": {
+      "numFound": 87462,
+      "start": 0,
+      "maxScore": 7.2017426,
+      "numFoundExact": true,
+      "docs": [
+        {
+          "id": "BGIOSGA001967",
+          "name": "BGIOSGA001967",
+          "description": "Zinc inducible protein",
+          "taxon_id": 39946001,
+          "biotype": "protein_coding",
+          "system_name": "oryza_indica",
+          "capabilities": [
+            "location",
+            "expression",
+            "homology",
+            "xrefs",
+            "domains",
+            "GO",
+            "taxonomy",
+            "familyRoot"
+          ],
+          "expressed_in_gxa_attr_ss": [
+            "E-GEOD-116422",
+            "E-MTAB-1913"
+          ],
+          "model_rep_id": "BGIOSGA001967",
+          "model_rep_taxon_id": 39946001,
+          "model_rep_identity": 1,
+          "model_rep_description": "Zinc inducible protein",
+          "score": 7.2017426
+        },
+        {
+          "id": "BGIOSGA019039",
+          "name": "MT2C",
+          "description": "unknown",
+          "taxon_id": 39946001,
+          "biotype": "protein_coding",
+          "synonyms": [
+            "MT2BL"
+          ],
+          "system_name": "oryza_indica",
+          "capabilities": [
+            "location",
+            "expression",
+            "homology",
+            "xrefs",
+            "domains",
+            "GO",
+            "taxonomy",
+            "familyRoot"
+          ],
+          "expressed_in_gxa_attr_ss": [
+            "E-GEOD-114188"
+          ],
+          "closest_rep_id": "Os05g0111300",
+          "closest_rep_taxon_id": 39947001,
+          "closest_rep_identity": 1,
+          "closest_rep_name": "OsMT2b",
+          "score": 7.2013197
+        }
+      ]
+    },
+    "facet_counts": {
+      "facet_queries": {},
+      "facet_fields": {},
+      "facet_ranges": {},
+      "facet_intervals": {},
+      "facet_heatmaps": {}
+    },
+    "stats": {
+      "stats_fields": {}
+    }
+  }
+}

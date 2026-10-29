@@ -1,0 +1,102 @@
+{
+  "capture": {
+    "url": "https://data.gramene.org/v69/taxonomy?idList=39946001&idList=4530",
+    "at": "2026-10-28T13:08:38.089Z",
+    "status": 200,
+    "originalBytes": 790,
+    "contentType": "application/json; charset=utf-8",
+    "note": "两个 id 用重复参数；ancestors 是 taxid 链，不含名称"
+  },
+  "payload": [
+    {
+      "_id": 4530,
+      "is_a": [
+        4527
+      ],
+      "rank": "species",
+      "namespace": "ncbi_taxonomy",
+      "id": "NCBITaxon:4530",
+      "num_genes": 639732,
+      "synonym": [
+        "Asian cultivated rice",
+        "red rice",
+        "rice"
+      ],
+      "subset": [
+        "gramene",
+        "compara"
+      ],
+      "name": "Oryza sativa",
+      "ancestors": [
+        4530,
+        4527,
+        1648021,
+        147380,
+        147367,
+        359160,
+        4479,
+        38820,
+        4734,
+        1437197,
+        4447,
+        1437183,
+        3398,
+        58024,
+        78536,
+        58023,
+        3193,
+        131221,
+        35493,
+        33090,
+        2759,
+        131567,
+        1
+      ]
+    },
+    {
+      "_id": 39946001,
+      "is_a": [
+        39946
+      ],
+      "rank": "genome",
+      "namespace": "ncbi_taxonomy",
+      "id": "NCBITaxon:39946001",
+      "num_genes": 42031,
+      "synonym": [],
+      "subset": [
+        "gramene",
+        "compara"
+      ],
+      "name": "Oryza sativa Indica Group",
+      "left_index": 1775560.001,
+      "ancestors": [
+        39946001,
+        39946,
+        4530,
+        4527,
+        1648021,
+        147380,
+        147367,
+        359160,
+        4479,
+        38820,
+        4734,
+        1437197,
+        4447,
+        1437183,
+        3398,
+        58024,
+        78536,
+        58023,
+        3193,
+        131221,
+        35493,
+        33090,
+        2759,
+        131567,
+        1
+      ],
+      "reactomePrefix": "OSI"
+    }
+  ]
+}

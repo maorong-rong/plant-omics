@@ -1,0 +1,39 @@
+{
+  "capture": {
+    "url": "https://data.gramene.org/v69/search?q=NOT_A_REAL_THING_XYZ&rows=2",
+    "at": "2026-10-28T13:08:54.196Z",
+    "status": 200,
+    "originalBytes": 432,
+    "contentType": "text/plain",
+    "note": "查无形态：numFound=0、docs=[]，仍为 text/plain"
+  },
+  "payload": {
+    "responseHeader": {
+      "status": 0,
+      "QTime": 0,
+      "params": {
+        "q": "NOT_A_REAL_THING_XYZ",
+        "stats": "true",
+        "rows": "2",
+        "facet": "true"
+      }
+    },
+    "response": {
+      "numFound": 0,
+      "start": 0,
+      "maxScore": 0,
+      "numFoundExact": true,
+      "docs": []
+    },
+    "facet_counts": {
+      "facet_queries": {},
+      "facet_fields": {},
+      "facet_ranges": {},
+      "facet_intervals": {},
+      "facet_heatmaps": {}
+    },
+    "stats": {
+      "stats_fields": {}
+    }
+  }
+}

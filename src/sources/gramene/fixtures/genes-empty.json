@@ -1,0 +1,11 @@
+{
+  "capture": {
+    "url": "https://data.gramene.org/v69/genes?idList=NOT_A_REAL_ID",
+    "at": "2026-10-28T13:08:32.126Z",
+    "status": 200,
+    "originalBytes": 5,
+    "contentType": "application/json; charset=utf-8",
+    "note": "真实查无形态：200 + 5 字节空数组 [\\n\\n]"
+  },
+  "payload": []
+}

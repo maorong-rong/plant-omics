@@ -1,0 +1,284 @@
+{
+  "capture": {
+    "url": "https://data.gramene.org/v69/genes?idList=BGIOSGA001967",
+    "at": "2026-10-28T13:08:29.578Z",
+    "status": 200,
+    "originalBytes": 8520,
+    "contentType": "application/json; charset=utf-8",
+    "trimmed": "删除每条基因的 xrefs（外部交叉引用，约占 8.5 KB 主体）与 gene_idx；_id/name/description/biotype/taxon_id/system_name/db_type/location 原样保留",
+    "note": "原始 8,520 B；裁剪后只保留工具实际输出的字段量级"
+  },
+  "payload": [
+    {
+      "_id": "BGIOSGA001967",
+      "name": "BGIOSGA001967",
+      "description": "Zinc inducible protein [Source:UniProtKB/TrEMBL;Acc:A2TEQ3]",
+      "biotype": "protein_coding",
+      "taxon_id": 39946001,
+      "system_name": "oryza_indica",
+      "db_type": "core",
+      "location": {
+        "region": "1",
+        "start": 9403806,
+        "end": 9404126,
+        "strand": -1,
+        "map": "GCA_000004655.2"
+      },
+      "gene_structure": {
+        "exons": [
+          {
+            "id": "BGIOSGA001967-TA.1",
+            "start": 1,
+            "end": 321
+          }
+        ],
+        "transcripts": [
+          {
+            "exons": [
+              "BGIOSGA001967-TA.1"
+            ],
+            "length": 321,
+            "cds": {
+              "start": 1,
+              "end": 321
+            },
+            "translation": {
+              "id": "BGIOSGA001967-PA",
+              "length": 106,
+              "features": {
+                "family": {
+                  "entries": [
+                    {
+                      "name": "PF03242",
+                      "description": "LEA_3a",
+                      "db": "Pfam",
+                      "interpro": "IPR004926",
+                      "start": 1,
+                      "end": 102
+                    },
+                    {
+                      "name": "PTHR33509",
+                      "description": "LATE EMBRYOGENIS ABUNDANT PROTEIN 2-RELATED",
+                      "db": "PANTHER",
+                      "interpro": "IPR004926",
+                      "start": 8,
+                      "end": 100
+                    }
+                  ]
+                }
+              }
+            },
+            "id": "BGIOSGA001967-TA"
+          }
+        ],
+        "canonical_transcript": "BGIOSGA001967-TA"
+      },
+      "annotations": {
+        "domains": {
+          "entries": [
+            {
+              "id": "IPR004926",
+              "name": "LEA_3a",
+              "description": "Late embryogenesis abundant protein, LEA_3a subgroup"
+            }
+          ]
+        },
+        "GO": {
+          "entries": [
+            {
+              "id": "GO:0005739",
+              "name": "mitochondrion",
+              "namespace": "cellular_component",
+              "def": "A semiautonomous, self replicating organelle that occurs in varying numbers, shapes, and sizes in the cytoplasm of virtually all eukaryotic cells. It is notably the site of tissue respiration.",
+              "subset": [
+                "goslim_agr",
+                "goslim_candida",
+                "goslim_chembl",
+                "goslim_drosophila",
+                "goslim_euk_cellular_processes_ribbon",
+                "goslim_flybase_ribbon",
+                "goslim_generic",
+                "goslim_mouse",
+                "goslim_pir",
+                "goslim_plant",
+                "goslim_plant_ribbon",
+                "goslim_yeast"
+              ],
+              "evidence_code": "IEA"
+            },
+            {
+              "id": "GO:0006950",
+              "name": "response to stress",
+              "namespace": "biological_process",
+              "def": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a disturbance in organismal or cellular homeostasis, usually, but not necessarily, exogenous (e.g. temperature, humidity, ionizing radiation).",
+              "subset": [
+                "goslim_candida",
+                "goslim_chembl",
+                "goslim_drosophila",
+                "goslim_metagenomics",
+                "goslim_plant",
+                "goslim_plant_ribbon"
+              ],
+              "evidence_code": "IEA"
+            }
+          ],
+          "ancestors": [
+            5575,
+            5622,
+            5737,
+            8150,
+            43226,
+            43227,
+            43229,
+            43231,
+            50896,
+            110165
+          ]
+        },
+        "taxonomy": {
+          "entries": [
+            {
+              "_id": 39946001,
+              "name": "Oryza sativa Indica Group"
+            }
+          ],
+          "ancestors": [
+            1,
+            2759,
+            3193,
+            3398,
+            4447,
+            4479,
+            4527,
+            4530,
+            4734,
+            33090,
+            35493,
+            38820,
+            39946,
+            58023,
+            58024,
+            78536,
+            131221,
+            131567,
+            147367,
+            147380,
+            359160,
+            1437183,
+            1437197,
+            1648021
+          ]
+        },
+        "familyRoot": {
+          "entries": [
+            {
+              "_id": 4734,
+              "name": "commelinids"
+            }
+          ],
+          "ancestors": [
+            1,
+            2759,
+            3193,
+            3398,
+            4447,
+            33090,
+            35493,
+            58023,
+            58024,
+            78536,
+            131221,
+            131567,
+            1437183,
+            1437197
+          ]
+        }
+      },
+      "homology": {
+        "gene_tree": {
+          "id": "EPlGT00140000010789",
+          "root_taxon_id": 4734,
+          "root_taxon_name": "commelinids",
+          "duplications": [
+            1010633
+          ],
+          "representative": {
+            "model": {
+              "id": "BGIOSGA001967",
+              "taxon_id": 39946001,
+              "percent_identity": 1,
+              "description": "Zinc inducible protein"
+            }
+          }
+        },
+        "homologous_genes": {
+          "within_species_paralog": [
+            "BGIOSGA014353"
+          ],
+          "ortholog_one2many": [
+            "AeUmb.TA1851.r1.3UG0006940",
+            "AVESA.00001b.r3.3Cg0001774",
+            "OPUNC01G09680",
+            "SETIT_003758mg",
+            "SORBI_3003G117000",
+            "SEVIR_5G056800v2",
+            "TraesCS3B02G205100",
+            "TraesCS3A02G175400",
+            "Zm00001eb127770",
+            "TuG1812G0300001960.01",
+            "BRADI_2g09145v3",
+            "OGLUM01G11270",
+            "OMERI01G09880",
+            "GQ55_5G429900",
+            "HORVU.MOREX.r3.3HG0253630",
+            "AET3Gv20399500",
+            "LPERR01G09380",
+            "TraesTSP3B01G230900",
+            "TraesTSP3A01G196100",
+            "TRIDC3AG024350",
+            "TRIDC3BG028090"
+          ],
+          "ortholog_many2many": [
+            "KYUSg_chr3.17707",
+            "KYUSg_chr3.17696",
+            "AVESA.00010b.r2.3CG0489220",
+            "AVESA.00010b.r2.3DG0525650",
+            "AVESA.00010b.r2.3AG0424920",
+            "SECCE3Rv1G0171230",
+            "SECCE3Rv1G0171220",
+            "TraesCS3D02G180800",
+            "TraesCS3D02G180900",
+            "Tritim_EIv0.3_0595630",
+            "Tritim_EIv0.3_0492280",
+            "Tritim_EIv0.3_0492310",
+            "Tritim_EIv0.3_0595570",
+            "scaffold109.121",
+            "scaffold54.324",
+            "scaffold298.15",
+            "Dexi5A01G0011440",
+            "Dexi5B01G0011740",
+            "Dexi9A01G0012430",
+            "TraesTSP3D01G200400",
+            "TraesTSP3D01G200600",
+            "Et_3B_031509",
+            "Et_3A_027103"
+          ],
+          "syntenic_ortholog_one2one": [
+            "ORUFI01G10780"
+          ]
+        }
+      },
+      "bins": {
+        "fixed_100": 15215,
+        "fixed_200": 30417,
+        "fixed_500": 76025,
+        "fixed_1000": 152039,
+        "uniform_1Mb": 637342,
+        "uniform_2Mb": 319144,
+        "uniform_5Mb": 128261,
+        "uniform_10Mb": 64598
+      },
+      "species_idx": 39946001
+    }
+  ]
+}

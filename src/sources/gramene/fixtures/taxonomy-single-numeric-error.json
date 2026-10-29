@@ -1,0 +1,40 @@
+{
+  "capture": {
+    "url": "https://data.gramene.org/v69/taxonomy?idList=4530",
+    "at": "2026-10-28T13:08:39.341Z",
+    "status": 400,
+    "contentType": "application/json",
+    "originalBytes": 420,
+    "note": "数值型单 id 直接传会被上游校验器拒绝：Expected type array but found type integer（420 B）。本仓因此对单值数字重复一次再发"
+  },
+  "payload": {
+    "message": "Validation errors",
+    "errors": [
+      {
+        "code": "INVALID_REQUEST_PARAMETER",
+        "errors": [
+          {
+            "code": "INVALID_TYPE",
+            "params": [
+              "array",
+              "integer"
+            ],
+            "message": "Expected type array but found type integer",
+            "path": [],
+            "description": "a comma separated list of document ids"
+          }
+        ],
+        "in": "query",
+        "message": "Invalid parameter (idList): Value failed JSON Schema validation",
+        "name": "idList",
+        "path": [
+          "paths",
+          "/taxonomy",
+          "get",
+          "parameters",
+          "5"
+        ]
+      }
+    ]
+  }
+}
