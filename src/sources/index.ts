@@ -23,12 +23,25 @@ import { validateProbe as validateGwhProbe } from './gwh/probe.js';
 import { manifest as icgManifest } from './icg/manifest.js';
 import { tools as icgTools } from './icg/tools.js';
 import { validateProbe as validateIcgProbe } from './icg/probe.js';
+import { manifest as ic4rManifest } from './ic4r/manifest.js';
+import { tools as ic4rTools } from './ic4r/tools.js';
+import { validateProbe as validateIc4rProbe } from './ic4r/probe.js';
+import { manifest as grameneManifest } from './gramene/manifest.js';
+import { tools as grameneTools } from './gramene/tools.js';
+import { validateProbe as validateGrameneProbe } from './gramene/probe.js';
+import { manifest as scodManifest } from './scod/manifest.js';
+import { tools as scodTools } from './scod/tools.js';
+import { validateProbe as validateScodProbe } from './scod/probe.js';
+import { createHubTools } from '../retrieval/index.js';
 
 const bundles: SourceBundle[] = [
   { manifest: wheatomicsManifest, tools: wheatomicsTools },
   { manifest: strawberryManifest, tools: strawberryTools, validateProbe: validateStrawberryProbe },
   { manifest: gwhManifest, tools: gwhTools, validateProbe: validateGwhProbe },
   { manifest: icgManifest, tools: icgTools, validateProbe: validateIcgProbe },
+  { manifest: ic4rManifest, tools: ic4rTools, validateProbe: validateIc4rProbe },
+  { manifest: grameneManifest, tools: grameneTools, validateProbe: validateGrameneProbe },
+  { manifest: scodManifest, tools: scodTools, validateProbe: validateScodProbe },
 ];
 
 export interface RegistryOptions {
@@ -59,6 +72,10 @@ export function createRegistry(options: RegistryOptions = {}): ToolRegistry {
     if (enabled && !enabled.has(bundle.manifest.id)) continue;
     registry.register(bundle);
   }
+  // 检索层入口（`hub_*`）：不属于任何源，走 registerMetaTool——
+  // 计入工具预算、不计入源数。装配点放这里，是因为 `src/sources/index.ts`
+  // 是"有哪些源"的唯一清单，元工具由它统一挂上，避免两处都能注册。
+  for (const tool of createHubTools(registry)) registry.registerMetaTool(tool);
   return registry;
 }
 

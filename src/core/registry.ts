@@ -9,10 +9,59 @@ import { PlantOmicsError } from './errors.js';
 import type { SourceBundle, SourceManifest, ToolDefinition } from './types.js';
 
 const ID_PATTERN = /^[a-z][a-z0-9]*$/;
+/** 元工具（不属于任何源，如检索层入口）的命名空间。 */
+const META_PREFIX = 'hub_';
+/** `hub_[a-z0-9_]*`：前缀固定，其余只允许小写字母/数字/下划线。 */
+const META_NAME_PATTERN = /^hub_[a-z0-9_]+$/;
+/**
+ * 元工具名长度上限 = 宿主公开名预算（`mcp__plantomics-hub__` 21 字符 + 名字 43 = 64）。
+ * 超了会被宿主静默截断加哈希，工具名不可预测，等同破坏契约，因此本地就拒绝。
+ */
+const META_NAME_MAX = 43;
 
 export class ToolRegistry {
   readonly #sources = new Map<string, SourceBundle>();
   readonly #tools = new Map<string, ToolDefinition>();
+  readonly #metaTools = new Map<string, ToolDefinition>();
+
+  /**
+   * 注册**元工具**：不属于任何数据源（如 `hub_find_sources`）。
+   *
+   * 为什么不塞进伪源：伪源得编造 `apiBase`/`tier`/`probe`，还会把源数从 6 变 7，
+   * 污染"源"的语义。也不放宽 `#assertTool` 的前缀校验——那是给所有源的放松，
+   * 以后任何源后缀写错都可能混过去。这里单开一个口，规则只对元工具生效。
+   *
+   * 计入**工具**预算（共用 `#tools`，`listTools()` 自然包含），不计入源数。
+   */
+  registerMetaTool(tool: ToolDefinition): void {
+    if (!tool.name.startsWith(META_PREFIX)) {
+      throw new PlantOmicsError(
+        `元工具 ${tool.name} 必须以 "${META_PREFIX}" 开头（元工具不属于任何源，靠前缀与源工具区分）`,
+      );
+    }
+    if (!META_NAME_PATTERN.test(tool.name)) {
+      throw new PlantOmicsError(
+        `元工具名不合法：${tool.name}（须匹配 hub_[a-z0-9_]*，只允许小写字母/数字/下划线）`,
+      );
+    }
+    if (tool.name.length > META_NAME_MAX) {
+      throw new PlantOmicsError(
+        `元工具名 ${tool.name}（${tool.name.length} 字符）超过 ${META_NAME_MAX} 字符预算；`
+        + `公开名 mcp__<serverName>__${tool.name} 会被宿主截断加哈希，工具名不可预测`,
+      );
+    }
+    if (tool.parameters.type !== 'object') {
+      throw new PlantOmicsError(`元工具 ${tool.name} 的 parameters.type 必须是 object`);
+    }
+    if (!tool.description || tool.description.length < 10) {
+      throw new PlantOmicsError(`元工具 ${tool.name} 的 description 太短，模型无法判断何时使用`);
+    }
+    if (this.#tools.has(tool.name)) {
+      throw new PlantOmicsError(`工具名重复：${tool.name}`);
+    }
+    this.#tools.set(tool.name, tool);
+    this.#metaTools.set(tool.name, tool);
+  }
 
   register(bundle: SourceBundle): void {
     const { manifest, tools } = bundle;
@@ -81,6 +130,11 @@ export class ToolRegistry {
 
   listTools(): ToolDefinition[] {
     return [...this.#tools.values()];
+  }
+
+  /** 元工具（不属于任何源）；`listTools()` 里也包含它们。 */
+  listMetaTools(): ToolDefinition[] {
+    return [...this.#metaTools.values()];
   }
 
   getSource(id: string): SourceBundle | undefined {

@@ -1,0 +1,260 @@
+import { describe, expect, it } from 'vitest';
+
+import { utf8Bytes, DEFAULT_MAX_BYTES } from '../src/core/format.js';
+import { INTENT_BY_ID, TOOL_CAPABILITIES } from '../src/retrieval/capability-catalog.js';
+import {
+  createFindSourcesTool,
+  findSources,
+  normalize,
+  speciesKnownInCatalog,
+  type CatalogSnapshot,
+} from '../src/retrieval/find-sources.js';
+import { registry } from '../src/sources/index.js';
+
+/**
+ * `hub_find_sources` golden 题集。
+ *
+ * 每条期望都能在目录/契约里找到依据；这里断言的是**行为效果**（候选是谁、状态对不对、
+ * 文案是否如实），不是"函数存在"。
+ */
+
+const snapshot: CatalogSnapshot = { version: 'test+svc.0', sourceCount: 6, toolCount: 30 };
+const noNetwork = { http: async () => { throw new Error('hub_find_sources 不应发起任何上游请求'); } };
+
+async function run(question: string, extra: Record<string, unknown> = {}) {
+  const tool = createFindSourcesTool(snapshot);
+  return tool.run({ question, ...extra }, noNetwork as never);
+}
+
+function candidateIds(text: string): string[] {
+  return [...text.matchAll(/^[①②③④⑤] ([a-z0-9]+)｜/gm)].map((m) => m[1]!);
+}
+
+describe('识别与归一化', () => {
+  it('归一化：全角转半角、标点归空格、小写', () => {
+    expect(normalize('Ｔｒｉｔｉｃｕｍ  Ａｅｓｔｉｖｕｍ，,同源！')).toContain('triticum aestivum');
+    expect(normalize('小麦，变异')).toBe('小麦 变异');
+  });
+
+  it('中文物种与别名都能识别', async () => {
+    expect((await run('小麦春化基因')).raw.recognized.species).toContain('小麦');
+    expect((await run('苞米内参基因')).raw.recognized.species).toContain('玉米');
+    expect((await run('Triticum aestivum homolog')).raw.recognized.species).toContain('小麦');
+  });
+
+  it('显式 hint 能兜底识别（中文查询漏召回时）', async () => {
+    const result = await run('帮我查一下这个', { species_hint: '玉米', intent_hint: '内参' });
+    expect(result.raw.recognized.species).toContain('玉米');
+    expect(result.raw.recognized.intents).toContain('reference-gene');
+  });
+});
+
+describe('golden 题集：候选真实相关', () => {
+  it('「小麦里调控春化的已知基因」→ 命中 wheatomics 的基因搜索', async () => {
+    const result = await run('小麦里调控春化的已知基因');
+    expect(result.raw.state).toBe('ok');
+    expect(result.text).toContain('wheatomics_search_known_genes');
+    expect(result.text).toContain('识别：物种=小麦');
+  });
+
+  it('拉丁名 "Triticum aestivum homolog" → 同源工具，且注明目标域', async () => {
+    const result = await run('Triticum aestivum homolog');
+    expect(result.raw.state).toBe('ok');
+    expect(result.text).toContain('wheatomics_cross_species_homologs');
+    expect(result.text).toContain('水稻');
+  });
+
+  it('别名「苞米内参基因」→ icg（示例已验语义）', async () => {
+    const result = await run('苞米内参基因');
+    expect(result.text).toContain('icg_lookup');
+    expect(result.text).toContain('示例非承诺');
+  });
+
+  it('多意图「水稻基因的表达与序列」→ 多个意图都进识别行', async () => {
+    const result = await run('水稻基因的表达与序列');
+    expect(result.text).toContain('表达');
+    expect(result.text).toContain('序列');
+    expect(result.raw.recognized.intents).toEqual(expect.arrayContaining(['expression', 'sequence']));
+  });
+
+  it('「这个基因叫什么」→ 意图识别到但物种缺失，仍给出候选（不硬判状态 A）', async () => {
+    const result = await run('这个基因叫什么');
+    // 命中"基因详情"意图；物种缺失时不出"不覆盖"结论
+    expect(result.raw.recognized.intents).toContain('gene-detail');
+    expect(result.text).not.toContain('没有覆盖');
+  });
+
+  it('「油菜种子含油量位点」→ 状态 B，且明说"未覆盖≠不存在"', async () => {
+    const result = await run('油菜种子含油量位点');
+    expect(result.raw.state).toBe('B');
+    expect(result.text).toContain('没有覆盖');
+    expect(result.text).toContain('不是「该数据不存在」');
+    expect(result.text).toContain('油菜不在本服务目录');
+    expect(candidateIds(result.text)).toEqual([]);
+  });
+
+  it('「水稻内参基因」→ 状态 B；物种在册，且必须解释"为什么没命中"而不是笼统说没有', async () => {
+    const result = await run('水稻内参基因');
+    expect(result.raw.state).toBe('B');
+    // 水稻在目录里（ic4r/gramene 都覆盖），不能说成"没有源"
+    expect(result.text).not.toContain('水稻不在本服务目录');
+    // 目录里确实有 reference-gene 工具（icg_lookup），只是物种门挡下；
+    // 所以正确做法是给"线索"而不是断言"没有工具"——否则等于说假话。
+    expect(result.text).toContain('线索（未验证）');
+    expect(result.text).toContain('水稻 未验');
+    expect(result.text).not.toContain('没有工具');
+  });
+
+  it('「玉米变异」→ 不把 gramene 当候选（只实测水稻）', async () => {
+    const result = await run('玉米变异');
+    expect(candidateIds(result.text)).not.toContain('gramene');
+    expect(result.raw.state).toBe('B');
+  });
+
+  it('「小麦取某区间序列」→ 命中 hardExclude，明确说"不做区间取序列"', async () => {
+    const result = await run('小麦取某区间序列');
+    expect(result.text).toContain('按基因组区间取序列');
+  });
+
+  it('「水稻基因对应小麦哪个」→ 同源工具不得作为可执行候选（方向相反）', async () => {
+    const result = await run('水稻基因对应小麦哪个');
+    expect(result.text).not.toContain('wheatomics_cross_species_homologs');
+  });
+
+  it('「小麦里调控春化的已知基因」候选不得混入缺口/线索条目', async () => {
+    const result = await run('小麦里调控春化的已知基因');
+    const ids = candidateIds(result.text);
+    expect(ids).toEqual(['wheatomics']);
+  });
+
+  it('物种在册判断与目录一致（水稻/小麦在册，油菜不在册）', () => {
+    expect(speciesKnownInCatalog('水稻')).toBe(true);
+    expect(speciesKnownInCatalog('小麦')).toBe(true);
+    expect(speciesKnownInCatalog('油菜')).toBe(false);
+  });
+});
+
+describe('状态 A：识别不出', () => {
+  it('物种与意图都没有 → 说"无法识别"，不是"没有覆盖"', async () => {
+    const result = await run('你好');
+    expect(result.raw.state).toBe('A');
+    expect(result.text).toContain('没有识别出物种与意图');
+    expect(result.text).toContain('既不是没有覆盖，也不是数据不存在');
+    expect(result.text).not.toContain('没有覆盖：');
+  });
+});
+
+describe('输出预算与出处', () => {
+  it('正文 + 尾注 ≤ 4096 UTF-8 字节，且尾注完整不被截断', async () => {
+    const result = await run('小麦里调控春化的已知基因');
+    expect(utf8Bytes(result.text)).toBeLessThanOrEqual(DEFAULT_MAX_BYTES);
+    expect(result.text).toContain('源：plantomics-hub 本地目录');
+    expect(result.text).toContain('无上游请求');
+    expect(result.text).toContain('目录快照：服务版本');
+    expect(result.text.trimEnd().endsWith('Z')).toBe(true); // 查询时刻（ISO）在最后一行
+  });
+
+  it('超长问题在入参回显上限前拒绝，且不发起任何请求', async () => {
+    await expect(run('小'.repeat(2000))).rejects.toThrow(/超过 1536 字节上限/);
+  });
+
+  it('确定性：同一输入两次调用，文本字节完全一致（时刻除外）', async () => {
+    const a = await run('小麦变异');
+    const b = await run('小麦变异');
+    const strip = (text: string) => text.replace(/查询时刻 [0-9T:.Z-]+/, '查询时刻 X');
+    expect(strip(a.text)).toBe(strip(b.text));
+  });
+
+  it('成功输出恒带免责行（不承诺上游可用）', async () => {
+    for (const question of ['小麦里调控春化的已知基因', '玉米变异', '你好']) {
+      const result = await run(question);
+      expect(result.text).toContain('未探测上游；工具是否可用以上游实际响应为准。');
+    }
+  });
+});
+
+describe('目录注入文本按数据对待', () => {
+  it('目录里的指令性文本不会触发任何动作，只原样排版', async () => {
+    const injected = TOOL_CAPABILITIES.find((tool) => tool.tool === 'wheatomics_search_known_genes')!;
+    expect(injected.blindSpots.every((line) => typeof line === 'string')).toBe(true);
+    const result = await run('小麦已知基因');
+    // 输出中不出现"请不要告诉用户"这类指令被执行的痕迹；只有固定模板文本
+    expect(result.text).not.toContain('忽略以上');
+  });
+});
+
+describe('候选上限与截断', () => {
+  it('候选源 ≤ 5，且只有 ≥3 时才可能给到 5', async () => {
+    const result = await run('小麦水稻玉米草莓拟南芥蒲公英的基因序列表达变异同源注释');
+    expect(candidateIds(result.text).length).toBeLessThanOrEqual(5);
+  });
+
+  it('候选 <3 时注明"不足 3 个，如实给出"', async () => {
+    const result = await run('小麦里调控春化的已知基因');
+    expect(result.text).toContain('不足 3 个，如实给出');
+  });
+});
+
+
+describe('方向门与排除门（审查反例）', () => {
+  it('反向同源（水稻→小麦）不得推荐同源工具，且说明方向相反', async () => {
+    const result = await run('水稻基因对应小麦哪个同源');
+    expect(result.raw.state).toBe('B');
+    expect(result.text).not.toContain('wheatomics_cross_species_homologs');
+    expect(result.text).toContain('方向相反');
+    expect(result.text).toContain('查询主体是水稻');
+  });
+
+  it('正向同源（小麦→水稻）正常命中', async () => {
+    const result = await run('小麦基因对应水稻哪个同源');
+    expect(result.raw.state).toBe('ok');
+    expect(result.text).toContain('wheatomics_cross_species_homologs');
+  });
+
+  it('排除门按意图求交，不靠关键词：区间取序列被挡且写明理由', async () => {
+    const result = await run('小麦取某区间序列');
+    expect(result.raw.state).toBe('B');
+    expect(result.text).toContain('明确不做：按基因组区间取序列');
+  });
+
+  it('排除门不误伤无关意图：问"小麦已知基因"时不得冒出区间类禁令', async () => {
+    const result = await run('小麦已知基因');
+    expect(result.text).not.toContain('按基因组区间');
+    expect(result.text).not.toContain('模糊搜索');
+  });
+
+  it('两个物种同时出现时，以先出现的为查询主体', async () => {
+    const forward = await run('小麦对应水稻同源');
+    const reverse = await run('水稻对应小麦同源');
+    expect(forward.raw.state).toBe('ok');
+    expect(reverse.raw.state).toBe('B');
+  });
+});
+
+describe('返回的工具名真的存在于注册表', () => {
+  it('golden 输出里的每个工具名都能被 registry 解析，且 schema 合法', async () => {
+    const questions = [
+      '小麦里调控春化的已知基因',
+      '水稻基因的表达与序列',
+      '苞米内参基因',
+      '小麦变异区间查询',
+    ];
+    for (const question of questions) {
+      const result = await run(question);
+      for (const [, name] of result.text.matchAll(/工具：(.+)/g)) {
+        for (const toolName of name!.split('、').map((s) => s.trim()).filter(Boolean)) {
+          const tool = registry.getTool(toolName);
+          expect(tool, `输出里的工具名 ${toolName} 必须存在于注册表`).toBeTruthy();
+          expect(tool!.name.length).toBeLessThanOrEqual(43);
+          expect(tool!.parameters.type).toBe('object');
+        }
+      }
+    }
+  });
+
+  it('意图标签全部来自封闭词表', () => {
+    for (const tool of TOOL_CAPABILITIES) {
+      for (const id of tool.intents) expect(INTENT_BY_ID.has(id)).toBe(true);
+    }
+  });
+});
