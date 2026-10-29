@@ -3,21 +3,66 @@
 格式照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号用语义化版本。
 **破坏性变更（工具改名、必填参数变化）必须在本文件显式标 ⚠️**。
 
+## [plantomics-hub 0.1.0] — 首发候选（未发布；与旧包 dsh-plugin-plant-omics 0.1.0 不是同一条版本线）
+
+### 形态变更（破坏性）
+
+- 包名 `dsh-plugin-plant-omics` → **`plantomics-hub`**；插件改为**薄壳**，自身不注册任何工具。
+- 工具改由**远程 MCP 服务**（Streamable HTTP）提供，模型看到的名字带命名空间：`mcp__plantomics-hub__<tool>`。
+- 新增服务入口：`npm run serve` / `npx plantomics-hub-mcp`；`/healthz` 提供免鉴权健康检查。
+- 服务端版本独立于包版本，形如 `0.1.0+svc.N.g<sha>`；工具集或源集变化时 `svc.N` 递增。
+
+### 新增工具（6 源 28 工具）
+
+- WheatOmics 新增三项：`wheatomics_cross_species_homologs`（跨物种同源，不区分直系/旁系）、`wheatomics_variant_datasets`、`wheatomics_variant_query`（按区间查，`total=0` 不等于该区间无变异）。
+
+### 证据等级
+
+- 上述三工具的 5 个 fixture 为**结构回放件（`simulated: true`）**，上游采集期整体 503；能证明解析自洽，**不能证明上游契约已被真实快照钉住**，恢复后须替换。
+
+## [0.7.0] — 源码集成候选（未构建/打包/发布）
+
+### 新增
+
+- 接入 **Gramene v69**（T1，https://data.gramene.org/v69）：4 个意图工具——`gramene_search`（自由文本 `q`）、`gramene_gene`、`gramene_expression`、`gramene_taxonomy`。默认源码注册表为 **6 源 25 工具**。
+- 入口区分：`/search` 收 `q`；其余三个只收 `idList`，描述写明"按 ID、不按名称"。把 `q` 传给非 search 端点只会得到空数组。
+- **`idList` 按数组语义发送**：上游对数值型单值（`idList=4530`）返回 400（Expected type array but found type integer），本仓对单值也重复发送一次，并按 `_id` 去重；输出中注明这是规避写法，不隐藏在实现里。
+- **身份对账**：gene/expression/taxonomy 会比对"请求 ID 集合"与"返回 `_id` 集合"——返回集合外的 `_id` 直接抛"身份不符"，不把无关记录当结果；请求了未返回的 ID 逐个列在正文与 `raw.missingIds`。
+- **`/search` 的 `text/plain`**：该端点 content-type 是 text/plain 而正文是 JSON；本仓按正文解析，不按 content-type 分流，正文非 JSON 时按结构漂移失败。
+- 查无语义：Gramene 是 **HTTP 200 + 空数组**（`/search` 为 `numFound=0`），报"本次返回 0 条"；`numFound>0` 且 `start` 越过末页时单独报"已越过末页"，不混为无匹配。
+- 裁剪：单基因原始 8.5 KB（含 `xrefs`）只输出关键字段；表达每实验最多 3 个、每实验 2 个比较；`facet_counts` 不读、`ancestors` 只给长度。正文预算仍 1280 B，出处由公共层尾注完整给出。
+
+### 说明
+
+- 覆盖只写实测物种：`Oryza sativa`（taxid 4530）与 `Oryza sativa Indica Group`（39946001），**不声称覆盖禾本科**。
+- `taxonomy` 只接受数字 taxid，前导零按数值归一（`04530` 与 `4530` 视为同一 taxid）。
+- 数据版本只能写 v69（Swagger basePath）；与 Ensembl 版本的对应关系未核验。
+- 版本同步为 0.7.0（`package.json`、lock 根条目、`SERVER_INFO.version`）。**仅到适配器、fixture、离线测试与注册集成，尚未构建、打包、真实探活或宿主验收。**
+
+## [0.6.0] — 源码集成候选（未构建/打包/发布）
+
+### 新增
+
+- 接入 **IC4R**（NGDC 水稻信息共享平台，T1）：6 个意图工具——`ic4r_gene`、`ic4r_annotation`、`ic4r_circrna`、`ic4r_lncrna`、`ic4r_id_convert`，以及按染色体分页发现 locus 的 `ic4r_gene_list`。默认源码注册表变为 **5 源 21 工具**。
+- 参数按 ID 空间拆分：gene/annotation/idConversion 用 `locus`；circRNA/lncRNA 用各自 `accession`（`…Circ…`/`…Lnc…`），描述中写明不是同一 ID 空间。
+- 查无语义：上游查无是 **HTTP 200 + 0 字节正文**（annotation 为 `[]`）。0 字节报“无法确认是否存在”，`[]` 只表示本次未返回注释，均不判“记录不存在”；`bodyKind` 缺失时报“响应类型未知”而不猜测。
+- 预算：正文预算 1280 B（1408−128）。circRNA 实测 182 bp 完整展示；lncRNA 实测 1,639 bp 因预算整条省略并说明“不是上游没有序列，也未截断”；annotation 按类别整块放入，放不下整组省略并报“另有 N 个功能类别未展示”。
+- 新增 `ic4r_gene_list`：`chromosome` 仅接受页面下拉给出的 1–12/`Sy`/`Un`（**本仓白名单，不是上游限制**；上游对枚举外取值返回 200 + 零记录），`start` ≥0，`length` 本仓上限 50（上游上限未测），`draw` 固定。区分“记录数为 0”“start 越过末页”“0 字节正文”三种空。
+
+### 说明
+
+- 仅覆盖粳稻（japonica）单物种；接口文档为 2018 版，引用时写“IC4R 2.0（文档声明，2018-05）”，不当作数据版本。
+- ID 映射只承诺已测方向（IC4R `locus` → MSU/RAP-DB），反向未测。
+- 工具 `name`/`parameters` 为新增，不改既有工具契约；不涉及依赖变更。
+- 版本同步为 0.6.0（`package.json`、lock 根条目、`SERVER_INFO.version`）。**本候选仅到适配器、fixture、离线测试与注册集成，尚未构建、打包、真实探活或宿主验收。**
+
 ## [0.5.0] — GitHub源码交付候选（未发布Release/npm）
 
 - 新增 GWH 两工具与 ICG 两工具，并注册源级 probe 断言；默认源码注册表为4源15工具，保留按源启用。
 - 新增四工具各实体的 MCP/DSH 离线回放、查无与模拟结构漂移验证。两源 raw 使用隐私白名单投影，不是上游原体；隐私检查不覆盖无标签电话/微信/人名。
 - HTTP 新增可选 bodyKind：零长度为 empty，合法 JSON 为 json，缺字段未知；旧 data 行为不变。
 - 版本及 lock 根版本同步为0.5.0，不重解依赖；旧工具 name/parameters 不变。已完成候选包隔离安装、四源probe及MCP调用验证；本机用户报告已安装，真实DSH问答验收仍未完成。
-- 补充源码安装、DSH本地tgz安装、前置环境及回滚说明；本轮仅提供手动安装路径，不分发安装辅助脚本。源码推送不代表已有公开tgz下载入口。
-
-### 安全修复（仅开发依赖）
-
-- 此前 `npm audit` 报3项开发依赖问题（`vitest`、`tinypool`、`@vitest/mocker`，含critical）。Vitest 3.x 无同主版本修复，故精确升级到 `vitest 4.1.12`，并显式锁定 `vite 7.3.7` 以避免被解析到Vite8（Vitest4.1.12官方peer范围含7.x）。
-- 为什么跨主版本：Vitest3.2.7固定`@vitest/mocker 3.2.7`且`tinypool ^1.1.1`，两者受影响版本无法在3.x内摆脱；覆盖传递依赖属于强制修复，故不走该路。
-- 影响面：仅开发/测试依赖与`package-lock.json`；工具`name`/`parameters`、运行时依赖、MCP/DSH协议、输出预算与侧边栏实现均未变。测试配置与断言未改，295例全部保留通过。
-- lock结构：`npm ci`清理了根条目中陈旧的`@deepseek-ai/cordis` peer声明（`package.json`本未声明），不影响宿主。
-- 验证：干净`npm ci`、完整`check`、`npm audit`与`npm audit --omit=dev`均退出0且当次0项；这只是当次结果，不是长期安全保证。
+- 补充源码安装、DSH本地tgz安装、前置环境及回滚说明；辅助安装脚本不替代桌面插件管理器。源码推送不代表已有公开tgz下载入口。
 
 ## [0.4.0] — 源码候选（未打包/发布）
 

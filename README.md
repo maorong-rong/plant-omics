@@ -1,4 +1,4 @@
-# plant-omics
+# PlantOmics Hub
 
 让 AI 更方便地查询植物组学公开数据。
 
@@ -17,12 +17,17 @@
 
 | 源 | 等级 | 覆盖 | 工具数 | 鉴权 |
 |---|---|---|---|---|
-| **WheatOmics**（山东农大，小麦多组学） | T1 | 本仓已封装：小麦族基因、表达、文献、注释ID换算；不代表网站全部模块已接入 | 6 | 无 |
+| **WheatOmics**（山东农大，小麦多组学） | T1 | 本仓已封装：小麦族基因、表达、文献、注释ID换算、跨物种同源（wheat/rice/arabidopsis，不区分直系旁系）、变异数据集目录与区间查变异（不含按变异 ID 查）；不代表网站全部模块已接入 | 9 | 无 |
 | **Strawberry Data Hub**（海南大学） | T1 | 草莓及相关病原：目录和精确基因注释；表达仅已证实草莓数据集、TF仅Fragaria、共线仅已证实装配 | 5 | 无 |
 | **GWH**（NGDC） | T1 | 精确基因组/组装、项目/样本元数据；物种示例非穷尽，不提供物种搜索 | 2 | 无 |
 | **ICG**（NGDC） | T1 | 物种目录及研究验证的内参基因/引物；不提供名称搜索，不作通用推荐 | 2 | 无 |
+| **IC4R**（NGDC） | T1 | 仅粳稻（japonica）单物种：基因、功能注释、circRNA、lncRNA、ID 映射，并按染色体分页列 locus；文档为 2018 版，不能按基因名/性状/区间检索 | 6 | 无 |
+| **Gramene v69** | T1 | 全文检索、基因、差异表达、分类单元；实测物种只有 Oryza sativa / Indica Group，不声称覆盖禾本科；按 ID 或全文查，不按名称精确匹配 | 4 | 无 |
+| **SCOD**（NGDC，甘蔗多组学） | T2 | 甘蔗（Saccharum spontaneum）及相关材料：基因组目录、按区间查基因（服务端分页）；区间需**包住整条基因**才返回，0 条不代表该位置没有基因；不是主粮 | 2 | 无 |
 
-> 0.5.0：4源、15工具。候选包已完成隔离安装、四源探活及MCP调用验证；真实DSH问答验收仍单列。GitHub源码不等于已有tgz下载入口，本项目尚未发布到npm。源等级和实测以[源登记表](docs/源登记表.md)为准。
+> **0.1.0（`plantomics-hub`）：7 源、34 工具（含 2 个元工具）。** 形态已改为「薄插件 + 远程 MCP 服务」，安装前必须先起服务，见下方「0.1.0 的形态变了」。0.7.x 及更早的 `dsh-plugin-plant-omics` 是「插件内置工具」的旧形态，可与新包共存但不可同时启用。
+>
+> 已验证：源码离线检查、候选包构建与包内内容一致性、六源最小 HTTP MCP 回放、服务层安全反例。**未验证**：真实宿主装载新包、动态刷新、公网部署；npm 尚未发布。源等级与实测以[源登记表](docs/源登记表.md)为准。
 
 ---
 
@@ -36,6 +41,9 @@
 | `wheatomics_expression_query` | 查基因在指定项目里的表达量：**均值 ± 标准差**；条件 ≤20 个时全部列出，可用 `condition` 精确看某类、`top` 控制条数 |
 | `wheatomics_search_papers` | 检索小麦族文献元数据（关键词 / 条数 / `sinceDays` 时间窗） |
 | `wheatomics_convert_gene_ids` | 基因 ID 跨注释版本换算，统一转成上游所称的 02G（IWGSC v1.1）格式；**只是 ID 表映射，不等于确认了组装版本** |
+| `wheatomics_cross_species_homologs` | 按基因 ID 查小麦/水稻/拟南芥同源基因；**不区分直系与旁系**（上游无该字段），`max_targets` 是**每物种**上限 |
+| `wheatomics_variant_datasets` | 列出变异数据集及 `genome_concordant` 标志；该标志未知时显示"未知"，不替上游推断 |
+| `wheatomics_variant_query` | 按区间查变异（`chrom` + 起止）；**`total=0` 不代表该区间没有变异**，正文会提示先确认数据集 `genome_concordant`；上游未给 `total` 时按结构漂移报错、不当作 0 条；返回的 `dataset` 与请求不符会拒绝展示；正文摘要分三段——**上游 total / 上游返回 N 条 / 正文展示 N 条**，其中"正文展示"与表格行数、尾行"另有 N 条"同源计算，三者必须一致；不支持按变异 ID 查 |
 | `strawberry_catalog` | 目录发现：模块、装配和限流；`module`仅本地过滤，不代表已支持所有目录模块 |
 | `strawberry_gene_lookup` | `geneId`精确查询；可选`species`/`version`消歧；`includeSequence=true`仅显示最多120 aa的**非完整蛋白前缀**，不能用于完整序列分析 |
 | `strawberry_expression` | 草莓组织表达：`geneId`、可选`dataset`/`top`；保留响应原单位batch-corrected TPM，不跨数据集比较 |
@@ -45,6 +53,18 @@
 | `gwh_project_sample_lookup` | `entity=project/sample` + PRJCA/SAMC；项目与样本为平行入口，不提供关联样本列表 |
 | `icg_lookup` | 显式 `entity=species/project/gene/publication` + `id`；逐层取研究、完整引物或题录，预算不足整块省略 |
 | `icg_species_list` | `offset`/`limit` 分页浏览目录，不能按名称搜索；本次返回条数不等于全库总数 |
+| `ic4r_gene` | `locus` 精确查粳稻基因（同义词、MSU/RAP-DB accession、位置）；`locus` 是基因 ID 空间，与 circRNA/lncRNA 不通用；只有 locus 不确定时，先用 `ic4r_gene_list` 按染色体浏览取 ID |
+| `ic4r_annotation` | `locus` 取功能注释，按类别分组；`[]` 只表示本次未返回注释，不是“该基因没有注释” |
+| `ic4r_circrna` | `accession`（`…Circ…`）取 circRNA；序列默认整条展示，超 4 KB 预算整条省略 |
+| `ic4r_lncrna` | `accession`（`…Lnc…`，可带 `.1` 后缀）取 lncRNA；唯一实测 1,639 bp 序列默认不展示，是预算结果，不是上游没有序列 |
+| `ic4r_id_convert` | IC4R `locus` → MSU / RAP-DB 映射；只承诺已测方向，反向未测 |
+| `gramene_search` | 自由文本 `q` 全文检索，返回上游 `numFound` 与本次返回条数；只能全文检索，不能按字段过滤 |
+| `gramene_gene` | `ids` 精确文档 ID 取基因（名称/描述/类型/物种/位置）；原始 8.5 KB 含 xrefs，工具只给裁剪字段 |
+| `gramene_expression` | `ids` 取差异表达：每实验 p_value/l2fc，最多 3 实验×2 比较；不做显著性判定 |
+| `gramene_taxonomy` | 数字 taxid 取分类单元；前导零按数值归一；单值也按数组语义重复发送（规避上游 400） |
+| `scod_genome_list` | 列出甘蔗基因组目录（14 个材料）；裸数组响应，与基因接口的信封不同 |
+| `scod_gene_region` | 按 `genome_id`+`chrom`+`pos_start`+`pos_end` 查基因；**返回完全落在区间内的基因**（跨界的不会返回），服务端分页且**本地限制 `length ≤ 50`**；0 条不等于该位置没有基因 |
+| `ic4r_gene_list` | `chromosome`（仅页面给出的 1–12/`Sy`/`Un`，本仓白名单）+ `start`/`length`（本仓上限 50，上游上限未测）分页列 locus；报 `recordsTotal` 与本次返回条数 |
 
 分类分三轴：物种覆盖、数据类型、查询意图；官方MCP/公开API是接入方式，本仓工具是封装层，不重复计源。Strawberry首版仅GET，不包含批量序列、导出、单细胞、表观或GWAS实际查询。HTML404仅说明未获业务响应，不能断定基因不存在。
 
@@ -60,6 +80,87 @@
 ---
 
 ## 安装
+
+### 从 npm 安装（最快）
+
+```bash
+npm install plantomics-hub
+```
+
+装完后有两个入口：
+
+```bash
+npx plantomics-hub-mcp     # 启动 MCP 服务（Streamable HTTP，默认 127.0.0.1:8787）
+npx plant-omics-mcp        # 启动 stdio 版 MCP（给 Claude Code / Codex 等直接接）
+```
+
+只想临时跑一次、不装到项目里：
+
+```bash
+npx -p plantomics-hub plantomics-hub-mcp
+```
+
+> 本包同时是 DSH 插件。DSH 桌面端请按下一节装 tgz（插件管理器只接受压缩包或路径，不接受包名），并**先起服务**。
+
+### 0.1.0 的形态变了：先起服务，再装薄插件
+
+0.1.0（`plantomics-hub`）不再是「插件内置工具」的形态：
+
+```
+DSH ──(薄插件：只有面板 + 一条 MCP 客户端配置)──► 我们的 MCP 服务（Streamable HTTP）──► 各数据库
+```
+
+两条硬要求，装之前必须先满足：
+
+1. **服务必须先起来**，否则插件能装上、但一个工具都不会出现（`failOnStartupError: true` 会让它明确报错，而不是静默）。默认地址 `http://127.0.0.1:8787/mcp`。
+2. **工具名带命名空间前缀**：模型看到的是 `mcp__plantomics-hub__wheatomics_search_known_genes` 这样的名字，不再是裸名。旧的 0.7.x 及更早版本包（`dsh-plugin-plant-omics`）**可以共存但不能与新包同时启用**，否则两套工具会重复出现。
+
+起服务：
+
+```bash
+# 默认 127.0.0.1:8787，不鉴权（仅回环）
+npm run serve
+
+# 换个端口
+PLANTOMICS_HUB_PORT=0 npm run serve        # 0 = 让系统分配
+
+# 对外提供服务（必须带 token，否则启动即失败）
+PLANTOMICS_HUB_HOST=0.0.0.0 \
+PLANTOMICS_HUB_TOKEN='至少16字符的随机串' \
+npm run serve
+```
+
+服务启动后会打印监听地址、源/工具数与工具名预算；预算不达标（源 >20、工具 >40、工具名超长）时**拒绝启动**，不会带病接客。
+
+**一键启动（不用每次敲命令）**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "<包目录>\scripts\start-service.ps1"
+```
+
+脚本先检查已安装的服务入口是否存在、端口是否被占用，再用人话说明怎么处理，而不是甩一段 Node 堆栈。 **仅 Windows**（PowerShell 脚本）；macOS/Linux 直接用上面 `npx plantomics-hub-mcp` 那两条命令。端口冲突时加 `-Port 8788`，但**换了端口要同步插件里的 `PLANTOMICS_HUB_URL`**，否则宿主连不上。
+
+**开机自启**：把上面那条命令做成快捷方式放进 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`，目标写 `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<脚本完整路径>"`。
+
+**健康检查**：`GET /healthz` 返回 `{"status":"ok","version":"…","sources":6,"tools":25}`，**不需要 token、不校验 Host**（托管平台探针从内部地址打过来），也不泄露工具清单。
+
+**服务没起来时会看到什么**：宿主日志是 MCP 连接失败（连不上 8787），会话里**一个 `mcp__plantomics-hub__*` 工具都没有**；patch 里设了 `failOnStartupError: true`，这条会被判为激活失败，而不是"静默装上没反应"。先确认服务窗口还在、`/healthz` 返回 200，再重启 DSH。
+
+装插件：
+
+- 从 `npm pack` 得到 `plantomics-hub-0.1.0.tgz`，在 DSH 侧边栏「插件」页添加该 tgz 的绝对路径。
+- 服务地址不是默认值时，先设环境变量再启动 DSH：`PLANTOMICS_HUB_URL=http://127.0.0.1:8787/mcp`、`PLANTOMICS_HUB_TOKEN=<token>`（token 以 `Bearer` 形式随请求头发送）。
+
+**反代部署注意**：服务默认只接受回环 Host。放到 nginx 等反向代理之后，Host 会变成代理域名，必须显式放行，否则 403：
+
+```bash
+PLANTOMICS_HUB_ALLOWED_HOSTS=hub.example.org \
+PLANTOMICS_HUB_HOST=0.0.0.0 \
+PLANTOMICS_HUB_TOKEN=<至少16字符> \
+npm run serve
+```
+
+只写主机名，不带协议与路径；未配置时默认只允许回环，不会因为部署成代理就自动放开。
 
 ### 前置环境与获取源码
 
@@ -78,8 +179,8 @@ npm run check
 
 ### 1. 按用途选择
 
-- **只用MCP**：完成上述构建后按第2节配置stdio，无需安装DSH或tgz。
-- **DSH桌面用户**：按第3节生成/取得可信tgz并从插件页安装；不要把GitHub源码ZIP当作插件包。当前没有承诺可下载的Release附件，也不能使用 `npm install dsh-plugin-plant-omics` 从npm获取本项目。
+- **只用MCP（stdio）**：完成上述构建后按第2节配置stdio，无需安装DSH或tgz。_stdio 出口仍是旧形态（插件内置工具），与 0.1.0 的薄插件/服务形态并存。_
+- **DSH桌面用户**：按上面「0.1.0 的形态变了」先起服务，再从插件页安装 `plantomics-hub` 的 tgz；第3节是 0.7.x 及更早版本的旧装法，**不要用于 0.1.0**。
 
 源码构建产物仅位于本地，不会自动更新已经安装的插件。验证范围详见[安装验证说明](docs/安装验证.md)。
 
@@ -104,7 +205,9 @@ claude mcp add plant-omics -- node "<仓库路径>/dist/mcp/cli.js"
 }
 ```
 
-### 3. 作为 DSH 插件
+### 3. 作为 DSH 插件（**仅适用于 0.7.x 及更早的旧形态**）
+
+> ⚠️ 0.1.0（`plantomics-hub`）**不要按本节安装**：新包是薄插件，工具由远程 MCP 服务提供，安装前必须先起服务，步骤见上方「0.1.0 的形态变了」。本节保留给仍在使用 `dsh-plugin-plant-omics` 旧包的人。
 
 没有现成tgz时，在已完成构建的源码目录生成自己的包，并放到长期保留的目录（不要留在系统临时目录）：
 
@@ -112,7 +215,7 @@ claude mcp add plant-omics -- node "<仓库路径>/dist/mcp/cli.js"
 # Windows PowerShell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.dsh\plugin-archives" | Out-Null
 npm pack --pack-destination "$env:USERPROFILE\.dsh\plugin-archives"
-Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\.dsh\plugin-archives\dsh-plugin-plant-omics-0.5.0.tgz"
+Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\.dsh\plugin-archives\<包名>-<版本>.tgz"
 ```
 
 ```bash
@@ -121,7 +224,7 @@ mkdir -p "$HOME/.dsh/plugin-archives"
 npm pack --pack-destination "$HOME/.dsh/plugin-archives"
 ```
 
-文件名取实际package版本；本地构建的哈希不保证与维护者候选包相同。收到别人提供的tgz时先核对对方公布的完整SHA256；仅计算本地哈希不构成来源认证。无源码用户可直接把可信tgz放入长期目录，在插件页粘贴其绝对路径。
+文件名取实际package版本；本地构建的哈希不保证与维护者候选包相同。收到别人提供的tgz时先核对对方公布的完整SHA256；仅计算本地哈希不构成来源认证。无源码用户可直接把可信tgz放入长期目录，在插件页粘贴其绝对路径，不必运行下面的可选辅助脚本。
 
 ⚠️ **`dsh plugin --profile desktop add …` 一定失败**（2026-10-27 实测）：
 
@@ -131,14 +234,36 @@ error: profile "desktop" is managed exclusively by the Electron application
 
 desktop profile 由桌面端**独占管理**，CLI 连碰都不碰。所以装了也不会成功，别试。
 
-请保留tgz原件与完整SHA256，将包存放在长期目录；不要覆盖同版本的旧包，内容不同时使用另一个目录保留两份及其校验值。
+**可选辅助脚本**（源码用户；需要系统 `tar` 命令与已初始化的DSH profile；不是全自动安装）：
+
+```powershell
+# 用仓库当前版本号，从 plugin-archives 里找包
+npm run install:dsh
+
+# 指定某个 tgz（例如别人给的候选包）
+npm run install:dsh -- "C:\path\to\<包名>-<版本>.tgz"
+
+# 只验包与环境，不做任何改动
+npm run install:dsh -- --dry-run
+```
+
+脚本会逐项拦住「装了但没反应」的成因：包名不是 `plantomics-hub`、
+`main` 不是 `./dist/dsh/index.js`、`cordis.patch.yml` 的 `name` 与包名不一致
+（**这条 dsh 不报错、只是静默跳过**，是本插件最容易踩的坑）、必需文件缺失、tgz 解不开。
+通过后它把包复制进 `~/.dsh/plugin-archives/` 并校验哈希，最后打印可粘贴的路径。
+
+> **它不能替你点「添加插件」**——那一步在桌面端进程里，没有 CLI 入口。
+> 脚本也不会去改 profile 的 `package.json` 或直接跑 pnpm：那是绕过桌面端管理，出问题难查。
+>
+> 为什么必须归档：profile 的 `package.json` 记的是**绝对路径**。直接把 `%TEMP%` 里的包路径黏进去，
+> 系统清理临时目录后，下次 install 会解析失败。`plugin-archives/` 才是稳的落点。
 
 **然后手动点这三步：**
 
-1. DSH 侧边栏 → **插件** → 右上 **添加插件** → 粘贴已保存tgz的完整路径：
+1. DSH 侧边栏 → **插件** → 右上 **添加插件** → 粘贴脚本给你的完整路径：
 
    ```
-   C:\Users\<你>\.dsh\plugin-archives\dsh-plugin-plant-omics-0.5.0.tgz
+   C:\Users\<你>\.dsh\plugin-archives\<包名>-<版本>.tgz
    ```
 
    该输入框接受**包名 / Git 地址 / 压缩包 / 本地绝对路径**四种写法；
@@ -155,7 +280,7 @@ desktop profile 由桌面端**独占管理**，CLI 连碰都不碰。所以装�
 | 工具名、何时使用、必填参数 | 来自注册表，与模型实际看到的一致 |
 | MCP 配置片段 | 一份定义两个出口，复制即用（替换 `<安装目录>`） |
 
-⚠️ **面板是构建期静态快照，不是运行状态。** 顶部固定写「静态快照 · 构建于 … · 不表示上游当前可用」；
+⚠️ **面板是构建期静态快照，不是运行状态。**（其中的源码时间取自 git 提交或 `SOURCE_DATE_EPOCH`，不是墙钟构建时刻） 顶部固定写「静态快照 · 源码 <提交> · 源码时间 … · 包版本 … · 不表示上游当前可用」；
 上游是否活着只由 `npm run probe` 回答。面板也不会反映运行时的 `sources` 子集配置（改配置后仍显示全量清单）。
 
 装完自查两件事（**缺任何一条都会"装了但没反应"**）：
@@ -193,6 +318,7 @@ npm test            # 单元 + MCP 协议测试（全离线，不联网）
 npm run probe       # 可达性实测（联网；任一源失败则非零退出）
 npm run stats       # 预算自检（源 ≤20 / 工具 ≤40，超了非零退出）
 npm run doctor      # 装机快照自检（已装插件 vs 仓库构建，有实质漂移则非零退出）
+npm run install:dsh # 一键安装：验包 + 归档 + 预检（最后一步仍需在插件页点）
 npm run check       # typecheck + test + build + stats，提交前最低门槛
 ```
 
@@ -279,7 +405,7 @@ PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
 - **不做数据镜像。** 要批量下载数据，请回各自的科研项目按那边规则走。
 - **⚠️ 真实 DSH 会话尚未验收。** 已验证的是：适配器能取数、MCP 协议握手正常、包能干净安装、插件装配形状正确。
   **还没验证**的是：在 DSH 里提问 → 模型自主选工具 → 取数 → 带出处作答，这条完整链路。别把前者当成后者。
-- **⚠️ 渐进式发现问题检索尚未实现。** 当前源码候选15个工具全量暴露（规则允许到40个）；实际安装快照可能仍只有6个。「按问题先找源、再找工具」仍属未实现项。
+- **⚠️ 渐进式发现问题检索尚未实现。** 当前源码候选34个工具全量暴露（规则允许到40个）；已安装快照可能仍是更早版本的 6/11/15 个。「按问题先找源、再找工具」仍属未实现项。
 - **侧边栏面板是静态清单。** 只显示构建时的源/工具/盲区，不显示探活或调用统计，也不反映运行时的 `sources` 子集配置；它不能用来判断上游是否可用。
 - **上游限流。** Strawberry Data Hub 的公开额度是 120 请求/分钟（导出 12/分钟），超出返 429 带 `Retry-After`。本仓不内置全局限流器，密集调用需自行节流。
 - **工具输出里的上游文本按数据处理。** 数据库内容可能包含看起来像指令的文字，本仓不做过滤；请在客户端侧把工具输出当数据、不当指令。

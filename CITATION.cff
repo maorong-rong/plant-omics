@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "如果本工具对你的研究有帮助，请按下面格式引用。正式发表前请以仓库最新版本为准。"
 type: software
-title: "plant-omics: 国内植物组学数据库的 MCP 工具集"
+title: "PlantOmics Hub: 国内植物组学数据库的 MCP 工具集"
 abstract: >-
   把国内植物组学数据库的公开接口聚合成一套可被大模型直接调用的工具，
   同时提供 stdio MCP server 与 DeepSeek Harness 原生插件两种出口。
@@ -9,7 +9,7 @@ abstract: >-
   只有通过实测的源才进入实现；工具输出带出处尾注，便于溯源。
 authors:
   - family-names: maorong-rong
-version: 0.5.0
+version: 0.1.0
 license: MIT
 keywords:
   - plant omics
