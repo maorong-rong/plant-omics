@@ -17,11 +17,13 @@
 
   var BOOT =
     (typeof globalThis !== 'undefined' && globalThis.__PLANT_OMICS_CLIENT__) || {};
-  var MODULE_ID = BOOT.moduleId || 'dsh-plugin-plant-omics';
+  var MODULE_ID = BOOT.moduleId || 'plantomics-hub';
   var META = {
     moduleId: MODULE_ID,
     packageVersion: BOOT.packageVersion || '未知',
     builtAt: BOOT.builtAt || '未知',
+    builtAtSource: BOOT.builtAtSource || 'unknown',
+    sourceRev: BOOT.sourceRev || '未知',
   };
   var CATALOG = BOOT.catalog || {
     schemaVersion: 0,
@@ -40,13 +42,23 @@
     var tools = catalog.tools || [];
 
     return {
-      title: '植物组学 · 源与工具',
-      note:
-        '静态快照 · 构建于 ' +
-        (meta && meta.builtAt ? meta.builtAt : '未知') +
-        ' · 包版本 ' +
-        (meta && meta.packageVersion ? meta.packageVersion : '未知') +
-        ' · 不表示上游当前可用',
+      title: 'PlantOmics Hub · 源与工具',
+      note: (function () {
+        // 标签要跟来源走：SOURCE_DATE_EPOCH 是构建时间基准，不一定是源码时间。
+        var src = meta && meta.builtAtSource ? meta.builtAtSource : 'unknown';
+        var whenLabel =
+          src === 'source-date-epoch' ? '构建基准时间'
+            : src === 'git-commit' ? '源码时间'
+              : src === 'git-rev' ? '源码版本'
+                : '时间未知';
+        return '静态快照 · 源码 ' +
+          (meta && meta.sourceRev ? meta.sourceRev : '未知') +
+          ' · ' + whenLabel + ' ' +
+          (meta && meta.builtAt ? meta.builtAt : '未知') +
+          ' · 包版本 ' +
+          (meta && meta.packageVersion ? meta.packageVersion : '未知') +
+          ' · 不表示上游当前可用';
+      })(),
       sections: [
         {
           id: 'budget',
@@ -349,8 +361,8 @@
             ref: entryRef,
             type: 'button',
             className: 'po-entry',
-            title: '植物组学 · 源与工具（静态清单）',
-            'aria-label': '植物组学，打开源与工具清单',
+            title: 'PlantOmics Hub · 源与工具（静态清单）',
+            'aria-label': 'PlantOmics Hub，打开源与工具清单',
             'aria-expanded': open ? 'true' : 'false',
             onClick: function () {
               setOpen(!open);

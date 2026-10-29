@@ -93,6 +93,16 @@ export function buildCatalog(registry: ToolRegistry = createRegistry()): ClientC
     };
   });
 
+  // 元工具（检索层入口）不属于任何源：单独列出，sourceId 显示「元工具」
+  for (const tool of registry.listMetaTools()) {
+    tools.push({
+      name: tool.name,
+      sourceId: '元工具',
+      whenToUse: clip(tool.description),
+      required: [...(tool.parameters.required ?? [])],
+    });
+  }
+
   return {
     schemaVersion: CLIENT_SCHEMA_VERSION,
     budget: {

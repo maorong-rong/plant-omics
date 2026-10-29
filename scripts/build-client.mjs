@@ -16,6 +16,7 @@
  * 运行：`npm run build`（tsc 之后执行，因为清单来自 dist 里的注册表）。
  */
 
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -63,11 +64,77 @@ if (/^\s*(?:import|export)\s/m.test(source)) {
   fail('bundle.js 里出现了顶层 import/export；客户端 bundle 必须是 classic script + lazy-CJS factory');
 }
 
-const builtAt = new Date().toISOString();
+/**
+ * 可复现构建：产物里**不许出现墙钟时间**（2026-10-28 改）。
+ *
+ * 原先写 `new Date().toISOString()`，导致同一提交每次构建字节都不同：
+ * dist 无法与已发布包字节比对，所谓"可复现构建"就无从谈起，diff 里全是噪音。
+ *
+ * 现在按优先级取确定的来源：
+ *   1. `SOURCE_DATE_EPOCH`（Reproducible Builds 约定，单位秒）；
+ *   2. git HEAD 的提交时间（同一提交恒相同）；
+ *   3. git 不可用 → 版本号 + 短 sha（`v0.6.0@1e3c3cf`），仍可复现；
+ *   4. 都没有 → 'unknown'（不编造时间）。
+ * 同时记录 `sourceRev`（短 sha，工作区有未提交的已跟踪改动时加 `-dirty`），
+ * 让"这份产物来自哪个源码状态"可追溯，而不是靠时间戳猜。
+ */
+function git(args) {
+  try {
+    return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function deterministicStamp() {
+  const epoch = process.env.SOURCE_DATE_EPOCH;
+  if (epoch !== undefined && epoch !== '') {
+    const seconds = Number(epoch);
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      fail(`SOURCE_DATE_EPOCH 不是合法的非负秒数：${JSON.stringify(epoch)}`);
+    }
+    return { value: new Date(seconds * 1000).toISOString(), source: 'source-date-epoch' };
+  }
+  const commitDate = git(['show', '-s', '--format=%cI', 'HEAD']);
+  if (commitDate) return { value: commitDate, source: 'git-commit' };
+  // git 不可用（无仓库/无提交）时的退化：版本号 + 短 sha，仍可复现；再没有就写未知。
+  const rev = git(['rev-parse', '--short', 'HEAD']);
+  if (rev) return { value: `v${pkg.version}@${rev}`, source: 'git-rev' };
+  return { value: 'unknown', source: 'unknown' };
+}
+
+function sourceRevision() {
+  const sha = git(['rev-parse', '--short', 'HEAD']);
+  if (!sha) return 'unknown';
+  /**
+   * dirty 判定要包含"新增未跟踪的源码文件"：否则干净树里新加一个 `src/sources/x/`，
+   * `sourceRev` 仍显示干净，产物与实际源码不符（审查 P2）。
+   * 只计入源码相关路径，避免临时产物/日志把标识弄脏。
+   */
+  const watched = [
+    'src',
+    'test',
+    'scripts',
+    'package.json',
+    'package-lock.json',
+    // 构建配置也影响产物：tsconfig 改了 tsc 输出会变，cordis.patch.yml 随包分发。
+    // 用 glob 魔术，避免将来新增 tsconfig.*.json 又漏掉。
+    ':(glob)tsconfig*.json',
+    'cordis.patch.yml',
+  ];
+  const dirty = git(['status', '--porcelain', '--untracked-files=all', '--', ...watched]) !== '';
+  return dirty ? `${sha}-dirty` : sha;
+}
+
+const stamp = deterministicStamp();
+const builtAt = stamp.value;
+const sourceRev = sourceRevision();
 const boot = {
   moduleId: pkg.name,
   packageVersion: pkg.version,
   builtAt,
+  builtAtSource: stamp.source,
+  sourceRev,
   catalog,
 };
 const output = `globalThis.__PLANT_OMICS_CLIENT__ = ${JSON.stringify(boot)};\n${source}`;
@@ -84,6 +151,20 @@ const outDir = path.join(root, 'dist', 'client');
 mkdirSync(outDir, { recursive: true });
 const outPath = path.join(outDir, 'panel.js');
 writeFileSync(outPath, output, 'utf8');
+
+/**
+ * 服务端构建标识：写进 dist 供运行时读取，用来拼 `+svc.N.g<sha>`。
+ *
+ * 为什么不运行时调 git：装到 profile 里的包不是 git 仓库，`git rev-parse` 会失败；
+ * 构建期算一次写进产物，运行时只读文件，失败也不致命（退化成没有 sha）。
+ */
+const serviceDir = path.join(root, 'dist', 'service');
+mkdirSync(serviceDir, { recursive: true });
+writeFileSync(
+  path.join(serviceDir, 'build-info.json'),
+  JSON.stringify({ sourceRev, builtAt, packageVersion: pkg.version }, null, 2) + '\n',
+  'utf8',
+);
 
 const written = readFileSync(outPath, 'utf8');
 if (!written.includes(`"moduleId":${JSON.stringify(pkg.name)}`)) {

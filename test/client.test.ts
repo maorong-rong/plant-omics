@@ -217,6 +217,11 @@ describe('侧边栏静态清单', () => {
       const definition = registry.getTool(tool.name);
       expect(definition).toBeDefined();
       expect(tool.required).toEqual(definition?.parameters.required ?? []);
+      // 元工具（sourceId=「元工具」）走 hub_ 前缀，不适用 <sourceId>_ 规则
+      if (tool.sourceId === '元工具') {
+        expect(tool.name.startsWith('hub_')).toBe(true);
+        continue;
+      }
       expect(tool.name.startsWith(`${tool.sourceId}_`)).toBe(true);
     }
   });
