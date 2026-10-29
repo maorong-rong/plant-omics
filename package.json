@@ -1,8 +1,7 @@
 {
-  "name": "dsh-plugin-plant-omics",
-  "version": "0.5.0",
-  "private": true,
-  "description": "把国内植物组学数据库的公开接口聚合成一套工具，一次维护、两个出口：stdio MCP server（Claude Code / Codex / Reasonix 可用）与 DSH 原生插件。",
+  "name": "plantomics-hub",
+  "version": "0.1.0",
+  "description": "PlantOmics Hub：把国内植物组学数据库的公开接口聚合成一套工具，一次维护、两个出口：stdio MCP server（Claude Code / Codex / Reasonix 可用）与 DSH 原生插件。",
   "type": "module",
   "license": "MIT",
   "main": "./dist/dsh/index.js",
@@ -25,14 +24,15 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "plant-omics-mcp": "./dist/mcp/cli.js"
+    "plantomics-hub-mcp": "dist/service/cli.js",
+    "plant-omics-mcp": "dist/mcp/cli.js"
   },
   "files": [
     "dist",
-    "scripts",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "scripts/start-service.ps1"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/build-client.mjs",
@@ -43,22 +43,27 @@
     "probe": "node scripts/probe.mjs",
     "stats": "node scripts/stats.mjs",
     "doctor": "node scripts/doctor.mjs",
+    "install:dsh": "node scripts/install-dsh.mjs",
     "check": "npm run typecheck && npm run test && npm run build && npm run stats",
-    "mcp": "node dist/mcp/cli.js"
-  },
-  "engines": {
-    "node": ">=20"
+    "mcp": "node dist/mcp/cli.js",
+    "serve": "node dist/service/cli.js"
   },
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",
     "mcp",
     "model-context-protocol",
+    "植物组学",
+    "植物",
+    "组学",
     "plant-omics",
+    "plantdata",
     "bioinformatics",
     "wheatomics",
-    "ngdc",
-    "cngbdb"
+    "strawberry",
+    "gramene",
+    "ic4r",
+    "ngdc"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2"
@@ -66,8 +71,8 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0",
-    "vite": "7.3.7",
-    "vitest": "4.1.12"
+    "vitest": "^3.2.0",
+    "yaml": "^2.9.1"
   },
   "dsh": {
     "bundle": {
@@ -76,5 +81,21 @@
     "client": {
       "platform": "web"
     }
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.2"
+  },
+  "author": {
+    "name": "maorong-rong",
+    "email": "299401268+maorong-rong@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/maorong-rong/plant-omics#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maorong-rong/plant-omics.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maorong-rong/plant-omics/issues"
   }
 }

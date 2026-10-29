@@ -16,19 +16,20 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { describeError } from '../core/errors.js';
+import { PACKAGE_VERSION } from '../core/package-version.js';
 import { invokeTool } from '../core/invoke.js';
 import type { ToolDefinition } from '../core/types.js';
 import { registry as defaultRegistry } from '../sources/index.js';
 import type { ToolRegistry } from '../core/registry.js';
 
 export const SERVER_INFO = {
-  name: 'plant-omics',
+  name: 'plantomics-hub',
   // 与 package.json 的 version 必须一致；test/core.test.ts 有断言盯着，改一处漏一处会红
-  version: '0.5.0',
+  version: PACKAGE_VERSION,
 } as const;
 
 const INSTRUCTIONS = [
-  '国内植物组学数据库聚合工具。',
+  'PlantOmics Hub：国内植物组学数据库公开接口的聚合工具。',
   '每个工具名前缀标明数据源（如 wheatomics_ 前缀表示 WheatOmics 小麦多组学平台）。',
   '工具输出末尾带出处：源 / 完整请求（含查询参数）/ HTTP 状态 / 耗时 / 查询时刻。引用结果时请一并交代。',
   '一个源查不到不等于不存在：先看工具描述里该源覆盖的物种与数据范围，再换源查。',

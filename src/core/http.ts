@@ -128,7 +128,10 @@ export interface FetchJsonConfig {
  */
 export function createFetcher(
   config: FetchJsonConfig = {},
-  fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+  // 惰性转发，不在模块初始化时把 globalThis.fetch 拷走：
+  // 拷走之后测试再怎么替换 globalThis.fetch 都无效（这里踩过一次），
+  // 而且宿主若在运行期注入自己的 fetch，拷走的版本会一直是旧的。
+  fetchImpl: typeof globalThis.fetch = (...args) => globalThis.fetch(...args),
 ): Fetcher {
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retries = config.retries ?? DEFAULT_RETRIES;

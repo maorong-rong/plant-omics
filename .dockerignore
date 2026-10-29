@@ -1,0 +1,11 @@
+node_modules
+dist
+test
+记录
+docs
+skills
+_归档
+.git
+.github
+*.tgz
+*.log
