@@ -44,7 +44,9 @@ export const manifest: SourceManifest = {
     '平台自带 MCP server（GET /api/mcp/sse）—— 本插件不是它的替代品，价值在于把小麦和别的国内库并成同一套工具',
     '上游各端点对 01G/02G/03G 的"v1/v2/v3"叫法不一致；本仓按前缀识别，不替你判定注释版本',
     '表达值单位随项目而定且上游未逐点标注，跨项目不可直接比较大小',
-    '返回信封统一为 {success, message, timestamp, data}；success=false 时 data 不可用',
+    '已接入的信封类端点使用 {success, message, timestamp, data}；success=false 时 data 不可用，不外推其他端点',
+    'Pfam 注释仅默认 Genefunc_CS_IWGSC03G_table，坐标为 Mb；本地展示裁剪，不提供上游分页或区间注释',
+    '序列仅按gene_id查gene/protein，本地对去重后的单条序列分块，不接区间；offset不是基因组坐标，分块会重新请求上游，不是上游分页',
     '基因详情里的 molecular_weight 单位未在文档中标注（245 aa 的蛋白返回 27838.39，量级像 Da）；引用前请回上游确认',
   ],
 };

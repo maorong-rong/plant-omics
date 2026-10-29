@@ -1,0 +1,100 @@
+{
+    "capture":  {
+                    "url":  "https://wheatomics.sdau.edu.cn/api/homologs/wheat-rice-arabidopsis?gene_id=TraesCS5A02G391700\u0026max_targets=3",
+                    "at":  "2026-10-29T07:32:13.898Z",
+                    "status":  200,
+                    "contentType":  "application/json",
+                    "originalBytes":  1777,
+                    "simulated":  false,
+                    "note":  "真实抓取（2026-10-29 上游恢复后采集），1777 B，与故障前一致"
+                },
+    "payload":  {
+                    "success":  true,
+                    "message":  "ok",
+                    "timestamp":  "2026-10-29T07:32:12.072474+00:00",
+                    "data":  {
+                                 "query_gene":  "TraesCS5A02G391700",
+                                 "count":  6,
+                                 "hits":  [
+                                              {
+                                                  "query_gene":  "TraesCS5A02G391700",
+                                                  "target_gene":  "LOC_Os03g54160",
+                                                  "description":  "Similar to Isoform 2 of MADS-box transcription factor 14",
+                                                  "species":  "Rice",
+                                                  "gene_name":  "MADS14",
+                                                  "qcovs":  100.0,
+                                                  "length":  247,
+                                                  "identity":  84.211,
+                                                  "positive":  90.69,
+                                                  "evalue":  6.49E-131,
+                                                  "score":  948.0
+                                              },
+                                              {
+                                                  "query_gene":  "TraesCS5A02G391700",
+                                                  "target_gene":  "LOC_Os07g01820",
+                                                  "description":  "Similar to MADS-box transcription factor 15",
+                                                  "species":  "Rice",
+                                                  "gene_name":  "DEP",
+                                                  "qcovs":  100.0,
+                                                  "length":  267,
+                                                  "identity":  69.663,
+                                                  "positive":  75.28,
+                                                  "evalue":  3.07E-105,
+                                                  "score":  781.0
+                                              },
+                                              {
+                                                  "query_gene":  "TraesCS5A02G391700",
+                                                  "target_gene":  "LOC_Os07g41370",
+                                                  "description":  "APETALA1 (AP1)/ FRUITFULL (FUL)-like MADS box transcription factor, Specification of inflorescence meristem identit",
+                                                  "species":  "Rice",
+                                                  "gene_name":  "MADS18",
+                                                  "qcovs":  98.0,
+                                                  "length":  246,
+                                                  "identity":  56.504,
+                                                  "positive":  71.54,
+                                                  "evalue":  5.17E-90,
+                                                  "score":  679.0
+                                              },
+                                              {
+                                                  "query_gene":  "TraesCS5A02G391700",
+                                                  "target_gene":  "AT1G69120",
+                                                  "description":  "K-box region and MADS-box transcription factor family protein",
+                                                  "species":  "Arabidopsis",
+                                                  "gene_name":  "AP1",
+                                                  "qcovs":  73.0,
+                                                  "length":  177,
+                                                  "identity":  68.362,
+                                                  "positive":  90.4,
+                                                  "evalue":  1.09E-88,
+                                                  "score":  671.0
+                                              },
+                                              {
+                                                  "query_gene":  "TraesCS5A02G391700",
+                                                  "target_gene":  "AT5G60910",
+                                                  "description":  "AGAMOUS-like 8",
+                                                  "species":  "Arabidopsis",
+                                                  "gene_name":  "AGL8",
+                                                  "qcovs":  98.0,
+                                                  "length":  241,
+                                                  "identity":  56.017,
+                                                  "positive":  72.2,
+                                                  "evalue":  7.28E-86,
+                                                  "score":  651.0
+                                              },
+                                              {
+                                                  "query_gene":  "TraesCS5A02G391700",
+                                                  "target_gene":  "AT1G26310",
+                                                  "description":  "K-box region and MADS-box transcription factor family protein",
+                                                  "species":  "Arabidopsis",
+                                                  "gene_name":  "CAL",
+                                                  "qcovs":  77.0,
+                                                  "length":  189,
+                                                  "identity":  63.492,
+                                                  "positive":  84.66,
+                                                  "evalue":  1.09E-83,
+                                                  "score":  638.0
+                                              }
+                                          ]
+                             }
+                }
+}

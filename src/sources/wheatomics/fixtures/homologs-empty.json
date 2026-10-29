@@ -1,0 +1,23 @@
+{
+    "capture":  {
+                    "url":  "https://wheatomics.sdau.edu.cn/api/homologs/wheat-rice-arabidopsis?gene_id=TraesCS9Z99G999999\u0026max_targets=3",
+                    "at":  "2026-10-29T07:32:15.229Z",
+                    "status":  200,
+                    "contentType":  "application/json",
+                    "originalBytes":  141,
+                    "simulated":  false,
+                    "note":  "真实抓取，查无形态 200 + count=0 + hits=[]，141 B"
+                },
+    "payload":  {
+                    "success":  true,
+                    "message":  "ok",
+                    "timestamp":  "2026-10-29T07:32:13.410928+00:00",
+                    "data":  {
+                                 "query_gene":  "TraesCS9Z99G999999",
+                                 "count":  0,
+                                 "hits":  [
+
+                                          ]
+                             }
+                }
+}

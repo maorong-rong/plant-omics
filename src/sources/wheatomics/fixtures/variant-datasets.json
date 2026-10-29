@@ -1,0 +1,273 @@
+{
+    "capture":  {
+                    "url":  "https://wheatomics.sdau.edu.cn/api/VariantHub/datasets",
+                    "at":  "2026-10-29T07:32:15.738Z",
+                    "status":  200,
+                    "contentType":  "application/json",
+                    "originalBytes":  6675,
+                    "simulated":  false,
+                    "note":  "真实抓取，3 参考基因组 / 29 数据集，6675 B；reference 字段名为 name"
+                },
+    "payload":  {
+                    "success":  true,
+                    "message":  "ok",
+                    "timestamp":  "2026-10-29T07:32:13.904720+00:00",
+                    "data":  {
+                                 "references":  [
+                                                    {
+                                                        "name":  "Chinese_Spring1.0",
+                                                        "display":  "Chinese Spring (IWGSCv1.0)",
+                                                        "blast_db":  "AABBDD_Chinese_Spring1.0.genome",
+                                                        "datasets":  [
+                                                                         {
+                                                                             "key":  "WEC_filtered_SNPs",
+                                                                             "label":  "WEC_filtered_SNPs",
+                                                                             "source":  "WEC SNP (PMID 25886949)",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/25886949/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  false
+                                                                         },
+                                                                         {
+                                                                             "key":  "WEC_filtered_INDELs",
+                                                                             "label":  "WEC_filtered_INDELs",
+                                                                             "source":  "WEC InDel",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/25886949/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  false
+                                                                         },
+                                                                         {
+                                                                             "key":  "whealbi_minocc10",
+                                                                             "label":  "whealbi.minocc10",
+                                                                             "source":  "Whealbi panel (imputed)",
+                                                                             "url":  "https://urgi.versailles.inrae.fr/download/iwgsc/IWGSC_RefSeq_Annotations/v1.0/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Aus_UG_eff",
+                                                                             "label":  "Aus.UG.eff",
+                                                                             "source":  "Hexaploid bread wheat pangenome (PMID 28231383)",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/28231383/",
+                                                                             "has_sample_meta":  false,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Exon_dedup_HCandUG",
+                                                                             "label":  "Exon.dedup.HCandUG",
+                                                                             "source":  "Exome HC+UG, deduplicated",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/pubmed/25886949",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "PRJNA381058_exome",
+                                                                             "label":  "PRJNA381058_exome",
+                                                                             "source":  "Exome capture (recombination study)",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC617499/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Exome_PRJEB30905",
+                                                                             "label":  "Exome_PRJEB30905",
+                                                                             "source":  "VRN1 and developmental response (PRJEB30905)",
+                                                                             "url":  "https://doi.org/10.1242/dev.172684",
+                                                                             "has_sample_meta":  false,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "1000_wheat_exomes",
+                                                                             "label":  "1000 wheat exomes",
+                                                                             "source":  "1kEC（KSU wheatgenomics）",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA517692",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Canadian_wheat_lines",
+                                                                             "label":  "Canadian wheat lines",
+                                                                             "source":  "Canadian wheat germplasm, novoalign raw variants",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA517692",
+                                                                             "has_sample_meta":  false,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "1000_wheat_exomes_imputed",
+                                                                             "label":  "1000 wheat exomes after imputation and filtering",
+                                                                             "source":  "1kEC, imputed and filtered",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA517692",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "NewExomeCapute",
+                                                                             "label":  "NewExomeCapute",
+                                                                             "source":  "New exome capture (GigaScience 2019)",
+                                                                             "url":  "https://academic.oup.com/gigascience/article/8/4/giz018/5304888",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "90_mini_core_rna_seq_HC",
+                                                                             "label":  "90_mini_core_rna_seq_HC",
+                                                                             "source":  "90 mini-core accessions RNA-seq (PMC5619896)",
+                                                                             "url":  "https://pmc.ncbi.nlm.nih.gov/articles/PMC5619896/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "355_common_wheat_WGS",
+                                                                             "label":  "355 common wheat WGS",
+                                                                             "source":  "355 common wheat WGS, integrated (Plant Cell 2023)",
+                                                                             "url":  "https://doi.org/10.1093/plcell/koad229",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Vmap_1.0",
+                                                                             "label":  "Vmap 1.0",
+                                                                             "source":  "VMap 1.0 panel (414 WGS, Nat Genet 2020)",
+                                                                             "url":  "https://www.nature.com/articles/s41588-020-00722-w",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "35_grain_rna_seq_HC",
+                                                                             "label":  "35_grain_rna_seq_HC",
+                                                                             "source":  "35 grain RNA-seq accessions (PMC5637334)",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5637334/",
+                                                                             "has_sample_meta":  false,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "GBS_filtered_SNPs",
+                                                                             "label":  "GBS_filtered_SNPs",
+                                                                             "source":  "GBS SNPs, filtered",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/25886949/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "GBS_filtered_Indels",
+                                                                             "label":  "GBS_filtered_Indels",
+                                                                             "source":  "GBS InDels, filtered",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/25886949/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "GBS_NG_GWAS",
+                                                                             "label":  "GBS_NG_GWAS",
+                                                                             "source":  "GBS NG GWAS panel (Nat Genet 2019)",
+                                                                             "url":  "https://www.nature.com/articles/s41588-019-0496-6",
+                                                                             "has_sample_meta":  false,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "commonwheat63WGS",
+                                                                             "label":  "commonwheat63WGS",
+                                                                             "source":  "Common wheat, 63 WGS (PMID 30081829)",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/30081829/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "WildEmmer20WGS_SNP",
+                                                                             "label":  "WildEmmer20WGS_SNP",
+                                                                             "source":  "Wild emmer, 20x WGS SNPs",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/pubmed/31300020",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "WildEmmer10WGS_INDEL",
+                                                                             "label":  "WildEmmer10WGS_INDEL",
+                                                                             "source":  "Wild emmer, 10x WGS InDels",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/pubmed/31300020",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "SHW_GBS_SNP",
+                                                                             "label":  "SHW_GBS_SNP",
+                                                                             "source":  "Synthetic hexaploid wheat (SHW) GBS SNPs",
+                                                                             "url":  "https://www.ncbi.nlm.nih.gov/pubmed/30081829/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Cheng_2024",
+                                                                             "label":  "Cheng, S. et al. 2024",
+                                                                             "source":  "Cheng et al. 2024, integrated SNPs (Nature 2024)",
+                                                                             "url":  "https://www.nature.com/articles/s41586-024-07682-9",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "all491_cnv_snp_indel",
+                                                                             "label":  "Triticum_aestivum.AABBDD.491.WGS",
+                                                                             "source":  "Ma et al. 2025, Plant Communications — CNV map of 491 common wheat genomes (doi:10.1016/j.xplc.2024.101226)",
+                                                                             "url":  "https://linkinghub.elsevier.com/retrieve/pii/S2590346224006473",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         }
+                                                                     ]
+                                                    },
+                                                    {
+                                                        "name":  "Chinese_Spring2.1",
+                                                        "display":  "Chinese Spring (IWGSCv2.1)",
+                                                        "blast_db":  "AABBDD_Chinese_Spring2.1.genome",
+                                                        "datasets":  [
+                                                                         {
+                                                                             "key":  "287exome_CS2.1",
+                                                                             "label":  "287exome_raw (CS2.1)",
+                                                                             "source":  "Mol Plant 2022 (10.1016/j.molp.2022.01.004)",
+                                                                             "url":  "https://doi.org/10.1016/j.molp.2022.01.004",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "wheat660k_2191_CS2.1",
+                                                                             "label":  "wgs2191 (CS2.1)",
+                                                                             "source":  "Nat Genet 2025 (10.1038/s41588-025-02259-2)",
+                                                                             "url":  "https://www.nature.com/articles/s41588-025-02259-2",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         }
+                                                                     ]
+                                                    },
+                                                    {
+                                                        "name":  "Kronos",
+                                                        "display":  "Kronos (Tetraploid)",
+                                                        "blast_db":  "AABB_Kronos.genome",
+                                                        "datasets":  [
+                                                                         {
+                                                                             "key":  "Tetra_wheat_sample736_InDel",
+                                                                             "label":  "Tetraploid_wheat.sample736.InDel",
+                                                                             "source":  "Tetraploid wheat 736-sample InDel variants (PMID 42486906)",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/42486906/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Tetra_wheat_sample736_SNP",
+                                                                             "label":  "Tetraploid_wheat.sample736.SNP",
+                                                                             "source":  "Tetraploid wheat 736-sample SNP variants (PMID 42486906)",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/42486906/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         },
+                                                                         {
+                                                                             "key":  "Tetra_wheat_sample736_SV",
+                                                                             "label":  "Tetraploid_wheat.sample736.SV",
+                                                                             "source":  "Tetraploid wheat 736-sample SV variants (PMID 42486906)",
+                                                                             "url":  "https://pubmed.ncbi.nlm.nih.gov/42486906/",
+                                                                             "has_sample_meta":  true,
+                                                                             "genome_concordant":  true
+                                                                         }
+                                                                     ]
+                                                    }
+                                                ]
+                             }
+                }
+}

@@ -1,0 +1,13 @@
+{
+  "capture": {
+    "request": "GET https://wheatomics.sdau.edu.cn/api/sequence/by-gene?gene_id=TraesCS9Z99G999999",
+    "status": 404,
+    "contentType": "application/json",
+    "sourceBytes": 104,
+    "date": "2026-10-29",
+    "cropping": "whitelisted fields; original FASTA retained including duplicate records"
+  },
+  "payload": {
+    "detail": "No sequence found for TraesCS9Z99G999999 (tried: TraesCS9Z99G999999, TraesCS9Z99G999999.1)."
+  }
+}

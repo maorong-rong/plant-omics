@@ -1,0 +1,20 @@
+{
+  "capture": {
+    "request": "GET https://wheatomics.sdau.edu.cn/api/genes/functions/pfam?ID=PF999999",
+    "status": 200,
+    "sourceBytes": 167,
+    "date": "2026-10-29",
+    "cropping": "field whitelist only; all 0 records retained"
+  },
+  "payload": {
+    "success": true,
+    "message": "ok",
+    "timestamp": "2026-10-29T10:43:34.963445+00:00",
+    "data": {
+      "table": "Genefunc_CS_IWGSC03G_table",
+      "domain": "PF999999",
+      "count": 0,
+      "records": []
+    }
+  }
+}

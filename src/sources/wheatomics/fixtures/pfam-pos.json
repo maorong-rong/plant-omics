@@ -1,0 +1,2527 @@
+{
+  "capture": {
+    "request": "GET https://wheatomics.sdau.edu.cn/api/genes/functions/pfam?ID=PF00319",
+    "status": 200,
+    "sourceBytes": 111440,
+    "date": "2026-10-29",
+    "cropping": "field whitelist only; all 358 records retained"
+  },
+  "payload": {
+    "success": true,
+    "message": "ok",
+    "timestamp": "2026-10-29T10:43:17.173579+00:00",
+    "data": {
+      "table": "Genefunc_CS_IWGSC03G_table",
+      "domain": "PF00319",
+      "count": 358,
+      "records": [
+        {
+          "gene_primary": "TraesCS1A03G0032400",
+          "chromosome": "chr1A",
+          "start_mb": 8.652783,
+          "end_mb": 8.653352,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0107300",
+          "chromosome": "chr1A",
+          "start_mb": 27.85502,
+          "end_mb": 27.85914,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0107400",
+          "chromosome": "chr1A",
+          "start_mb": 27.936103,
+          "end_mb": 27.940085,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0148900LC",
+          "chromosome": "chr1A",
+          "start_mb": 44.522896,
+          "end_mb": 44.52324,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0149000",
+          "chromosome": "chr1A",
+          "start_mb": 44.543769,
+          "end_mb": 44.544284,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0175900LC",
+          "chromosome": "chr1A",
+          "start_mb": 56.867233,
+          "end_mb": 56.868159,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0312600",
+          "chromosome": "chr1A",
+          "start_mb": 152.510815,
+          "end_mb": 152.518088,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0533300",
+          "chromosome": "chr1A",
+          "start_mb": 360.259109,
+          "end_mb": 360.269755,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0533600",
+          "chromosome": "chr1A",
+          "start_mb": 360.720933,
+          "end_mb": 360.737481,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0670400",
+          "chromosome": "chr1A",
+          "start_mb": 459.95708,
+          "end_mb": 459.961239,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0673200",
+          "chromosome": "chr1A",
+          "start_mb": 461.676776,
+          "end_mb": 461.678837,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0771400",
+          "chromosome": "chr1A",
+          "start_mb": 503.367682,
+          "end_mb": 503.368647,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1A03G0771600LC",
+          "chromosome": "chr1A",
+          "start_mb": 503.473814,
+          "end_mb": 503.473996,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0136100",
+          "chromosome": "chr1B",
+          "start_mb": 44.561861,
+          "end_mb": 44.566021,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0136300",
+          "chromosome": "chr1B",
+          "start_mb": 44.721154,
+          "end_mb": 44.726853,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0136600",
+          "chromosome": "chr1B",
+          "start_mb": 44.751766,
+          "end_mb": 44.756,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0202100",
+          "chromosome": "chr1B",
+          "start_mb": 68.317749,
+          "end_mb": 68.318393,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0396500",
+          "chromosome": "chr1B",
+          "start_mb": 204.592441,
+          "end_mb": 204.601181,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0624000",
+          "chromosome": "chr1B",
+          "start_mb": 395.20233,
+          "end_mb": 395.21369,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0624500",
+          "chromosome": "chr1B",
+          "start_mb": 395.539671,
+          "end_mb": 395.539859,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0761800",
+          "chromosome": "chr1B",
+          "start_mb": 486.614427,
+          "end_mb": 486.618557,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0765800",
+          "chromosome": "chr1B",
+          "start_mb": 488.614739,
+          "end_mb": 488.619131,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0883000",
+          "chromosome": "chr1B",
+          "start_mb": 553.592809,
+          "end_mb": 553.593753,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0883200LC",
+          "chromosome": "chr1B",
+          "start_mb": 553.699602,
+          "end_mb": 553.699784,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1B03G0883500LC",
+          "chromosome": "chr1B",
+          "start_mb": 553.90906,
+          "end_mb": 553.909525,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1B03G1249000",
+          "chromosome": "chr1B",
+          "start_mb": 685.80096,
+          "end_mb": 685.801256,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0094300",
+          "chromosome": "chr1D",
+          "start_mb": 27.040885,
+          "end_mb": 27.044685,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0094400",
+          "chromosome": "chr1D",
+          "start_mb": 27.181757,
+          "end_mb": 27.188076,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0094500",
+          "chromosome": "chr1D",
+          "start_mb": 27.353072,
+          "end_mb": 27.35742,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0136500",
+          "chromosome": "chr1D",
+          "start_mb": 45.357872,
+          "end_mb": 45.35875,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0304600",
+          "chromosome": "chr1D",
+          "start_mb": 143.478094,
+          "end_mb": 143.485822,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0514600",
+          "chromosome": "chr1D",
+          "start_mb": 290.088523,
+          "end_mb": 290.09998,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0514700",
+          "chromosome": "chr1D",
+          "start_mb": 290.725784,
+          "end_mb": 290.746688,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0633500",
+          "chromosome": "chr1D",
+          "start_mb": 359.194899,
+          "end_mb": 359.19947,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0637600",
+          "chromosome": "chr1D",
+          "start_mb": 362.639457,
+          "end_mb": 362.644161,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS1D03G0738000",
+          "chromosome": "chr1D",
+          "start_mb": 408.805522,
+          "end_mb": 408.806454,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS1D03G1013900",
+          "chromosome": "chr1D",
+          "start_mb": 488.918464,
+          "end_mb": 488.920395,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0257600LC",
+          "chromosome": "chr2A",
+          "start_mb": 78.650263,
+          "end_mb": 78.650772,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0299700",
+          "chromosome": "chr2A",
+          "start_mb": 95.498872,
+          "end_mb": 95.500204,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0299800LC",
+          "chromosome": "chr2A",
+          "start_mb": 96.199687,
+          "end_mb": 96.200431,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0362900",
+          "chromosome": "chr2A",
+          "start_mb": 137.422986,
+          "end_mb": 137.440104,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0643000",
+          "chromosome": "chr2A",
+          "start_mb": 416.061569,
+          "end_mb": 416.068894,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0706900",
+          "chromosome": "chr2A",
+          "start_mb": 479.397983,
+          "end_mb": 479.398246,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0773600",
+          "chromosome": "chr2A",
+          "start_mb": 538.479622,
+          "end_mb": 538.481717,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2A03G0808500",
+          "chromosome": "chr2A",
+          "start_mb": 563.845098,
+          "end_mb": 563.858962,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2A03G1009400",
+          "chromosome": "chr2A",
+          "start_mb": 681.034796,
+          "end_mb": 681.037496,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2A03G1083900",
+          "chromosome": "chr2A",
+          "start_mb": 710.044622,
+          "end_mb": 710.045764,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G1215400LC",
+          "chromosome": "chr2A",
+          "start_mb": 749.052015,
+          "end_mb": 749.053253,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G1215800",
+          "chromosome": "chr2A",
+          "start_mb": 749.096531,
+          "end_mb": 749.097472,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2A03G1347300LC",
+          "chromosome": "chr2A",
+          "start_mb": 781.06904,
+          "end_mb": 781.069444,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0352400",
+          "chromosome": "chr2B",
+          "start_mb": 119.894542,
+          "end_mb": 119.895633,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0419800LC",
+          "chromosome": "chr2B",
+          "start_mb": 152.894363,
+          "end_mb": 152.894695,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0420300",
+          "chromosome": "chr2B",
+          "start_mb": 153.810419,
+          "end_mb": 153.810994,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0484500",
+          "chromosome": "chr2B",
+          "start_mb": 188.113174,
+          "end_mb": 188.132413,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0727900",
+          "chromosome": "chr2B",
+          "start_mb": 396.320992,
+          "end_mb": 396.327834,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0786400",
+          "chromosome": "chr2B",
+          "start_mb": 431.563425,
+          "end_mb": 431.5863,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0855400",
+          "chromosome": "chr2B",
+          "start_mb": 478.22979,
+          "end_mb": 478.232652,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2B03G0893500",
+          "chromosome": "chr2B",
+          "start_mb": 498.437839,
+          "end_mb": 498.452084,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2B03G1112300LC",
+          "chromosome": "chr2B",
+          "start_mb": 636.824329,
+          "end_mb": 636.824682,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2B03G1120500",
+          "chromosome": "chr2B",
+          "start_mb": 640.478168,
+          "end_mb": 640.480047,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2B03G1389300LC",
+          "chromosome": "chr2B",
+          "start_mb": 757.359137,
+          "end_mb": 757.360375,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0268600",
+          "chromosome": "chr2D",
+          "start_mb": 77.184546,
+          "end_mb": 77.185988,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0317600",
+          "chromosome": "chr2D",
+          "start_mb": 95.676641,
+          "end_mb": 95.677887,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0318000LC",
+          "chromosome": "chr2D",
+          "start_mb": 96.547141,
+          "end_mb": 96.547713,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0379400",
+          "chromosome": "chr2D",
+          "start_mb": 128.452822,
+          "end_mb": 128.477614,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0605600",
+          "chromosome": "chr2D",
+          "start_mb": 321.444186,
+          "end_mb": 321.451604,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0654200",
+          "chromosome": "chr2D",
+          "start_mb": 357.783589,
+          "end_mb": 357.783928,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0712600",
+          "chromosome": "chr2D",
+          "start_mb": 398.929234,
+          "end_mb": 398.931032,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0747600",
+          "chromosome": "chr2D",
+          "start_mb": 420.275189,
+          "end_mb": 420.290058,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2D03G0944100",
+          "chromosome": "chr2D",
+          "start_mb": 535.526973,
+          "end_mb": 535.529451,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS2D03G1173200",
+          "chromosome": "chr2D",
+          "start_mb": 617.581833,
+          "end_mb": 617.583109,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G1173400",
+          "chromosome": "chr2D",
+          "start_mb": 617.684262,
+          "end_mb": 617.684969,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G1256900LC",
+          "chromosome": "chr2D",
+          "start_mb": 638.121592,
+          "end_mb": 638.1222,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS2D03G1311500LC",
+          "chromosome": "chr2D",
+          "start_mb": 648.799735,
+          "end_mb": 648.799998,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0198600",
+          "chromosome": "chr3A",
+          "start_mb": 57.887446,
+          "end_mb": 57.888823,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0200300",
+          "chromosome": "chr3A",
+          "start_mb": 58.118513,
+          "end_mb": 58.120326,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0302300",
+          "chromosome": "chr3A",
+          "start_mb": 115.292614,
+          "end_mb": 115.293369,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0306900",
+          "chromosome": "chr3A",
+          "start_mb": 117.878099,
+          "end_mb": 117.885889,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0311400",
+          "chromosome": "chr3A",
+          "start_mb": 122.590922,
+          "end_mb": 122.591521,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0711600",
+          "chromosome": "chr3A",
+          "start_mb": 524.736346,
+          "end_mb": 524.738373,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0854200LC",
+          "chromosome": "chr3A",
+          "start_mb": 607.522225,
+          "end_mb": 607.523229,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0854400",
+          "chromosome": "chr3A",
+          "start_mb": 607.609995,
+          "end_mb": 607.610984,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0951300",
+          "chromosome": "chr3A",
+          "start_mb": 651.780047,
+          "end_mb": 651.783275,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3A03G0971200",
+          "chromosome": "chr3A",
+          "start_mb": 660.156022,
+          "end_mb": 660.156936,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1006400",
+          "chromosome": "chr3A",
+          "start_mb": 674.409622,
+          "end_mb": 674.433638,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1009400",
+          "chromosome": "chr3A",
+          "start_mb": 676.393319,
+          "end_mb": 676.429534,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1009700",
+          "chromosome": "chr3A",
+          "start_mb": 677.032258,
+          "end_mb": 677.035388,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1009900",
+          "chromosome": "chr3A",
+          "start_mb": 677.066707,
+          "end_mb": 677.087044,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1010200",
+          "chromosome": "chr3A",
+          "start_mb": 677.322033,
+          "end_mb": 677.35253,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1056000",
+          "chromosome": "chr3A",
+          "start_mb": 692.706753,
+          "end_mb": 692.707921,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1190700LC",
+          "chromosome": "chr3A",
+          "start_mb": 728.377412,
+          "end_mb": 728.378083,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1247900",
+          "chromosome": "chr3A",
+          "start_mb": 743.997261,
+          "end_mb": 743.99846,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1263000LC",
+          "chromosome": "chr3A",
+          "start_mb": 748.054846,
+          "end_mb": 748.055427,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3A03G1269400",
+          "chromosome": "chr3A",
+          "start_mb": 750.517103,
+          "end_mb": 750.517885,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0242800",
+          "chromosome": "chr3B",
+          "start_mb": 82.827487,
+          "end_mb": 82.829323,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0371200",
+          "chromosome": "chr3B",
+          "start_mb": 159.617346,
+          "end_mb": 159.617933,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0375900",
+          "chromosome": "chr3B",
+          "start_mb": 163.210856,
+          "end_mb": 163.21851,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0381900",
+          "chromosome": "chr3B",
+          "start_mb": 166.219334,
+          "end_mb": 166.220089,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0415800LC",
+          "chromosome": "chr3B",
+          "start_mb": 186.671915,
+          "end_mb": 186.672325,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0814800",
+          "chromosome": "chr3B",
+          "start_mb": 526.910069,
+          "end_mb": 526.912516,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3B03G0978600LC",
+          "chromosome": "chr3B",
+          "start_mb": 632.39825,
+          "end_mb": 632.398495,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1087500",
+          "chromosome": "chr3B",
+          "start_mb": 694.521425,
+          "end_mb": 694.523614,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1116900",
+          "chromosome": "chr3B",
+          "start_mb": 708.948566,
+          "end_mb": 708.949962,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1119800",
+          "chromosome": "chr3B",
+          "start_mb": 711.232838,
+          "end_mb": 711.234186,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1120100LC",
+          "chromosome": "chr3B",
+          "start_mb": 711.477437,
+          "end_mb": 711.477799,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1159100",
+          "chromosome": "chr3B",
+          "start_mb": 731.42443,
+          "end_mb": 731.45657,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1159200LC",
+          "chromosome": "chr3B",
+          "start_mb": 731.682207,
+          "end_mb": 731.682443,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1160000",
+          "chromosome": "chr3B",
+          "start_mb": 731.996693,
+          "end_mb": 732.027796,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1220600",
+          "chromosome": "chr3B",
+          "start_mb": 753.519896,
+          "end_mb": 753.521169,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1490400",
+          "chromosome": "chr3B",
+          "start_mb": 839.818612,
+          "end_mb": 839.819775,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511000",
+          "chromosome": "chr3B",
+          "start_mb": 845.245062,
+          "end_mb": 845.245583,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511300",
+          "chromosome": "chr3B",
+          "start_mb": 845.311257,
+          "end_mb": 845.312609,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511400LC",
+          "chromosome": "chr3B",
+          "start_mb": 845.311328,
+          "end_mb": 845.311546,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511600",
+          "chromosome": "chr3B",
+          "start_mb": 845.615373,
+          "end_mb": 845.616391,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511700",
+          "chromosome": "chr3B",
+          "start_mb": 845.735112,
+          "end_mb": 845.736421,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511800",
+          "chromosome": "chr3B",
+          "start_mb": 845.791465,
+          "end_mb": 845.792049,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1511900LC",
+          "chromosome": "chr3B",
+          "start_mb": 845.84879,
+          "end_mb": 845.849374,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1512000LC",
+          "chromosome": "chr3B",
+          "start_mb": 845.910603,
+          "end_mb": 845.911049,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1512400",
+          "chromosome": "chr3B",
+          "start_mb": 846.016827,
+          "end_mb": 846.017946,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3B03G1512700",
+          "chromosome": "chr3B",
+          "start_mb": 846.300999,
+          "end_mb": 846.302065,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0095200LC",
+          "chromosome": "chr3D",
+          "start_mb": 21.02146,
+          "end_mb": 21.021744,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0179400",
+          "chromosome": "chr3D",
+          "start_mb": 46.018505,
+          "end_mb": 46.02029,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0179900",
+          "chromosome": "chr3D",
+          "start_mb": 46.051111,
+          "end_mb": 46.051287,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0210000",
+          "chromosome": "chr3D",
+          "start_mb": 55.324908,
+          "end_mb": 55.326796,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0290500",
+          "chromosome": "chr3D",
+          "start_mb": 97.233565,
+          "end_mb": 97.234204,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0294800",
+          "chromosome": "chr3D",
+          "start_mb": 101.389258,
+          "end_mb": 101.397151,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0299200LC",
+          "chromosome": "chr3D",
+          "start_mb": 104.340002,
+          "end_mb": 104.340376,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0654800",
+          "chromosome": "chr3D",
+          "start_mb": 394.741799,
+          "end_mb": 394.744297,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0783500LC",
+          "chromosome": "chr3D",
+          "start_mb": 464.972495,
+          "end_mb": 464.973502,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0885300",
+          "chromosome": "chr3D",
+          "start_mb": 517.036809,
+          "end_mb": 517.038919,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0910300LC",
+          "chromosome": "chr3D",
+          "start_mb": 527.597453,
+          "end_mb": 527.597815,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0936300LC",
+          "chromosome": "chr3D",
+          "start_mb": 539.709712,
+          "end_mb": 539.744164,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0940300",
+          "chromosome": "chr3D",
+          "start_mb": 541.98907,
+          "end_mb": 542.021642,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0940500LC",
+          "chromosome": "chr3D",
+          "start_mb": 542.122322,
+          "end_mb": 542.123647,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0940900",
+          "chromosome": "chr3D",
+          "start_mb": 542.19522,
+          "end_mb": 542.227445,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0941100",
+          "chromosome": "chr3D",
+          "start_mb": 542.421172,
+          "end_mb": 542.455539,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G0982400",
+          "chromosome": "chr3D",
+          "start_mb": 556.641144,
+          "end_mb": 556.642412,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G1135100",
+          "chromosome": "chr3D",
+          "start_mb": 600.922389,
+          "end_mb": 600.923455,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G1178100",
+          "chromosome": "chr3D",
+          "start_mb": 612.863616,
+          "end_mb": 612.864484,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G1187500LC",
+          "chromosome": "chr3D",
+          "start_mb": 615.103525,
+          "end_mb": 615.103743,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G1192400",
+          "chromosome": "chr3D",
+          "start_mb": 616.362074,
+          "end_mb": 616.362873,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS3D03G1192500",
+          "chromosome": "chr3D",
+          "start_mb": 616.362087,
+          "end_mb": 616.363151,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4A03G0052800",
+          "chromosome": "chr4A",
+          "start_mb": 19.817266,
+          "end_mb": 19.829619,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4A03G0052900",
+          "chromosome": "chr4A",
+          "start_mb": 19.858662,
+          "end_mb": 19.873995,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4A03G0092400LC",
+          "chromosome": "chr4A",
+          "start_mb": 38.698888,
+          "end_mb": 38.700129,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF00448: SRP54-type protein, GTPase domain"
+        },
+        {
+          "gene_primary": "TraesCS4A03G0116200",
+          "chromosome": "chr4A",
+          "start_mb": 52.591436,
+          "end_mb": 52.60341,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4A03G0460400",
+          "chromosome": "chr4A",
+          "start_mb": 422.927078,
+          "end_mb": 422.930463,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4A03G0741100",
+          "chromosome": "chr4A",
+          "start_mb": 593.174396,
+          "end_mb": 593.175381,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4A03G1002500",
+          "chromosome": "chr4A",
+          "start_mb": 679.078681,
+          "end_mb": 679.08008,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0049600",
+          "chromosome": "chr4B",
+          "start_mb": 18.739231,
+          "end_mb": 18.741247,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0369800",
+          "chromosome": "chr4B",
+          "start_mb": 233.297362,
+          "end_mb": 233.300764,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0666300",
+          "chromosome": "chr4B",
+          "start_mb": 507.131534,
+          "end_mb": 507.146477,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0666400",
+          "chromosome": "chr4B",
+          "start_mb": 507.590146,
+          "end_mb": 507.603112,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0736300",
+          "chromosome": "chr4B",
+          "start_mb": 558.820348,
+          "end_mb": 558.83396,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0792700",
+          "chromosome": "chr4B",
+          "start_mb": 588.183023,
+          "end_mb": 588.198007,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0901500",
+          "chromosome": "chr4B",
+          "start_mb": 639.253412,
+          "end_mb": 639.267786,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4B03G0914000",
+          "chromosome": "chr4B",
+          "start_mb": 642.788532,
+          "end_mb": 642.791635,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0034300",
+          "chromosome": "chr4D",
+          "start_mb": 9.183062,
+          "end_mb": 9.185082,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0304000",
+          "chromosome": "chr4D",
+          "start_mb": 138.151062,
+          "end_mb": 138.154397,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0586600",
+          "chromosome": "chr4D",
+          "start_mb": 407.01303,
+          "end_mb": 407.02562,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0590000",
+          "chromosome": "chr4D",
+          "start_mb": 410.304894,
+          "end_mb": 410.315508,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0655000",
+          "chromosome": "chr4D",
+          "start_mb": 447.487194,
+          "end_mb": 447.496892,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0709900",
+          "chromosome": "chr4D",
+          "start_mb": 469.459908,
+          "end_mb": 469.475527,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0794000",
+          "chromosome": "chr4D",
+          "start_mb": 498.405575,
+          "end_mb": 498.41945,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS4D03G0803000",
+          "chromosome": "chr4D",
+          "start_mb": 500.441774,
+          "end_mb": 500.444389,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0003100LC",
+          "chromosome": "chr5A",
+          "start_mb": 2.220206,
+          "end_mb": 2.220485,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0003200",
+          "chromosome": "chr5A",
+          "start_mb": 2.225824,
+          "end_mb": 2.226003,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0023800",
+          "chromosome": "chr5A",
+          "start_mb": 7.940806,
+          "end_mb": 7.941798,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0045600LC",
+          "chromosome": "chr5A",
+          "start_mb": 16.839841,
+          "end_mb": 16.84011,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0321700",
+          "chromosome": "chr5A",
+          "start_mb": 240.233168,
+          "end_mb": 240.238496,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0702700",
+          "chromosome": "chr5A",
+          "start_mb": 495.406011,
+          "end_mb": 495.414119,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0935400",
+          "chromosome": "chr5A",
+          "start_mb": 589.259335,
+          "end_mb": 589.271297,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5A03G0935500",
+          "chromosome": "chr5A",
+          "start_mb": 589.863403,
+          "end_mb": 589.86965,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5A03G1207200",
+          "chromosome": "chr5A",
+          "start_mb": 680.729707,
+          "end_mb": 680.742429,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5A03G1215600",
+          "chromosome": "chr5A",
+          "start_mb": 682.786658,
+          "end_mb": 682.789182,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0003500",
+          "chromosome": "chr5B",
+          "start_mb": 2.311597,
+          "end_mb": 2.312335,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0003700",
+          "chromosome": "chr5B",
+          "start_mb": 2.316821,
+          "end_mb": 2.328979,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0018300",
+          "chromosome": "chr5B",
+          "start_mb": 8.990141,
+          "end_mb": 8.990908,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0310500",
+          "chromosome": "chr5B",
+          "start_mb": 192.770859,
+          "end_mb": 192.779311,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0740100",
+          "chromosome": "chr5B",
+          "start_mb": 474.815563,
+          "end_mb": 474.82345,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0986000",
+          "chromosome": "chr5B",
+          "start_mb": 577.008896,
+          "end_mb": 577.022083,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5B03G0986100",
+          "chromosome": "chr5B",
+          "start_mb": 577.26149,
+          "end_mb": 577.267452,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5B03G1154000",
+          "chromosome": "chr5B",
+          "start_mb": 645.172047,
+          "end_mb": 645.17273,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0003500",
+          "chromosome": "chr5D",
+          "start_mb": 2.286363,
+          "end_mb": 2.288714,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0003600",
+          "chromosome": "chr5D",
+          "start_mb": 2.291637,
+          "end_mb": 2.30249,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0033500LC",
+          "chromosome": "chr5D",
+          "start_mb": 8.712608,
+          "end_mb": 8.712826,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0283800",
+          "chromosome": "chr5D",
+          "start_mb": 157.222089,
+          "end_mb": 157.227638,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0669300",
+          "chromosome": "chr5D",
+          "start_mb": 394.523644,
+          "end_mb": 394.530959,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0894800",
+          "chromosome": "chr5D",
+          "start_mb": 470.04205,
+          "end_mb": 470.049949,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5D03G0895000",
+          "chromosome": "chr5D",
+          "start_mb": 470.28153,
+          "end_mb": 470.288417,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS5D03G1048300",
+          "chromosome": "chr5D",
+          "start_mb": 517.29209,
+          "end_mb": 517.292611,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0024300",
+          "chromosome": "chr6A",
+          "start_mb": 6.660567,
+          "end_mb": 6.667306,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0044400",
+          "chromosome": "chr6A",
+          "start_mb": 10.833081,
+          "end_mb": 10.833551,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0045600",
+          "chromosome": "chr6A",
+          "start_mb": 11.259162,
+          "end_mb": 11.259797,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0046900",
+          "chromosome": "chr6A",
+          "start_mb": 11.70398,
+          "end_mb": 11.704663,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0311800",
+          "chromosome": "chr6A",
+          "start_mb": 106.148918,
+          "end_mb": 106.150676,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0328400",
+          "chromosome": "chr6A",
+          "start_mb": 112.335253,
+          "end_mb": 112.335846,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0383100",
+          "chromosome": "chr6A",
+          "start_mb": 150.978052,
+          "end_mb": 150.981011,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0526100LC",
+          "chromosome": "chr6A",
+          "start_mb": 310.530531,
+          "end_mb": 310.530986,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0697000",
+          "chromosome": "chr6A",
+          "start_mb": 484.106319,
+          "end_mb": 484.11343,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0771600",
+          "chromosome": "chr6A",
+          "start_mb": 526.608714,
+          "end_mb": 526.6167,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0818700",
+          "chromosome": "chr6A",
+          "start_mb": 553.037891,
+          "end_mb": 553.044676,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0872100",
+          "chromosome": "chr6A",
+          "start_mb": 574.643381,
+          "end_mb": 574.644136,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0920400LC",
+          "chromosome": "chr6A",
+          "start_mb": 592.059449,
+          "end_mb": 592.060932,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0920500",
+          "chromosome": "chr6A",
+          "start_mb": 592.07554,
+          "end_mb": 592.07625,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0921000",
+          "chromosome": "chr6A",
+          "start_mb": 592.918151,
+          "end_mb": 592.918936,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6A03G0922700",
+          "chromosome": "chr6A",
+          "start_mb": 593.960199,
+          "end_mb": 593.960882,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0041900",
+          "chromosome": "chr6B",
+          "start_mb": 13.80502,
+          "end_mb": 13.813648,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0062600",
+          "chromosome": "chr6B",
+          "start_mb": 19.566807,
+          "end_mb": 19.56749,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0062900",
+          "chromosome": "chr6B",
+          "start_mb": 19.701508,
+          "end_mb": 19.702074,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0063400",
+          "chromosome": "chr6B",
+          "start_mb": 20.009684,
+          "end_mb": 20.010319,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0403200",
+          "chromosome": "chr6B",
+          "start_mb": 168.584764,
+          "end_mb": 168.587185,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0421800LC",
+          "chromosome": "chr6B",
+          "start_mb": 179.878093,
+          "end_mb": 179.878356,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0475900",
+          "chromosome": "chr6B",
+          "start_mb": 219.097907,
+          "end_mb": 219.099864,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0828100",
+          "chromosome": "chr6B",
+          "start_mb": 524.248582,
+          "end_mb": 524.255939,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0918500",
+          "chromosome": "chr6B",
+          "start_mb": 579.906181,
+          "end_mb": 579.913751,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6B03G0969600",
+          "chromosome": "chr6B",
+          "start_mb": 614.189788,
+          "end_mb": 614.196297,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6B03G1043000",
+          "chromosome": "chr6B",
+          "start_mb": 651.188485,
+          "end_mb": 651.189255,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G1043300",
+          "chromosome": "chr6B",
+          "start_mb": 651.333678,
+          "end_mb": 651.334451,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G1107800",
+          "chromosome": "chr6B",
+          "start_mb": 674.624757,
+          "end_mb": 674.625494,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G1108000",
+          "chromosome": "chr6B",
+          "start_mb": 674.65628,
+          "end_mb": 674.657017,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G1108300",
+          "chromosome": "chr6B",
+          "start_mb": 675.123133,
+          "end_mb": 675.123918,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6B03G1109700",
+          "chromosome": "chr6B",
+          "start_mb": 676.141914,
+          "end_mb": 676.142846,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0031500",
+          "chromosome": "chr6D",
+          "start_mb": 6.496387,
+          "end_mb": 6.503516,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0047700",
+          "chromosome": "chr6D",
+          "start_mb": 10.086212,
+          "end_mb": 10.086895,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0048000",
+          "chromosome": "chr6D",
+          "start_mb": 10.172728,
+          "end_mb": 10.173282,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0048600",
+          "chromosome": "chr6D",
+          "start_mb": 10.273426,
+          "end_mb": 10.274216,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0266700",
+          "chromosome": "chr6D",
+          "start_mb": 107.405157,
+          "end_mb": 107.407158,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0282100LC",
+          "chromosome": "chr6D",
+          "start_mb": 112.551454,
+          "end_mb": 112.551717,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0328600",
+          "chromosome": "chr6D",
+          "start_mb": 141.519829,
+          "end_mb": 141.522746,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0586500",
+          "chromosome": "chr6D",
+          "start_mb": 363.133119,
+          "end_mb": 363.14061,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0654000",
+          "chromosome": "chr6D",
+          "start_mb": 403.74584,
+          "end_mb": 403.754333,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0692300",
+          "chromosome": "chr6D",
+          "start_mb": 425.294248,
+          "end_mb": 425.300774,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0743100",
+          "chromosome": "chr6D",
+          "start_mb": 448.604268,
+          "end_mb": 448.605203,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0791700",
+          "chromosome": "chr6D",
+          "start_mb": 462.648452,
+          "end_mb": 462.649177,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0791800",
+          "chromosome": "chr6D",
+          "start_mb": 462.67349,
+          "end_mb": 462.675037,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0792100",
+          "chromosome": "chr6D",
+          "start_mb": 462.753637,
+          "end_mb": 462.754362,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0792300",
+          "chromosome": "chr6D",
+          "start_mb": 462.881928,
+          "end_mb": 462.882713,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS6D03G0793600",
+          "chromosome": "chr6D",
+          "start_mb": 463.162853,
+          "end_mb": 463.163782,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0093000LC",
+          "chromosome": "chr7A",
+          "start_mb": 20.134057,
+          "end_mb": 20.1367,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0248100LC",
+          "chromosome": "chr7A",
+          "start_mb": 67.012764,
+          "end_mb": 67.013135,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0264400",
+          "chromosome": "chr7A",
+          "start_mb": 71.543594,
+          "end_mb": 71.55279,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0264500",
+          "chromosome": "chr7A",
+          "start_mb": 71.64044,
+          "end_mb": 71.653033,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0264700",
+          "chromosome": "chr7A",
+          "start_mb": 72.052005,
+          "end_mb": 72.073522,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0264800LC",
+          "chromosome": "chr7A",
+          "start_mb": 72.081469,
+          "end_mb": 72.081849,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0289300",
+          "chromosome": "chr7A",
+          "start_mb": 82.162922,
+          "end_mb": 82.171279,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0289700",
+          "chromosome": "chr7A",
+          "start_mb": 82.219011,
+          "end_mb": 82.225885,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0334200LC",
+          "chromosome": "chr7A",
+          "start_mb": 97.631916,
+          "end_mb": 97.632617,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0334400LC",
+          "chromosome": "chr7A",
+          "start_mb": 97.863353,
+          "end_mb": 97.864375,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0335000",
+          "chromosome": "chr7A",
+          "start_mb": 97.917667,
+          "end_mb": 97.918917,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0411400",
+          "chromosome": "chr7A",
+          "start_mb": 132.457431,
+          "end_mb": 132.464217,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0603000",
+          "chromosome": "chr7A",
+          "start_mb": 257.972034,
+          "end_mb": 257.977391,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0604100",
+          "chromosome": "chr7A",
+          "start_mb": 258.977308,
+          "end_mb": 259.018791,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0786800",
+          "chromosome": "chr7A",
+          "start_mb": 463.989793,
+          "end_mb": 463.992171,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0825200",
+          "chromosome": "chr7A",
+          "start_mb": 495.468284,
+          "end_mb": 495.469499,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0842100",
+          "chromosome": "chr7A",
+          "start_mb": 506.524746,
+          "end_mb": 506.525339,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0842600",
+          "chromosome": "chr7A",
+          "start_mb": 506.784132,
+          "end_mb": 506.784873,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0896300",
+          "chromosome": "chr7A",
+          "start_mb": 544.78322,
+          "end_mb": 544.78457,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0896400",
+          "chromosome": "chr7A",
+          "start_mb": 544.853545,
+          "end_mb": 544.854981,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0929600",
+          "chromosome": "chr7A",
+          "start_mb": 563.136081,
+          "end_mb": 563.142714,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0949100LC",
+          "chromosome": "chr7A",
+          "start_mb": 573.630559,
+          "end_mb": 573.630981,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0950200",
+          "chromosome": "chr7A",
+          "start_mb": 574.049873,
+          "end_mb": 574.05136,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0952100LC",
+          "chromosome": "chr7A",
+          "start_mb": 575.242497,
+          "end_mb": 575.243885,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G0966500",
+          "chromosome": "chr7A",
+          "start_mb": 582.499063,
+          "end_mb": 582.500031,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1060400LC",
+          "chromosome": "chr7A",
+          "start_mb": 636.297323,
+          "end_mb": 636.29855,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1150200",
+          "chromosome": "chr7A",
+          "start_mb": 674.174096,
+          "end_mb": 674.180001,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1150400",
+          "chromosome": "chr7A",
+          "start_mb": 674.234984,
+          "end_mb": 674.241877,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1152100LC",
+          "chromosome": "chr7A",
+          "start_mb": 674.561466,
+          "end_mb": 674.563479,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1339800",
+          "chromosome": "chr7A",
+          "start_mb": 731.101882,
+          "end_mb": 731.102823,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1360000LC",
+          "chromosome": "chr7A",
+          "start_mb": 737.56293,
+          "end_mb": 737.565585,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1360200",
+          "chromosome": "chr7A",
+          "start_mb": 737.673937,
+          "end_mb": 737.675034,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1363200LC",
+          "chromosome": "chr7A",
+          "start_mb": 738.274074,
+          "end_mb": 738.274727,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1363300",
+          "chromosome": "chr7A",
+          "start_mb": 738.378898,
+          "end_mb": 738.379473,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7A03G1367800",
+          "chromosome": "chr7A",
+          "start_mb": 739.595732,
+          "end_mb": 739.596436,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0022700",
+          "chromosome": "chr7B",
+          "start_mb": 6.307057,
+          "end_mb": 6.325059,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0022800",
+          "chromosome": "chr7B",
+          "start_mb": 6.32832,
+          "end_mb": 6.32869,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0023000",
+          "chromosome": "chr7B",
+          "start_mb": 6.390975,
+          "end_mb": 6.402894,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0023100",
+          "chromosome": "chr7B",
+          "start_mb": 6.405589,
+          "end_mb": 6.412988,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0054200",
+          "chromosome": "chr7B",
+          "start_mb": 19.714301,
+          "end_mb": 19.724563,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0054700",
+          "chromosome": "chr7B",
+          "start_mb": 20.01027,
+          "end_mb": 20.011162,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0055600",
+          "chromosome": "chr7B",
+          "start_mb": 20.640873,
+          "end_mb": 20.641073,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0113100",
+          "chromosome": "chr7B",
+          "start_mb": 44.60993,
+          "end_mb": 44.611141,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0113300",
+          "chromosome": "chr7B",
+          "start_mb": 44.647724,
+          "end_mb": 44.648836,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0215800",
+          "chromosome": "chr7B",
+          "start_mb": 92.815863,
+          "end_mb": 92.821731,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0431200",
+          "chromosome": "chr7B",
+          "start_mb": 228.698699,
+          "end_mb": 228.704501,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0432700",
+          "chromosome": "chr7B",
+          "start_mb": 229.626646,
+          "end_mb": 229.663264,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0596500",
+          "chromosome": "chr7B",
+          "start_mb": 390.752894,
+          "end_mb": 390.753563,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0624800",
+          "chromosome": "chr7B",
+          "start_mb": 416.236301,
+          "end_mb": 416.23855,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0670200",
+          "chromosome": "chr7B",
+          "start_mb": 452.049239,
+          "end_mb": 452.050099,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0670400",
+          "chromosome": "chr7B",
+          "start_mb": 452.307545,
+          "end_mb": 452.308126,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0683800",
+          "chromosome": "chr7B",
+          "start_mb": 462.313644,
+          "end_mb": 462.314729,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0717100LC",
+          "chromosome": "chr7B",
+          "start_mb": 486.0284,
+          "end_mb": 486.028738,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0777400",
+          "chromosome": "chr7B",
+          "start_mb": 526.641013,
+          "end_mb": 526.647467,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0794300",
+          "chromosome": "chr7B",
+          "start_mb": 536.314653,
+          "end_mb": 536.315891,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0794500",
+          "chromosome": "chr7B",
+          "start_mb": 536.388996,
+          "end_mb": 536.390324,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G0803400",
+          "chromosome": "chr7B",
+          "start_mb": 541.194937,
+          "end_mb": 541.195908,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1014000LC",
+          "chromosome": "chr7B",
+          "start_mb": 647.66374,
+          "end_mb": 647.66418,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1015900",
+          "chromosome": "chr7B",
+          "start_mb": 648.283804,
+          "end_mb": 648.285692,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1277200LC",
+          "chromosome": "chr7B",
+          "start_mb": 743.266757,
+          "end_mb": 743.271255,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1277800LC",
+          "chromosome": "chr7B",
+          "start_mb": 743.328043,
+          "end_mb": 743.335131,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1277900LC",
+          "chromosome": "chr7B",
+          "start_mb": 743.328188,
+          "end_mb": 743.328481,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1278300LC",
+          "chromosome": "chr7B",
+          "start_mb": 743.446893,
+          "end_mb": 743.451379,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1301100LC",
+          "chromosome": "chr7B",
+          "start_mb": 753.352173,
+          "end_mb": 753.352649,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1301400LC",
+          "chromosome": "chr7B",
+          "start_mb": 753.42574,
+          "end_mb": 753.428375,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1301600",
+          "chromosome": "chr7B",
+          "start_mb": 753.439157,
+          "end_mb": 753.440305,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1302200LC",
+          "chromosome": "chr7B",
+          "start_mb": 753.771343,
+          "end_mb": 753.772449,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1302700",
+          "chromosome": "chr7B",
+          "start_mb": 753.816741,
+          "end_mb": 753.817889,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1303900",
+          "chromosome": "chr7B",
+          "start_mb": 754.08962,
+          "end_mb": 754.090177,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1304000",
+          "chromosome": "chr7B",
+          "start_mb": 754.099196,
+          "end_mb": 754.100079,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1304500",
+          "chromosome": "chr7B",
+          "start_mb": 754.127723,
+          "end_mb": 754.128565,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1304600",
+          "chromosome": "chr7B",
+          "start_mb": 754.159403,
+          "end_mb": 754.159897,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7B03G1310200",
+          "chromosome": "chr7B",
+          "start_mb": 755.29984,
+          "end_mb": 755.300544,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0084400",
+          "chromosome": "chr7D",
+          "start_mb": 19.739295,
+          "end_mb": 19.751285,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0224600LC",
+          "chromosome": "chr7D",
+          "start_mb": 60.883494,
+          "end_mb": 60.884615,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0242000",
+          "chromosome": "chr7D",
+          "start_mb": 66.173,
+          "end_mb": 66.182736,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0242100LC",
+          "chromosome": "chr7D",
+          "start_mb": 66.186107,
+          "end_mb": 66.18862,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0242400",
+          "chromosome": "chr7D",
+          "start_mb": 66.206712,
+          "end_mb": 66.22346,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0242500",
+          "chromosome": "chr7D",
+          "start_mb": 66.231339,
+          "end_mb": 66.231709,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0242900",
+          "chromosome": "chr7D",
+          "start_mb": 66.261406,
+          "end_mb": 66.262075,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0269700",
+          "chromosome": "chr7D",
+          "start_mb": 76.328926,
+          "end_mb": 76.335989,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0270100",
+          "chromosome": "chr7D",
+          "start_mb": 76.675354,
+          "end_mb": 76.693113,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0323800",
+          "chromosome": "chr7D",
+          "start_mb": 93.790923,
+          "end_mb": 93.792346,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0398300",
+          "chromosome": "chr7D",
+          "start_mb": 130.908057,
+          "end_mb": 130.914927,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0590500",
+          "chromosome": "chr7D",
+          "start_mb": 239.600886,
+          "end_mb": 239.61009,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0591000",
+          "chromosome": "chr7D",
+          "start_mb": 240.96046,
+          "end_mb": 240.990049,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0591200LC",
+          "chromosome": "chr7D",
+          "start_mb": 241.335155,
+          "end_mb": 241.335466,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0752400",
+          "chromosome": "chr7D",
+          "start_mb": 403.949406,
+          "end_mb": 403.951604,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0796500",
+          "chromosome": "chr7D",
+          "start_mb": 431.736781,
+          "end_mb": 431.737371,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0796800",
+          "chromosome": "chr7D",
+          "start_mb": 432.119746,
+          "end_mb": 432.120327,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0810800",
+          "chromosome": "chr7D",
+          "start_mb": 441.8519,
+          "end_mb": 441.852979,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0840500",
+          "chromosome": "chr7D",
+          "start_mb": 461.436253,
+          "end_mb": 461.437858,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0895000",
+          "chromosome": "chr7D",
+          "start_mb": 494.757108,
+          "end_mb": 494.763608,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0915400LC",
+          "chromosome": "chr7D",
+          "start_mb": 505.112133,
+          "end_mb": 505.113575,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0915900",
+          "chromosome": "chr7D",
+          "start_mb": 505.144257,
+          "end_mb": 505.160428,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0916500LC",
+          "chromosome": "chr7D",
+          "start_mb": 505.558546,
+          "end_mb": 505.55898,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G0924900",
+          "chromosome": "chr7D",
+          "start_mb": 510.104895,
+          "end_mb": 510.105884,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1011000LC",
+          "chromosome": "chr7D",
+          "start_mb": 550.090762,
+          "end_mb": 550.092004,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1098000LC",
+          "chromosome": "chr7D",
+          "start_mb": 580.313442,
+          "end_mb": 580.314459,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1265200",
+          "chromosome": "chr7D",
+          "start_mb": 632.610976,
+          "end_mb": 632.611917,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1288600LC",
+          "chromosome": "chr7D",
+          "start_mb": 639.071845,
+          "end_mb": 639.072966,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1288700",
+          "chromosome": "chr7D",
+          "start_mb": 639.088474,
+          "end_mb": 639.089721,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1289300",
+          "chromosome": "chr7D",
+          "start_mb": 639.521729,
+          "end_mb": 639.52297,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1289500",
+          "chromosome": "chr7D",
+          "start_mb": 639.542267,
+          "end_mb": 639.543415,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1290100LC",
+          "chromosome": "chr7D",
+          "start_mb": 639.621707,
+          "end_mb": 639.622825,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1290800",
+          "chromosome": "chr7D",
+          "start_mb": 639.789604,
+          "end_mb": 639.790314,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1291200",
+          "chromosome": "chr7D",
+          "start_mb": 639.819698,
+          "end_mb": 639.820436,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1291300",
+          "chromosome": "chr7D",
+          "start_mb": 639.827684,
+          "end_mb": 639.828241,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCS7D03G1294700",
+          "chromosome": "chr7D",
+          "start_mb": 640.535387,
+          "end_mb": 640.536094,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0050800LC",
+          "chromosome": "chrUn",
+          "start_mb": 27.620238,
+          "end_mb": 27.620441,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0140600LC",
+          "chromosome": "chrUn",
+          "start_mb": 114.301635,
+          "end_mb": 114.333909,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0306800LC",
+          "chromosome": "chrUn",
+          "start_mb": 224.839539,
+          "end_mb": 224.840816,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain); PF01486: K-box region"
+        },
+        {
+          "gene_primary": "TraesCSU03G0330100",
+          "chromosome": "chrUn",
+          "start_mb": 234.378112,
+          "end_mb": 234.3787,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0409600",
+          "chromosome": "chrUn",
+          "start_mb": 262.582706,
+          "end_mb": 262.58329,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0410000LC",
+          "chromosome": "chrUn",
+          "start_mb": 262.77683,
+          "end_mb": 262.777048,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0412900LC",
+          "chromosome": "chrUn",
+          "start_mb": 263.558913,
+          "end_mb": 263.559626,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0439600LC",
+          "chromosome": "chrUn",
+          "start_mb": 275.125532,
+          "end_mb": 275.125729,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0441700LC",
+          "chromosome": "chrUn",
+          "start_mb": 275.874626,
+          "end_mb": 275.875923,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        },
+        {
+          "gene_primary": "TraesCSU03G0503200LC",
+          "chromosome": "chrUn",
+          "start_mb": 305.625682,
+          "end_mb": 305.625849,
+          "domain": "PF00319: SRF-type transcription factor (DNA-binding and dimerisation domain)"
+        }
+      ]
+    }
+  }
+}
