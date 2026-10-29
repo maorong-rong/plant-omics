@@ -1,0 +1,86 @@
+{
+  "capture": {
+    "date": "2026-10-29",
+    "request": "GET https://ngdc.cncb.ac.cn/scod/api/genome/list?term=",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 13222,
+    "sourceSha256": "8E3139272DBCDB3BE575971327D9F0BB7227FC4EB00D07335185293DC48C844E",
+    "durationMs": 260,
+    "durationNote": "Researcher-reported capture duration",
+    "cropping": "Field whitelist only; original array/page and counts retained",
+    "simulated": false
+  },
+  "payload": [
+    {
+      "genomeId": 1,
+      "name": "S. spontaneum Np-X",
+      "species": "Saccharum spontaneum"
+    },
+    {
+      "genomeId": 5,
+      "name": "S. hybrid cultivar CC-01-1940",
+      "species": "Saccharum hybrid cultivar"
+    },
+    {
+      "genomeId": 7,
+      "name": "E. rufipilus Yunnan2009-3",
+      "species": "Erianthus rufipilus"
+    },
+    {
+      "genomeId": 12,
+      "name": "S. spontaneum AP85-441",
+      "species": "Saccharum spontaneum"
+    },
+    {
+      "genomeId": 13,
+      "name": "S. bicolor BTx623",
+      "species": "Sorghum bicolor"
+    },
+    {
+      "genomeId": 15,
+      "name": "S. officinarum LA-purple",
+      "species": "Saccharum officinarum"
+    },
+    {
+      "genomeId": 16,
+      "name": "S. hybrid cultivar ZZ1",
+      "species": "Saccharum hybrid cultivar"
+    },
+    {
+      "genomeId": 17,
+      "name": "E. fulvus Ness",
+      "species": "Erianthus fulvus"
+    },
+    {
+      "genomeId": 18,
+      "name": "S. hybrid cultivar R570",
+      "species": "Saccharum hybrid cultivar"
+    },
+    {
+      "genomeId": 19,
+      "name": "S. hybrid cultivar ROC22",
+      "species": "Saccharum hybrid cultivar"
+    },
+    {
+      "genomeId": 20,
+      "name": "E. rockii YN83-224",
+      "species": "Erianthus rockii"
+    },
+    {
+      "genomeId": 21,
+      "name": "M. floridulus M001",
+      "species": "Miscanthus floridulus"
+    },
+    {
+      "genomeId": 22,
+      "name": "M. lutarioriparius Honghu_Lake_No.8",
+      "species": "Miscanthus lutarioriparius"
+    },
+    {
+      "genomeId": 23,
+      "name": "M. sinensis DH1",
+      "species": "Miscanthus sinensis"
+    }
+  ]
+}

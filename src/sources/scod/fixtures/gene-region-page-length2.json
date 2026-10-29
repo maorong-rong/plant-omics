@@ -1,0 +1,36 @@
+{
+  "capture": {
+    "date": "2026-10-29",
+    "request": "GET https://ngdc.cncb.ac.cn/scod/api/gene/gene_list?genomeId=1&chrom=Chr1A&posStart=100000&posEnd=300000&start=0&length=2&draw=1",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 4053,
+    "sourceSha256": "163E004A390A258C7AB5AC1EEC9D7973540E89F9520DE579E4633C1A0DA05DF6",
+    "durationMs": null,
+    "durationNote": "Not supplied in research handoff; not invented",
+    "cropping": "Field whitelist only; original array/page and counts retained",
+    "simulated": false
+  },
+  "payload": {
+    "draw": 1,
+    "recordsTotal": 11,
+    "recordsFiltered": 11,
+    "error": null,
+    "data": [
+      {
+        "genomeId": 1,
+        "geneId": "Npp.01A000040.1",
+        "chrom": "Chr1A",
+        "posStart": "130574",
+        "posEnd": "133277"
+      },
+      {
+        "genomeId": 1,
+        "geneId": "Npp.01A000050.1",
+        "chrom": "Chr1A",
+        "posStart": "136115",
+        "posEnd": "139349"
+      }
+    ]
+  }
+}
