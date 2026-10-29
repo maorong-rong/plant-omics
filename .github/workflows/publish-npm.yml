@@ -1,0 +1,59 @@
+# 通过 npm Trusted Publishing（OIDC）发布到 npm，不需要 NPM_TOKEN。
+#
+# 前置条件（缺一即失败，且失败信息不一定直白）：
+#   1. npm 上已存在 plantomics-hub 这个包（本 workflow 不能用于首包发布）；
+#   2. npmjs.com 包设置页已绑定 Trusted Publisher：maorong-rong / plant-omics /
+#      publish-npm.yml（文件名必须与本文件完全一致）；
+#   3. Allowed actions 里勾选允许 npm publish（默认只允许 npm stage publish）；
+#   4. 仓库必须是 public，否则 provenance 不成立；
+#   5. runner 必须是 GitHub 托管，自托管 runner 官方明确不支持。
+
+name: publish-npm
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # OIDC 换取发布凭据，无需 NPM_TOKEN
+
+jobs:
+  publish:
+    # 防止 fork 或误推到别的仓库时触发发布
+    if: github.repository == 'maorong-rong/plant-omics'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0' # Trusted Publishing 官方下限，不写浮动的 22
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      # Node 22.14.0 自带 npm 为 10.x，低于 Trusted Publishing 要求的 11.5.1
+      - name: 升级 npm 到 11.5.1 以上
+        run: |
+          npm install -g npm@latest
+          npm --version
+          node -e '
+            const v = process.argv[1].split(".").map(Number);
+            const ok = v[0] > 11 || (v[0] === 11 && (v[1] > 5 || (v[1] === 5 && v[2] >= 1)));
+            if (!ok) { console.error("npm " + process.argv[1] + " < 11.5.1，不满足 Trusted Publishing 要求"); process.exit(1); }
+          ' "$(npm --version)"
+
+      - run: npm ci
+
+      # package.json 的 files 只含 dist 等少数条目，不先构建就会发一个没有 dist 的空包
+      - run: npm run check
+
+      - name: 校验 tag 与 package.json 版本一致
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          ver="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$ver" ]; then
+            echo "tag=$tag 与 package.json version=$ver 不一致，拒绝发布"; exit 1
+          fi
+
+      - run: npm publish --provenance --access public
