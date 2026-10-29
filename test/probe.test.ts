@@ -17,6 +17,18 @@ const bundle = { manifest, validateProbe };
 const registry = { listSources: () => [bundle] };
 const response = (payload: unknown, status = 200) => async () => new Response(JSON.stringify(payload), { status });
 
+/**
+ * 子进程用例的显式预算（2026-10-28 加固）。
+ *
+ * 这两条用例起 node 子进程跑 `scripts/probe.mjs`。默认的 10s 全局 testTimeout 在机器被
+ * 打包/安装/并发测试占满时可能不够，表现为随机变红而看不出原因。这里给它们单独的、
+ * 不低于原默认值的预算：断言一条没放宽，只是把"要等多久"写明白。
+ *
+ * 子进程自身也设 timeout，这样真挂住时得到明确 error，而不是静默拖到用例超时。
+ */
+const CHILD_TIMEOUT_MS = 30_000;
+const TEST_TIMEOUT_MS = 45_000;
+
 describe('probe offline synthetic cases', () => {
   it('accepts captured normal status without fixing the observed example count in the validator', async () => {
     expect(captured.capture.status).toBe(200);
@@ -95,11 +107,11 @@ describe('probe offline synthetic cases', () => {
       syncBuiltinESMExports();
       globalThis.fetch = () => { throw Error('unexpected network'); };
       await import(${JSON.stringify(url)});
-    `], { encoding: 'utf8' });
+    `], { encoding: 'utf8', timeout: CHILD_TIMEOUT_MS });
     expect(result.error).toBeUndefined();
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
-  });
+  }, TEST_TIMEOUT_MS);
 
   it.each(['disabled', 'unavailable', 'missing', 'format', '429'])('real isolated node CLI harness exits 1 for synthetic %s (no network/write)', (kind) => {
     const url = pathToFileURL(resolve('scripts/probe.mjs')).href;
@@ -113,9 +125,9 @@ describe('probe offline synthetic cases', () => {
         { status: ${kind === '429' ? 429 : 200}, headers: { 'Retry-After': '1' } });
       globalThis.fetch = () => { throw Error('real network forbidden'); };
       process.exitCode = await main({ args: [], registry, fetch, writer: () => {}, stdout: () => {}, stderr: (s) => process.stderr.write(s) });
-    `], { encoding: 'utf8' });
+    `], { encoding: 'utf8', timeout: CHILD_TIMEOUT_MS });
     expect(result.error).toBeUndefined();
     expect(result.stderr).toContain('1/1 个源实测失败');
     expect(result.status).toBe(1);
-  });
+  }, TEST_TIMEOUT_MS);
 });

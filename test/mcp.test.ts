@@ -4,12 +4,29 @@ import { describe, expect, it } from 'vitest';
 
 import { ToolRegistry } from '../src/core/registry.js';
 import type { ToolDefinition } from '../src/core/types.js';
+import { invokeTool } from '../src/core/invoke.js';
 import { createMcpServer } from '../src/mcp/server.js';
 import { createRegistry } from '../src/sources/index.js';
-import { apply as applyDsh } from '../src/dsh/index.js';
-import { UpstreamError } from '../src/core/errors.js';
+import { UpstreamError, describeError } from '../src/core/errors.js';
 import type { Fetcher } from '../src/core/types.js';
 import { readFileSync } from 'node:fs';
+
+/**
+ * 0.1.0 薄插件不再执行工具，DSH 侧不再是"第二个工具执行出口"。
+ * 这里保留一个**测试用直调**，只为校验工具本身的文本、错误与预算语义
+ * （与 MCP 出口共用同一个 invokeTool 入口）；它不代表插件仍注册工具。
+ */
+async function callDirect(registry: ToolRegistry, name: string, args: Record<string, unknown>): Promise<string> {
+  const tool = registry.getTool(name);
+  if (!tool) throw new Error(`测试里找不到工具 ${name}`);
+  try {
+    const result = await invokeTool(tool, args, {});
+    return result.text;
+  } catch (error) {
+    // 与两个出口一致：错误文本同样带完整请求（describeError 的职责）
+    throw new Error(describeError(error));
+  }
+}
 
 /**
  * 端到端协议测试：走完整的 initialize → tools/list → tools/call 握手。
@@ -67,7 +84,7 @@ describe('MCP 协议层', () => {
     const { client, server } = await connect();
     try {
       const listed = await client.listTools();
-      expect(listed.tools).toHaveLength(15);
+      expect(listed.tools).toHaveLength(34);
       expect(listed.tools.map((tool) => tool.name)).toContain('strawberry_catalog');
       expect(listed.tools.map((tool) => tool.name)).toContain('wheatomics_search_known_genes');
       for (const tool of listed.tools) {
@@ -158,11 +175,7 @@ describe('两个出口的完整请求证据（离线模拟HTTP错误）', () => 
       expect(result.isError).toBe(true);
       expect(seen.length).toBeGreaterThan(300);
       expect(text).toContain(seen);
-      let execute: ((args: Record<string, unknown>) => Promise<unknown>) | undefined;
-      applyDsh({ inject: (_names, cb) => cb({ tools: { register: (def: unknown) => {
-        execute = (def as { execute: typeof execute }).execute;
-      } } }) }, {}, registry);
-      await expect(execute!(args)).rejects.toThrow(seen);
+      // 0.1.0 薄插件不再执行工具：DSH 侧回放已移除；工具错误原文由 MCP/服务出口覆盖。
     } finally { await client.close(); await server.close(); }
   });
   it('超预算输入在两个出口均失败且零联网', async () => {
@@ -179,11 +192,7 @@ describe('两个出口的完整请求证据（离线模拟HTTP错误）', () => 
       const result = await client.callTool({ name: original.name, arguments: args });
       expect(result.isError).toBe(true);
       expect(JSON.stringify(result.content)).toContain('尚未联网');
-      let execute: ((args: Record<string, unknown>) => Promise<unknown>) | undefined;
-      applyDsh({ inject: (_names, cb) => cb({ tools: { register: (def: unknown) => {
-        execute = (def as { execute: typeof execute }).execute;
-      } } }) }, {}, registry);
-      await expect(execute!(args)).rejects.toThrow('尚未联网');
+      // 0.1.0 薄插件不再执行工具：DSH 侧回放已移除；工具错误原文由 MCP/服务出口覆盖。
       expect(calls).toBe(0);
     } finally { await client.close(); await server.close(); }
   });
@@ -214,13 +223,7 @@ describe('五个Strawberry工具穿过两个出口（真实fixture，离线）',
       const mcp = JSON.stringify(result.content);
       expect(result.isError).toBeFalsy(); expect(mcp).toContain(expected); expect(mcp).toContain(used);
       expect(mcp).not.toContain('"capture"');
-      let tool!: { execute: (a: Record<string, unknown>) => Promise<{ text: string }>;
-        output: { render: (a: unknown, r: unknown) => { text: string }[] } };
-      applyDsh({ inject: (_n, cb) => cb({ tools: { register: (def) => { tool = def as typeof tool; } } }) }, {}, registry);
-      const dsh = await tool.execute(args);
-      expect(dsh.text).toContain(expected); expect(dsh.text).toContain(used);
-      expect(tool.output.render(args, dsh)[0]?.text).toBe(dsh.text);
-      expect(new TextEncoder().encode(dsh.text).length).toBeLessThanOrEqual(4096);
+      expect(new TextEncoder().encode(mcp).length).toBeLessThanOrEqual(4200);
     } finally { await client.close(); await server.close(); }
   });
 });
@@ -251,13 +254,8 @@ describe('Strawberry结构漂移的两出口完整证据（模拟反例）', () 
       const text = first && 'text' in first ? String(first.text) : '';
       expect(text).toContain(`request=GET ${used}`);
       expect(text).toContain(local);
-      let execute!: (a: Record<string, unknown>) => Promise<unknown>;
-      applyDsh({ inject: (_n, cb) => cb({ tools: { register: def => {
-        execute = (def as { execute: typeof execute }).execute;
-      } } }) }, {}, registry);
-      await expect(execute(args)).rejects.toThrow(`request=GET ${used}`);
-      await expect(execute(args)).rejects.toThrow(local);
-      expect(calls).toBe(3);
+      // 0.1.0 薄插件不再执行工具：DSH 侧回放已移除，结构漂移由 MCP 出口覆盖。
+      expect(calls).toBe(1);
     } finally { await client.close(); await server.close(); }
   });
 });
@@ -288,22 +286,18 @@ describe('GWH/ICG双出口集成（离线真实fixture与模拟漂移）', () =>
     const isolated = new ToolRegistry();
     isolated.register({ ...bundle, tools: [{ ...original, run: (a,c) => original.run(a, { ...c, http }) }] });
     const { client, server } = await connect(isolated);
-    let tool!: { execute: (a: Record<string, unknown>) => Promise<{ text: string }>; output: { render: (a: unknown, r: unknown) => { text: string }[] } };
-    applyDsh({ inject: (_n,cb) => cb({ tools: { register: def => { tool = def as typeof tool; } } }) }, {}, isolated);
     try {
       const response = await client.callTool({ name, arguments: args });
       expect(response.isError).toBeFalsy();
       const first = response.content?.[0];
       const text = first && 'text' in first ? String(first.text) : '';
-      const value = await tool.execute(args);
-      for (const rendered of [text, value.text]) {
+      const value = await callDirect(isolated, name, args);
+      for (const rendered of [text, value]) {
         expect(rendered).toContain(expected);
         expect(rendered).toContain(`GET ${captured.capture.url}`);
         expect(new TextEncoder().encode(rendered).length).toBeLessThanOrEqual(4096);
         expect(rendered).not.toMatch(/contactEmail|contactName|"capture"|"payload"/);
       }
-      expect(Object.keys(value)).toEqual(['text']);
-      expect(tool.output.render(args, value)).toEqual([{ type: 'text', text: value.text }]);
       drift = true; // 明确模拟：不是上游真实反例。
       const failure = await client.callTool({ name, arguments: args });
       expect(failure.isError).toBe(true);
@@ -311,7 +305,125 @@ describe('GWH/ICG双出口集成（离线真实fixture与模拟漂移）', () =>
       const errorText = errorFirst && 'text' in errorFirst ? String(errorFirst.text) : '';
       expect(errorText).toContain(`request=GET ${captured.capture.url}`);
       expect(errorText).not.toContain('未找到');
-      await expect(tool.execute(args)).rejects.toThrow(`request=GET ${captured.capture.url}`);
+      await expect(callDirect(isolated, name, args)).rejects.toThrow(`request=GET ${captured.capture.url}`);
+    } finally { await client.close(); await server.close(); }
+  });
+});
+
+describe('IC4R双出口回放（绝对URL、防御性数组解包、序列整块省略）', () => {
+  const ic4r = () => createRegistry({ enabled: ['ic4r'] }).getSource('ic4r')!;
+  function harness(source: ReturnType<typeof ic4r>, name: string, payload: unknown, captureUrl: string) {
+    const original = source.tools.find(t => t.name === name)!;
+    const seen: string[] = [];
+    const http = (async (url: string) => {
+      seen.push(url);
+      expect(url).toBe(captureUrl);
+      return { data: payload, url, status: 200, durationMs: 1, attempts: 1, contentType: 'application/json;charset=UTF-8' };
+    }) as Fetcher;
+    const isolated = new ToolRegistry();
+    isolated.register({ ...source, tools: [{ ...original, run: (a, c) => original.run(a, { ...c, http }) }] });
+    return { isolated, seen, call: (args: Record<string, unknown>) => callDirect(isolated, name, args) };
+  }
+  const fixtureOf = (file: string) =>
+    JSON.parse(readFileSync(new URL(`../src/sources/ic4r/fixtures/${file}.json`, import.meta.url), 'utf8'));
+
+  it('gene_list 走绝对URL（不在 apiBase 下）且两出口一致', async () => {
+    const f = fixtureOf('gene-list');
+    expect(f.capture.url).toContain('/ic4r/genes/view?');
+    expect(f.capture.url).not.toContain('/api/json');
+    const { isolated, call, seen } = harness(ic4r(), 'ic4r_gene_list', f.payload, f.capture.url);
+    const args = { chromosome: '1', start: 0, length: 2 };
+    const { client, server } = await connect(isolated);
+    try {
+      const res = await client.callTool({ name: 'ic4r_gene_list', arguments: args });
+      expect(res.isError).toBeFalsy();
+      const text = res.content?.[0] && 'text' in res.content[0] ? String(res.content[0].text) : '';
+      const value = await call(args);
+      for (const rendered of [text, value]) {
+        expect(rendered).toContain('recordsTotal=6534');
+        expect(rendered).toContain('draw=1');
+        expect(rendered).toContain(`GET ${f.capture.url}`);
+        expect(new TextEncoder().encode(rendered).length).toBeLessThanOrEqual(4096);
+      }
+      expect(seen[0]).toBe(f.capture.url);
+    } finally { await client.close(); await server.close(); }
+  });
+
+  it('ic4r_gene 按 locus 回放：两出口同一份文本与出处', async () => {
+    const f = fixtureOf('gene');
+    expect(f.capture.url).toContain('/ic4r/api/json/gene/IC4R-OSJ01G000600');
+    const { isolated, call, seen } = harness(ic4r(), 'ic4r_gene', f.payload, f.capture.url);
+    const args = { locus: 'IC4R-OSJ01G000600' };
+    const { client, server } = await connect(isolated);
+    try {
+      const res = await client.callTool({ name: 'ic4r_gene', arguments: args });
+      expect(res.isError).toBeFalsy();
+      const text = res.content?.[0] && 'text' in res.content[0] ? String(res.content[0].text) : '';
+      const value = await call(args);
+      for (const rendered of [text, value]) {
+        expect(rendered).toContain('IC4R-OSJ01G000600');
+        expect(rendered).toContain('40S Ribosomal');
+        expect(rendered).toContain(`GET ${f.capture.url}`);
+        expect(new TextEncoder().encode(rendered).length).toBeLessThanOrEqual(4096);
+      }
+      expect(seen[0]).toBe(f.capture.url);
+    } finally { await client.close(); await server.close(); }
+  });
+
+  it('单元素数组包裹按防御性兼容解包（明确模拟，非上游实测形态）', async () => {
+    const f = fixtureOf('gene-list-array-wrap');
+    expect(f.capture.simulated).toBe(true);
+    expect(Array.isArray(f.payload)).toBe(true);
+    const { isolated, call } = harness(ic4r(), 'ic4r_gene_list', f.payload, f.capture.url);
+    const args = { chromosome: '1', start: 0, length: 2 };
+    const { client, server } = await connect(isolated);
+    try {
+      const res = await client.callTool({ name: 'ic4r_gene_list', arguments: args });
+      expect(res.isError).toBeFalsy();
+      const text = res.content?.[0] && 'text' in res.content[0] ? String(res.content[0].text) : '';
+      const value = await call(args);
+      for (const rendered of [text, value]) {
+        expect(rendered).toContain('recordsTotal=6534');
+        expect(rendered).toContain(`GET ${f.capture.url}`);
+      }
+    } finally { await client.close(); await server.close(); }
+  });
+
+  it('多元素数组仍按结构漂移失败（不为未验证形态放宽）', async () => {
+    const f = fixtureOf('gene-list-array-wrap');
+    const multi = [f.payload[0], f.payload[0]];
+    const { isolated, call } = harness(ic4r(), 'ic4r_gene_list', multi, f.capture.url);
+    const args = { chromosome: '1', start: 0, length: 2 };
+    const { client, server } = await connect(isolated);
+    try {
+      const res = await client.callTool({ name: 'ic4r_gene_list', arguments: args });
+      expect(res.isError).toBe(true);
+      const text = res.content?.[0] && 'text' in res.content[0] ? String(res.content[0].text) : '';
+      expect(text).toContain(`request=GET ${f.capture.url}`);
+      await expect(call(args)).rejects.toThrow(`request=GET ${f.capture.url}`);
+    } finally { await client.close(); await server.close(); }
+  });
+
+  it('lncRNA 长序列整块省略且不截半条，两出口一致', async () => {
+    const f = fixtureOf('lncrna');
+    const sequence = String(f.payload.sequence);
+    expect(sequence.length).toBeGreaterThan(1280);
+    const { isolated, call } = harness(ic4r(), 'ic4r_lncrna', f.payload, f.capture.url);
+    const args = { accession: 'IC4R-OSJ01Lnc000600.1' };
+    const { client, server } = await connect(isolated);
+    try {
+      const res = await client.callTool({ name: 'ic4r_lncrna', arguments: args });
+      expect(res.isError).toBeFalsy();
+      const text = res.content?.[0] && 'text' in res.content[0] ? String(res.content[0].text) : '';
+      const value = await call(args);
+      for (const rendered of [text, value]) {
+        expect(rendered).toContain('整条未展示');
+        expect(rendered).toContain('不是上游没有序列');
+        expect(rendered).not.toContain(sequence.slice(0, 40));
+        expect(rendered).not.toContain(sequence.slice(-40));
+        expect(rendered).toContain(`GET ${f.capture.url}`);
+        expect(new TextEncoder().encode(rendered).length).toBeLessThanOrEqual(4096);
+      }
     } finally { await client.close(); await server.close(); }
   });
 });
