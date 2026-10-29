@@ -32,10 +32,13 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: npm
 
-      # Node 22.14.0 自带 npm 为 10.x，低于 Trusted Publishing 要求的 11.5.1
+      # Node 22.14.0 自带 npm 为 10.x，低于 Trusted Publishing 要求的 11.5.1。
+      # 这里固定 11.9.0，不用 npm@latest：latest 已是 12.x，其 engines 要求
+      # Node ^22.22.2 / ^24.15.0 / >=26，在本 runner 上会 EBADENGINE 直接失败。
+      # npm 11.x 的 engines 是 ^20.17.0 || >=22.9.0，与 Node 22.14.0 相容。
       - name: 升级 npm 到 11.5.1 以上
         run: |
-          npm install -g npm@latest
+          npm install -g npm@11.9.0
           npm --version
           node -e '
             const v = process.argv[1].split(".").map(Number);
