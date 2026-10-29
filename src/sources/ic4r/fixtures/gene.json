@@ -1,0 +1,26 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/gene/IC4R-OSJ01G000600",
+    "at": "2026-10-28T11:23:09.592Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 384
+  },
+  "payload": {
+    "id": 56227,
+    "locus": "IC4R-OSJ01G000600",
+    "synonym": "LOC_Os01g01060,Os01g0100700",
+    "description": "40S Ribosomal Protein S5",
+    "jbrowse": null,
+    "source": "Oryza sativa Japonica Group",
+    "rapdbAccession": "Os01g0100700",
+    "msuAccession": "LOC_Os01g01060",
+    "type": "Protein-coding Gene",
+    "strand": "+",
+    "chromosome": "1",
+    "symbol": null,
+    "geneLength": 1515,
+    "location": "27136:28651",
+    "lastModified": 1522392592000
+  }
+}

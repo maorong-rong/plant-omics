@@ -1,0 +1,13 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/gene/IC4R-OSJ01G000600",
+    "at": "2026-10-28T11:23:09.592Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 384,
+    "simulated": true,
+    "bodyKind": "json",
+    "note": "模拟反例：合法 JSON 空对象 {}，用于断言“空对象不等于查无”"
+  },
+  "payload": {}
+}

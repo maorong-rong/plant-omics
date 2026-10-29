@@ -1,0 +1,52 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/genes/view?chromosome=1&draw=1&start=0&length=2",
+    "at": "2026-10-28T11:28:57.721Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 847,
+    "note": "裸对象信封 {draw,recordsTotal,recordsFiltered,data,error}；data 每项字段与 /gene/{locus} 相同"
+  },
+  "payload": {
+    "draw": 1,
+    "recordsTotal": 6534,
+    "recordsFiltered": 6534,
+    "data": [
+      {
+        "id": 56222,
+        "locus": "IC4R-OSJ01G000100",
+        "synonym": "LOC_Os01g01010,Os01g0100100",
+        "description": "Tbc Domain Containing Protein",
+        "jbrowse": null,
+        "source": "Oryza sativa Japonica Group",
+        "rapdbAccession": "Os01g0100100",
+        "msuAccession": "LOC_Os01g01010",
+        "type": "Protein-coding Gene",
+        "strand": "+",
+        "chromosome": "1",
+        "symbol": null,
+        "geneLength": 7914,
+        "location": "2903:10817",
+        "lastModified": 1522392592000
+      },
+      {
+        "id": 56223,
+        "locus": "IC4R-OSJ01G000200",
+        "synonym": "LOC_Os01g01019,Os01g0100200",
+        "description": "Conserved Hypothetical",
+        "jbrowse": null,
+        "source": "Oryza sativa Japonica Group",
+        "rapdbAccession": "Os01g0100200",
+        "msuAccession": "LOC_Os01g01019",
+        "type": "Protein-coding Gene",
+        "strand": "+",
+        "chromosome": "1",
+        "symbol": null,
+        "geneLength": 1217,
+        "location": "11218:12435",
+        "lastModified": 1522392592000
+      }
+    ],
+    "error": null
+  }
+}

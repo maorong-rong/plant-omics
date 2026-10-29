@@ -1,0 +1,16 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/idConversion/IC4R-OSJ01G000600",
+    "at": "2026-10-28T11:23:12.381Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 99
+  },
+  "payload": {
+    "id": 47993,
+    "ic4r": "IC4R-OSJ01G000600",
+    "msu": "LOC_Os01g01060",
+    "rapDb": "Os01g0100700",
+    "symbol": null
+  }
+}

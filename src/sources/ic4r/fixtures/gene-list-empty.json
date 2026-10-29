@@ -1,0 +1,17 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/genes/view?chromosome=99&draw=3&start=0&length=2",
+    "at": "2026-10-28T11:28:58.939Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 70,
+    "note": "recordsTotal=0 时仍是**裸对象**信封（draw/recordsTotal=0/recordsFiltered=0/data=[]/error=null）；此前记录里“单元素数组包裹”的说法源自显示时误加方括号，已更正"
+  },
+  "payload": {
+    "draw": 3,
+    "recordsTotal": 0,
+    "recordsFiltered": 0,
+    "data": [],
+    "error": null
+  }
+}

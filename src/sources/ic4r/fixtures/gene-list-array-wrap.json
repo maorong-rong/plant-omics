@@ -1,0 +1,55 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/genes/view?chromosome=1&draw=1&start=0&length=2",
+    "at": "2026-10-28T11:28:57.721Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 847,
+    "note": "防御性兼容反例（非真实响应）：把裸对象包进单元素数组。本仓在 2026-10-28 从未实测到该形态——chr99 的原始响应是 70 字节裸对象（首字节 0x7B）。此文件只用于验证“若上游将来这么回，工具能显式解包且不静默归一”",
+    "simulated": true
+  },
+  "payload": [
+    {
+      "draw": 1,
+      "recordsTotal": 6534,
+      "recordsFiltered": 6534,
+      "data": [
+        {
+          "id": 56222,
+          "locus": "IC4R-OSJ01G000100",
+          "synonym": "LOC_Os01g01010,Os01g0100100",
+          "description": "Tbc Domain Containing Protein",
+          "jbrowse": null,
+          "source": "Oryza sativa Japonica Group",
+          "rapdbAccession": "Os01g0100100",
+          "msuAccession": "LOC_Os01g01010",
+          "type": "Protein-coding Gene",
+          "strand": "+",
+          "chromosome": "1",
+          "symbol": null,
+          "geneLength": 7914,
+          "location": "2903:10817",
+          "lastModified": 1522392592000
+        },
+        {
+          "id": 56223,
+          "locus": "IC4R-OSJ01G000200",
+          "synonym": "LOC_Os01g01019,Os01g0100200",
+          "description": "Conserved Hypothetical",
+          "jbrowse": null,
+          "source": "Oryza sativa Japonica Group",
+          "rapdbAccession": "Os01g0100200",
+          "msuAccession": "LOC_Os01g01019",
+          "type": "Protein-coding Gene",
+          "strand": "+",
+          "chromosome": "1",
+          "symbol": null,
+          "geneLength": 1217,
+          "location": "11218:12435",
+          "lastModified": 1522392592000
+        }
+      ],
+      "error": null
+    }
+  ]
+}

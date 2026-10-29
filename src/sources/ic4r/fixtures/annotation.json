@@ -1,0 +1,76 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/annotation/IC4R-OSJ01G000600",
+    "at": "2026-10-28T11:23:10.541Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 2565,
+    "note": "8 条注释、5 个功能类别；原样保留，未裁剪"
+  },
+  "payload": [
+    {
+      "id": 46081,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "SUPPERFAMILY",
+      "functionalId": "SSF47973",
+      "description": "Ribosomal protein S7 domain",
+      "lastModified": 1526726918000
+    },
+    {
+      "id": 71790,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "Gene3D",
+      "functionalId": "G3DSA:1.10.455.10",
+      "description": "Ribosomal protein S7 domain",
+      "lastModified": 1526726919000
+    },
+    {
+      "id": 81366,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "InterPro",
+      "functionalId": "IPR020606",
+      "description": "Ribosomal protein S7, conserved site;(Type of Conserved_site)",
+      "lastModified": 1526726919000
+    },
+    {
+      "id": 81367,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "InterPro",
+      "functionalId": "IPR000235",
+      "description": "Ribosomal protein S5/S7;(Type of Family)",
+      "lastModified": 1526726919000
+    },
+    {
+      "id": 81368,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "InterPro",
+      "functionalId": "IPR023798",
+      "description": "Ribosomal protein S7 domain;(Type of Domain)",
+      "lastModified": 1526726919000
+    },
+    {
+      "id": 81369,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "InterPro",
+      "functionalId": "IPR005716",
+      "description": "Ribosomal protein S5/S7, eukaryotic/archaeal;(Type of Family)",
+      "lastModified": 1526726919000
+    },
+    {
+      "id": 218652,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "Pfam",
+      "functionalId": "PF00177",
+      "description": "Ribosomal protein S7p/S5e",
+      "lastModified": 1526726927000
+    },
+    {
+      "id": 252595,
+      "locus": "IC4R-OSJ01G000600",
+      "functionalCategory": "CDD",
+      "functionalId": "cd14867",
+      "description": "[uS7_Eukaryote] Eukaryota homolog of Ribosomal Protein S7. uS7, also known as Ribosomal protein (RP)S7, is an important part of the translation process which is universally present in the small subunit of prokaryotic and eukaryotic ribosomes. Eukaryotic RPS7 (also named RPS5) have variable N-terminal regions that affect the efficiency of initiation translation process by impacting small ribosomal subunit to function. The ribosome small subunit is one of the two subunits of ribosome organelles that use mRNA as a template for protein synthesis in a process called translation. The small subunits of bacteria and eukaryotes have the same shape of head, body, platform, beak, and shoulder. RPS7 is located at the head of the small subunit which is a primary ribosomal RNA (rRNA) binding protein that assists in rRNA folding and the binding of other proteins during small subunit assembly in all species. RPS7 is also involved in the formation of the mRNA exit channel at the interface of the large and small subunits. Some ribosomal proteins have extra ribosomal functions in cell differentiation and apoptosis.",
+      "lastModified": 1526726929000
+    }
+  ]
+}

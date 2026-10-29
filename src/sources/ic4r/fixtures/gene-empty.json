@@ -1,0 +1,12 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/gene/IC4R-OSJ01G999999",
+    "at": "2026-10-28T11:23:12.949Z",
+    "status": 200,
+    "contentType": "（无 content-type）",
+    "originalBytes": 0,
+    "bodyBytes": 0,
+    "bodyKind": "empty",
+    "note": "真实响应为 HTTP 200 + 0 字节正文，无 content-type。按审查要求不写成 payload {}，避免让人误以为是合法 JSON 空对象"
+  }
+}

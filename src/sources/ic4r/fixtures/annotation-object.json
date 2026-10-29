@@ -1,0 +1,15 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/annotation/IC4R-OSJ01G000600",
+    "at": "2026-10-28T11:23:10.541Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 2565,
+    "simulated": true,
+    "bodyKind": "json",
+    "note": "模拟反例：annotation 端点返回对象而非数组，用于断言结构漂移"
+  },
+  "payload": {
+    "functionalCategory": "X"
+  }
+}

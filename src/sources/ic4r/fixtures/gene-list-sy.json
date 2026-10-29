@@ -1,0 +1,52 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/genes/view?chromosome=Sy&draw=4&start=0&length=2",
+    "at": "2026-10-28T11:28:59.505Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 819,
+    "note": "染色体取值 Sy 实测 200、recordsTotal=140"
+  },
+  "payload": {
+    "draw": 4,
+    "recordsTotal": 140,
+    "recordsFiltered": 140,
+    "data": [
+      {
+        "id": 112163,
+        "locus": "IC4R-OSJSyG000100",
+        "synonym": "ChrSy.fgenesh.gene.1,",
+        "description": "Osjnba0033H08.5 Protein",
+        "jbrowse": null,
+        "source": "Oryza sativa Japonica Group",
+        "rapdbAccession": "NA",
+        "msuAccession": "ChrSy.fgenesh.gene.1",
+        "type": "Protein-coding Gene",
+        "strand": "-",
+        "chromosome": "Sy",
+        "symbol": null,
+        "geneLength": 383,
+        "location": "785:1168",
+        "lastModified": 1522392597000
+      },
+      {
+        "id": 112164,
+        "locus": "IC4R-OSJSyG000200",
+        "synonym": "ChrSy.fgenesh.gene.2,",
+        "description": "Retrotransposon Protein",
+        "jbrowse": null,
+        "source": "Oryza sativa Japonica Group",
+        "rapdbAccession": "NA",
+        "msuAccession": "ChrSy.fgenesh.gene.2",
+        "type": "Protein-coding Gene",
+        "strand": "+",
+        "chromosome": "Sy",
+        "symbol": null,
+        "geneLength": 2461,
+        "location": "3820:6281",
+        "lastModified": 1522392597000
+      }
+    ],
+    "error": null
+  }
+}

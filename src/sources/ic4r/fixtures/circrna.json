@@ -1,0 +1,25 @@
+{
+  "capture": {
+    "url": "https://ngdc.cncb.ac.cn/ic4r/api/json/circRNA/IC4R-OSJ01Circ057100",
+    "at": "2026-10-28T11:23:11.105Z",
+    "status": 200,
+    "contentType": "application/json;charset=UTF-8",
+    "originalBytes": 490,
+    "note": "序列 182 bp，原样保留"
+  },
+  "payload": {
+    "id": 10,
+    "accession": "IC4R-OSJ01Circ057100",
+    "chromosome": "1",
+    "alias": "Chr1:38932676|38932857",
+    "length": 182,
+    "type": "exon",
+    "parentalGene": "IC4R-OSJ01G585200",
+    "parentalGeneDesc": "Calreticulin Precursor Protein",
+    "start": 38932676,
+    "end": 38932857,
+    "strand": "-",
+    "organism": "Oryza sativa Japonica Group",
+    "sequence": "CCTAAGGATTGGGATGACAGAGAATATATTGAGGATCCAGATGCAGTTAAACCAGAGGTTTGTGTTGCCAAAACTCCACCCCTTACATGTTATACTGTGCATATGTGTTGTAACATTTCATTTGCCTTGGTCAGGGCTATGATTCTATTCCAAAGGAGATTCCTGATCCAAAAGACAAAAAG"
+  }
+}
