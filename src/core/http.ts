@@ -200,14 +200,16 @@ export function createFetcher(
           const message = response.status === 404 && contentType.toLowerCase().includes('text/html')
             ? '上游404 HTML兜底：未找到或路径不支持，无法据此判断基因是否存在'
             : httpMessage(response.status);
-          let detail = '';
-          if (response.status === 400 && /application\/(?:[\w.-]+\+)?json/i.test(contentType)) {
-            try {
-              const payload = JSON.parse(body) as { message?: unknown } | null;
-              if (payload && typeof payload.message === 'string') detail = `：${snippet(payload.message, 180)}`;
-            } catch { /* 无效JSON按HTTP失败处理，不猜错误体。 */ }
-          }
-          const error = new UpstreamError(message + detail, {
+          // 错误文案**只由本文件的分类函数生成**，不带任何上游可控文本。
+          // 2026-10-30 止血：此前 `400 + application/json + 正文含 message` 会把上游 `message`
+          // 截 180 字符拼进错误文本，理由是「参数哪里不对只有对面知道」。该例外已去掉——
+          // 上游可控文本一旦进模型上下文就是注入面，对面可以往 `message` 里塞指令；
+          // 换来的只是「参数哪里不对」这一句提示，不值得。
+          // 上游原文没有丢：它仍在 `meta.bodySnippet`（只给程序和日志看，不进模型可见文本）。
+          // 日后若确实需要「参数怎么改」的提示，按固定顺序接：先本地校验早知道 → 再考虑
+          // **允许清单**清洗（长度上限、仅可打印字符、剥离换行与控制字符、不含 URL 与命令形态），
+          // 不许写成「去掉几个坏字符」的黑名单。
+          const error = new UpstreamError(message, {
             url,
             status: response.status,
             attempts: attempt,

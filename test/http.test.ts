@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { describeError } from '../src/core/errors.js';
 import { createFetcher, retryDelayMs } from '../src/core/http.js';
 import type { HttpResult } from '../src/core/types.js';
 
@@ -164,5 +165,102 @@ describe('响应类型及模拟429（非真实上游证据）', () => {
     await expect(createFetcher({ maxTotalMs: 100, retries: 2 }, fake)('https://example.org/x'))
       .rejects.toMatchObject({ meta: { status: 429, attempts: 1, retryAfter: '60' } });
     expect(calls).toBe(1);
+  });
+});
+
+/**
+ * 上游原文不得进入模型可见的错误文本。
+ *
+ * 为什么需要这条：`describeError()` 是把 `error.message` 直接拼给模型的唯一出口
+ * （两个出口都用它：`src/mcp/server.ts`、`src/service/http.ts`）。因此「错误消息由谁生成」
+ * 直接决定上游正文会不会进上下文——若有人图省事写成
+ * `new UpstreamError(上游原文, …)`，上游的整页 HTML 就会原样进上下文。
+ *
+ * 每条用例都**先证明哨兵真的在响应里**：`bodySnippet` 必须含哨兵。
+ * 少了这半句，断言就是空转——响应里没有哨兵时，怎么拼都不会出现，
+ * 测试会一直绿，等于没测。
+ *
+ * 2026-10-30 止血：本组用例覆盖的五条路径，上游可控文本**全部**不进模型可见文本。
+ * 此前唯一例外（400 + JSON 的 `message`）已按负责人决定去掉，理由见最后一个用例的注释。
+ * 注意 `AGENTS.md` 的规则文本尚未随之更新，规则变更单独走授权。
+ */
+describe('错误文本不得带出上游原文（哨兵断言）', () => {
+  const SENTINEL = '哨兵_SENTINEL_ZZZ9';
+
+  /** 造一个固定返回某状态与正文的 fetcher；retries=0 保证只发一次。 */
+  const failingWith = (status: number, body: string, contentType: string) =>
+    createFetcher({ timeoutMs: 500, retries: 0 }, (async () =>
+      response(status, body, { 'content-type': contentType })) as typeof fetch);
+
+  const captureError = async (fetchJson: ReturnType<typeof createFetcher>) => {
+    try {
+      await fetchJson('https://example.org/x');
+    } catch (error) {
+      return error as { message: string; meta: { bodySnippet?: string } };
+    }
+    throw new Error('本用例要求上游失败，但 fetchJson 没有抛错');
+  };
+
+  /**
+   * 断言分两半，缺一不可：
+   *   ① 哨兵确实被收进了 `bodySnippet`（证明这次响应里真有哨兵）；
+   *   ② 模型可见的错误文本里没有哨兵。
+   */
+  const expectLeakFree = async (status: number, body: string, contentType: string) => {
+    const error = await captureError(failingWith(status, body, contentType));
+    expect(error.meta.bodySnippet, `HTTP ${status} 的响应正文应被收进 bodySnippet`).toContain(SENTINEL);
+    expect(describeError(error)).not.toContain(SENTINEL);
+    return error;
+  };
+
+  it('502 纯文本正文含哨兵：错误文本只有分类文案，不带正文', async () => {
+    const error = await expectLeakFree(502, `upstream said ${SENTINEL}`, 'text/plain');
+    expect(error.message).toMatch(/上游后端暂时不可用/);
+  });
+
+  it('500 HTML 错误页含哨兵：不带出 HTML', async () => {
+    await expectLeakFree(500, `<html><body>${SENTINEL}</body></html>`, 'text/html');
+  });
+
+  it('404 HTML 兜底页含哨兵：不带出页面内容', async () => {
+    await expectLeakFree(404, `<html>${SENTINEL}</html>`, 'text/html');
+  });
+
+  it('400 的 JSON 里非 message 字段含哨兵：不带出该字段', async () => {
+    await expectLeakFree(400, JSON.stringify({ error: SENTINEL, detail: SENTINEL }), 'application/json');
+  });
+
+  /**
+   * 400 + JSON 里的 `message` 字段**也不进错误文本**（2026-10-30 止血后的口径）。
+   *
+   * 历史：这里曾有一条已知例外——上游 `message` 截 180 字符进错误文本，理由是
+   * 「参数哪里不对只有对面知道」。该例外已按负责人决定去掉：上游可控文本进模型上下文
+   * 就是注入面，对面可以往 `message` 里塞指令。上游原文仍在 `meta.bodySnippet`，只给程序看。
+   *
+   * 本用例现在钉两件事，都是**上界**：
+   *   ① 上游 message 的**开头**（旧例外会带出来的那一段）不得出现在模型可见文本里；
+   *   ② 正文**深处**的哨兵同样不得出现（除非有人把窗口扩成整段正文，否则不会红）。
+   * 也就是说：例外被去掉它照样通过；谁把 `message` 或整段正文重新接回错误文本，它才会红。
+   *
+   * 有效性验证（隔离副本，未改共享工作区）：正常实现下整个文件 33/33 通过；
+   * 把 `error.meta.bodySnippet` 故意拼进 `describeError()` 后，本组 5 例全部失败。
+   */
+  it('400 的 JSON message 也不进错误文本：开头与深处都不出现', async () => {
+    const head = '参数错误：';
+    const deepSentinel = '深处哨兵_DEEP_SENTINEL';
+    // 位置为什么是这里：哨兵要落在 `bodySnippet` 的 300 字符窗口内（否则上一行断言
+    // 会空转），同时落在**旧例外**取不到的深处（旧的只取前 180 字符）。
+    // `{"message":"` 占 12 字符，故正文偏移 = 12 + 188 = 200，既 < 300 也 > 180。
+    // 注意：旧例外的 180 字符窗口**今天已不存在**（已按负责人决定去掉），
+    // 「200 > 180」只是历史位置说明；本用例现在钉的两件事都只是上界。
+    const padding = 'x'.repeat(188);
+    const error = await captureError(
+      failingWith(400, JSON.stringify({ message: `${head}${padding}${deepSentinel}` }), 'application/json'),
+    );
+    expect(error.meta.bodySnippet).toContain(deepSentinel);
+    const visible = describeError(error);
+    expect(visible).not.toContain(deepSentinel);
+    expect(visible, '上游 message 的开头（旧例外会带出的那段）也不得进模型可见文本').not.toContain(head);
+    expect(visible).toMatch(/上游返回 HTTP 400/);
   });
 });
