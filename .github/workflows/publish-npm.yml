@@ -59,4 +59,31 @@ jobs:
             echo "tag=$tag 与 package.json version=$ver 不一致，拒绝发布"; exit 1
           fi
 
-      - run: npm publish --provenance --access public
+      # 把发布日志同时落盘：失败时日志下载需要鉴权，写进 job summary 就能直接看
+      - name: 发布到 npm
+        run: |
+          set -o pipefail
+          npm publish --provenance --access public --loglevel=verbose 2>&1 | tee "$RUNNER_TEMP/publish.log"
+
+      - name: 失败时把发布日志写进摘要
+        if: failure()
+        run: |
+          {
+            echo '### npm publish 失败，最后 80 行'
+            echo '```'
+            tail -n 80 "$RUNNER_TEMP/publish.log" 2>/dev/null || echo '(没有日志文件)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 发布成功后独立核对 attestation 是否真的存进了 registry：
+      # 0.1.0 那次包发出去了但 attestation 404，而 publish 的退出码没体现出来
+      - name: 核对 provenance 已附上
+        run: |
+          ver="$(node -p "require('./package.json').version")"
+          url="https://registry.npmjs.org/-/npm/v1/attestations/plantomics-hub@$ver"
+          code="$(curl -s -o "$RUNNER_TEMP/attest.json" -w '%{http_code}' "$url")"
+          echo "attestations HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "provenance 缺失：$url 返回 $code"; exit 1
+          fi
+          node -e 'const a=require(process.argv[1]);console.log("attestations="+a.attestations.length)' "$RUNNER_TEMP/attest.json"
