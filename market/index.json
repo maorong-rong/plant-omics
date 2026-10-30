@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "title": {
+    "en": "PlantOmics Hub",
+    "zh": "植物组学枢纽"
+  },
+  "description": {
+    "en": "MCP tools that turn public plant-omics database APIs into interfaces an LLM can call reliably.",
+    "zh": "把国内植物组学数据库的公开接口做成一套 AI 可直接调用的 MCP 工具。"
+  },
+  "metadata": {
+    "keywords": ["植物组学", "plant omics", "MCP", "植物", "组学"]
+  },
+  "plugins": [
+    {
+      "name": "plantomics-hub",
+      "title": {
+        "en": "PlantOmics Hub",
+        "zh": "植物组学枢纽"
+      },
+      "description": {
+        "en": "7 plant-omics databases behind 34 MCP tools: wheat, rice, maize, strawberry, sugarcane and more. Thin plugin plus a remote MCP service; outputs carry full provenance.",
+        "zh": "7 个植物组学数据库、34 个 MCP 工具，覆盖小麦、水稻、玉米、草莓、甘蔗等。薄插件 + 远程 MCP 服务，输出带完整出处尾注。"
+      },
+      "author": "maorong-rong",
+      "homepage": "https://github.com/maorong-rong/plant-omics",
+      "repository": {
+        "url": "https://github.com/maorong-rong/plant-omics"
+      },
+      "metadata": {
+        "keywords": ["植物", "组学", "水稻", "小麦", "玉米", "拟南芥", "甘蔗", "草莓", "MCP", "plant", "omics"]
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1793285202,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-rc.2"
+          }
+        }
+      ]
+    }
+  ]
+}
