@@ -4,6 +4,7 @@ import { utf8Bytes, DEFAULT_MAX_BYTES } from '../src/core/format.js';
 import { INTENT_BY_ID, TOOL_CAPABILITIES } from '../src/retrieval/capability-catalog.js';
 import {
   createFindSourcesTool,
+  escapeRegExp,
   findSources,
   normalize,
   speciesKnownInCatalog,
@@ -352,5 +353,39 @@ describe('返回的工具名真的存在于注册表', () => {
     for (const tool of TOOL_CAPABILITIES) {
       for (const id of tool.intents) expect(INTENT_BY_ID.has(id)).toBe(true);
     }
+  });
+});
+
+/**
+ * `escapeRegExp` 的独立断言（2026-10-30，负责人要求）。
+ *
+ * 为什么单独钉：这个函数一度被写坏（替换串写成函数声明），却因为**零调用点**而没炸；
+ * 现在它虽然被 `detectSourceNames()` 调用，但当前别名表里没有正则元字符，
+ * **正常路径永远走不到它**——也就是说，把它改回坏版本，功能测试会全绿。
+ * 所以必须直接调用它来钉住行为，否则它今天修好、明天被改回去也没人知道。
+ *
+ * 有效性验证（隔离副本，未动共享工作区）：把函数体换成坏版本/恒等版本后，本组 3 例全红；
+ * 换回后全绿。
+ */
+describe('正则转义：死代码里的活缺陷（独立钉住）', () => {
+  it('元字符被转义成字面量：只匹配自身，不匹配它的通配写法', () => {
+    const literal = 'fragaria x(ananassa)+';
+    const pattern = new RegExp(escapeRegExp(literal));
+    expect(pattern.test(literal)).toBe(true);
+    expect(pattern.test('fragaria xananassa+')).toBe(false); // `.` 未转义时会漏匹配
+    expect(pattern.test('fragaria xx(ananassa)+')).toBe(false);
+    expect(pattern.test('fragaria xananassa')).toBe(false); // `(…)` 未转义时会被当分组
+  });
+
+  it('全量元字符集合逐个转义，转义后能精确匹配原串', () => {
+    const meta = '.*+?^${}()|[]\\';
+    const pattern = new RegExp(`^${escapeRegExp(meta)}$`);
+    expect(pattern.test(meta)).toBe(true);
+    expect(escapeRegExp(meta)).not.toBe(meta);
+  });
+
+  it('不含元字符的文本原样返回，不误伤', () => {
+    expect(escapeRegExp('wheatomics')).toBe('wheatomics');
+    expect(escapeRegExp('小 麦')).toBe('小 麦');
   });
 });

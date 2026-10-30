@@ -81,8 +81,16 @@ interface Clause {
   readonly intents: IntentId[];
 }
 
-/** 正则转义：物种别名里有 x 这类特殊字符（如 `Fragaria × ananassa`）。 */
-function escapeRegExp(text: string): string {
+/**
+ * 正则转义：把 `.*+?^${}()|[]\` 这类正则元字符变成字面量，供 `new RegExp` 使用。
+ *
+ * 现有 `SOURCE_NAME_ALIASES` 里没有元字符，所以这条路径**当下不会被触发**——正因如此
+ * 更不能没有断言：它曾经被写坏（替换串写成了一段函数声明）而长期无人发现，只因为零调用点。
+ * 断言见 `test/find-sources.test.ts` 的独立用例，来源见
+ * `记录/20261030-检索层三条修复与R1前后对比.md` §五。导出是为了让断言真正调用到它，
+ * 不是对外契约。
+ */
+export function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
