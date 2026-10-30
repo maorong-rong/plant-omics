@@ -18,7 +18,7 @@ import { InvalidArgumentError } from '../src/core/errors.js';
 import type { Fetcher, ToolDefinition } from '../src/core/types.js';
 import { createRegistry } from '../src/sources/index.js';
 import { MAX_SOURCES, MAX_TOOLS } from '../src/service/budget.js';
-import { INTENTS, TOOL_CAPABILITIES } from '../src/retrieval/capability-catalog.js';
+import { INTENTS, SOURCE_SEMANTICS, TOOL_CAPABILITIES } from '../src/retrieval/capability-catalog.js';
 import { buildStatusReport, createStatusTool, type StatusSnapshot } from '../src/retrieval/status.js';
 import { statusSnapshotOf } from '../src/retrieval/index.js';
 
@@ -66,6 +66,50 @@ expect(result.raw.sourceTools).toBe(registry.listTools().filter((t) => !t.name.s
     expect(result.raw.budget.maxTools).toBe(MAX_TOOLS);
     expect(result.text).toContain(`${MAX_SOURCES}`);
     expect(result.text).toContain(`${MAX_TOOLS}`);
+  });
+
+  it('raw.sourceList 逐源摊平，字段与注册表一致，且与文本表格同一份口径', async () => {
+    const registry = createRegistry();
+    const result = await statusTool().run({}, { http: forbiddenHttp });
+    const list = result.raw.sourceList;
+    expect(list).toHaveLength(registry.listSources().length);
+    for (const entry of list) {
+      const bundle = registry.listSources().find((b) => b.manifest.id === entry.id);
+      expect(bundle, `${entry.id} 不在注册表里`).toBeDefined();
+      expect(entry.displayName).toBe(bundle!.manifest.displayName);
+      expect(entry.tier).toBe(bundle!.manifest.tier);
+      expect(entry.toolCount).toBe(bundle!.tools.length);
+      expect(entry.species).toEqual([...bundle!.manifest.species]);
+      expect(entry.versionNote).toBe(bundle!.manifest.versionNote);
+      // 语义与政策必须来自能力目录，不允许前端/界面另写一份
+      expect(entry.semantics).toBe(SOURCE_SEMANTICS[entry.id].semantics);
+      expect(entry.policy).toBe(SOURCE_SEMANTICS[entry.id].policy);
+      expect(entry.semanticsUnknown).toBe(false);
+      // 文本表格那一行必须与结构体说同一件事
+      const row = result.text.split('\n').find((line) => line.startsWith(`| ${entry.id}（`));
+      expect(row, `${entry.id} 未出现在表格里`).toBeDefined();
+      expect(row).toContain(entry.semantics);
+      expect(row).toContain(`| ${entry.toolCount} |`);
+    }
+    // 逐源工具数之和必须等于 sourceTools，否则就是两套口径
+    expect(list.reduce((sum, entry) => sum + entry.toolCount, 0)).toBe(result.raw.sourceTools);
+  });
+
+  it('未登记语义的源被显式标出，不混进"承诺"里', () => {
+    const base = realSnapshot();
+    const injected: StatusSnapshot = {
+      ...base,
+      sources: [
+        ...base.sources,
+        { id: 'not-registered', displayName: '未登记源', tier: 'T2', toolCount: 0, species: ['水稻'], versionNote: '未知' },
+      ],
+    };
+    const report = buildStatusReport(injected, '2026-10-29T00:00:00.000Z');
+    const entry = report.raw.sourceList.find((row) => row.id === 'not-registered');
+    expect(entry?.semanticsUnknown).toBe(true);
+    expect(entry?.semantics).toBe('未登记语义');
+    expect(entry?.policy).toBeNull();
+    expect(report.text).toContain('未登记语义');
   });
 
   it('规模是"源工具＋元工具"分开计，总数计入 40 预算', async () => {

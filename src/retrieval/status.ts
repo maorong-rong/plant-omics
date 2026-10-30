@@ -30,6 +30,7 @@ import {
   SOURCE_SEMANTICS,
   TOOL_CAPABILITIES,
   type IntentId,
+  type SpeciesPolicy,
   type ToolCapability,
 } from './capability-catalog.js';
 
@@ -66,11 +67,36 @@ export interface StatusSnapshot {
   readonly metaToolNames: readonly string[];
 }
 
+/**
+ * `raw.sourceList` 的元素：把一个源的全部目录事实摊平成结构体。
+ *
+ * 为什么要有它：`raw.sources` 只是计数，前端要渲染卡片网格就得重新猜字段。
+ * 但**这里只放已经存在的字段**，不新增数据来源——`semantics`/`policy` 与文本
+ * 表格取自同一份 `SOURCE_SEMANTICS`，避免"界面一套说法、工具一套说法"。
+ * 盲区文案同样从 `semantics` + `policy` 派生，前端不许自己写一份。
+ */
+export interface StatusSourceEntry {
+  readonly id: string;
+  readonly displayName: string;
+  readonly tier: string;
+  readonly toolCount: number;
+  readonly species: readonly string[];
+  readonly versionNote: string;
+  /** 语义（承诺 / 实测 / 示例非承诺），与文本表格同一份来源 */
+  readonly semantics: string;
+  /** 覆盖政策；`null` 表示该源未登记政策 */
+  readonly policy: SpeciesPolicy | null;
+  /** 未登记语义时为 true，供界面显式提示"这个源还没登记语义" */
+  readonly semanticsUnknown: boolean;
+}
+
 export interface StatusReport {
   readonly text: string;
   readonly raw: {
     version: string;
     sources: number;
+    /** 逐源目录事实；顺序与文本表格一致（注册顺序，或 intent 过滤后的子集） */
+    sourceList: StatusSourceEntry[];
     sourceTools: number;
     metaTools: number;
     totalTools: number;
@@ -141,20 +167,34 @@ export function buildStatusReport(snapshot: StatusSnapshot, at: string): StatusR
   }
 
   lines.push('');
+  // 逐源事实只在这里算一次：文本表格与 raw.sourceList 共用，杜绝两套口径
+  const entries: StatusSourceEntry[] = snapshot.sources.map((source) => {
+    const registered = SOURCE_SEMANTICS[source.id];
+    return {
+      id: source.id,
+      displayName: source.displayName,
+      tier: source.tier,
+      toolCount: source.toolCount,
+      species: [...source.species],
+      versionNote: source.versionNote,
+      semantics: registered?.semantics ?? '未登记语义',
+      policy: registered?.policy ?? null,
+      semanticsUnknown: registered === undefined,
+    };
+  });
+
   lines.push('| 源 | 语义 | 工具数 | 物种（manifest 口径） |');
   lines.push('| --- | --- | --- | --- |');
-  for (const source of snapshot.sources) {
-    const semantics = SOURCE_SEMANTICS[source.id]?.semantics ?? '未登记语义';
-    const policy = SOURCE_SEMANTICS[source.id]?.policy;
+  for (const entry of entries) {
     // example-only / any-by-id 必须显式标出来，否则读者会把它当覆盖承诺
-    const policyNote = policy === 'example-only' ? '（示例非承诺）'
-      : policy === 'any-by-id' ? '（按精确 ID，不限物种）'
+    const policyNote = entry.policy === 'example-only' ? '（示例非承诺）'
+      : entry.policy === 'any-by-id' ? '（按精确 ID，不限物种）'
         : '';
-    const shown = source.species.slice(0, MAX_SPECIES_PER_ROW);
+    const shown = entry.species.slice(0, MAX_SPECIES_PER_ROW);
     const species = shown.length > 0
-      ? `${shown.join('、')}${source.species.length > shown.length ? `等 ${source.species.length} 种` : ''}`
+      ? `${shown.join('、')}${entry.species.length > shown.length ? `等 ${entry.species.length} 种` : ''}`
       : '未知';
-    lines.push(`| ${source.id}（${source.displayName}） | ${semantics}${policyNote} | ${source.toolCount} | ${species} |`);
+    lines.push(`| ${entry.id}（${entry.displayName}） | ${entry.semantics}${policyNote} | ${entry.toolCount} | ${species} |`);
   }
 
   lines.push('');
@@ -211,6 +251,7 @@ export function buildStatusReport(snapshot: StatusSnapshot, at: string): StatusR
     raw: {
       version: snapshot.version,
       sources: budget.sources,
+      sourceList: entries,
       sourceTools,
       metaTools,
       totalTools,
