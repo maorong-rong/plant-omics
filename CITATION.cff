@@ -8,7 +8,12 @@ abstract: >-
   设计上要求每个数据源先经实测归级（文档化 JSON 接口 / 稳定 URL 模式 / 无可编程入口），
   只有通过实测的源才进入实现；工具输出带出处尾注，便于溯源。
 authors:
-  - family-names: maorong-rong
+  # 占位，不是最终署名。投稿或正式引用前必须替换为真实姓名与单位；
+  # 需要提供：姓名（中文与拼音）、单位、ORCID（可选）。
+  - family-names: "待定"
+    given-names: "待定"
+    # affiliation: "待定"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
 version: 0.1.0
 license: MIT
 keywords:
