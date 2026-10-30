@@ -11,6 +11,7 @@ import { validateArgs } from '../core/invoke.js';
 import type { ToolDefinition, ToolResult } from '../core/types.js';
 import {
   INTENT_BY_ID,
+  SOURCE_NAME_ALIASES,
   SOURCE_SEMANTICS,
   SPECIES_ALIASES,
   TOOL_CAPABILITIES,
@@ -37,25 +38,129 @@ export function normalize(text: string): string {
     .trim();
 }
 
+/**
+ * 题级判据：这条请求是不是「分析/计算」而不是「查询」。
+ *
+ * 每条规则都要求**动作与对象同时出现**，不用"分析"这类单字兜底——
+ * 单字兜底会把「有哪些做抗旱分析的基因」这种正常查询一起挡掉，
+ * 而拒答正常查询的代价比漏挡一条分析请求大得多。
+ *
+ * 返回命中的规则名（原样进输出，让用户知道被判成了什么），未命中返回 undefined。
+ */
+const COMPUTATION_RULES: ReadonlyArray<{ rule: string; test: RegExp }> = [
+  { rule: '设计/生成引物', test: /(设计|生成|开发)[^，。；,;]{0,6}(pcr\s*)?引物|引物设计/ },
+  { rule: '绘制热图', test: /热图|heat\s*map/ },
+  { rule: '富集分析', test: /富集分析|go\s*富集|kegg/ },
+  { rule: '三维结构预测', test: /三维结构|3d\s*结构|结构预测|蛋白结构/ },
+  { rule: '比较基因组/共线性作图', test: /共线性图|比较基因组|circos|作图|画图|绘图/ },
+  { rule: '差异表达分析', test: /差异表达分析|差异分析/ },
+];
+
+export function detectComputation(normalized: string): string | undefined {
+  return COMPUTATION_RULES.find((entry) => entry.test.test(normalized))?.rule;
+}
+
 interface Recognized {
   /** 原始问题（未归一化）：`when` 条件要按原文测，因为归一化会吃掉 : 和 - */
   readonly raw?: string;
   readonly species: string[];
   readonly intents: IntentId[];
+  /** 问题里**被点名**的源（"Gramene 里查…"）。点名了就只答这个源。 */
+  readonly sources: string[];
+  /**
+   * 分句视图：每个分句各自认到哪些物种与意图（G3b 分句绑定用）。
+   * 单分句时为空数组——此时候选判据沿用全局集合，见 `selectCandidates`。
+   */
+  clauses: Clause[];
   readonly normalized: string;
+}
+
+/** 一个分句里认到的物种与意图。 */
+interface Clause {
+  readonly species: string[];
+  readonly intents: IntentId[];
 }
 
 /** 正则转义：物种别名里有 x 这类特殊字符（如 `Fragaria × ananassa`）。 */
 function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\function recognize(question: string): Recognized {');
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** 问题里被点名的源，按出现位置去重。 */
+export function detectSourceNames(normalized: string): string[] {
+  const hits: Array<{ id: string; index: number }> = [];
+  for (const [id, aliases] of Object.entries(SOURCE_NAME_ALIASES)) {
+    for (const alias of aliases) {
+      const query = escapeRegExp(alias);
+      const match = new RegExp(query).exec(normalized);
+      if (match) {
+        hits.push({ id, index: match.index });
+        break;
+      }
+    }
+  }
+  return [...new Set(hits.sort((a, b) => a.index - b.index).map((hit) => hit.id))];
+}
+
+/**
+ * 摘掉源名再识别物种。
+ *
+ * `WheatOmics` 里含 `wheat`、`Strawberry` 里含 `strawberry`，不摘就会被读成
+ * "用户在问小麦/草莓"，于是 `WheatOmics 查玉米的变异位点` 会命中"小麦+玉米"，
+ * 拿小麦的变异工具去答玉米 —— 用错物种作答比答不出来严重得多。
+ */
+export function stripSourceNames(normalized: string): string {
+  let text = normalized;
+  for (const aliases of Object.values(SOURCE_NAME_ALIASES)) {
+    for (const alias of aliases) {
+      text = text.split(alias).join(' ');
+    }
+  }
+  return text;
+}
+
+/**
+ * 把问题切成**分句**，每个分句各自认物种与意图（G3b 用）。
+ *
+ * 为什么按 `，。；;！？!?` 切、**不按顿号**：
+ *   - 顿号是并列，不是分句。「小麦、水稻、玉米的表达」是一个整体，
+ *     拆成三截会把"物种清单"与"意图"拆散，反而把合法问题误杀；
+ *   - 逗号/分号/句号才是"这里换了一件事"的信号，
+ *     「小麦的表达量，另外玉米的变异位点」正是靠它区分出"玉米问的是变异"。
+ *
+ * 物种省略时**继承上一个分句的物种**（「小麦的表达，还有变异位点」里
+ * 第二分句没有物种，问的仍是小麦），否则会把省略主语的正常问法误杀。
+ *
+ * 只有一个分句时返回空数组：此时候选判据沿用全局集合。并列写法无法用分句表达，
+ * 强行启用会误杀（「A、B、C 的 X 与 Y」这种问题没有分句边界）。
+ */
+function splitClauses(raw: string): Clause[] {
+  const parts = raw
+    .split(/[，。；;！？!?]/)
+    .map((part) => part.trim())
+    .filter((part) => part !== '');
+  if (parts.length < 2) return [];
+
+  const clauses: Clause[] = [];
+  let inherited: string[] = [];
+  for (const part of parts) {
+    const normalized = normalize(part);
+    const species = detectSpecies(stripSourceNames(normalized)).map((hit) => hit.species);
+    const intents = detectIntents(normalized);
+    if (species.length > 0) inherited = species;
+    clauses.push({ species: species.length > 0 ? species : inherited, intents });
+  }
+  return clauses;
 }
 
 function recognize(question: string): Recognized {
   const normalized = normalize(question);
   return {
     raw: question,
-    species: detectSpecies(normalized).map((hit) => hit.species),
+    species: detectSpecies(stripSourceNames(normalized)).map((hit) => hit.species),
     intents: detectIntents(normalized),
+    sources: detectSourceNames(normalized),
+    clauses: splitClauses(question),
     normalized,
   };
 }
@@ -140,12 +245,29 @@ export function selectCandidates(
   enabledTools?: readonly string[],
 ): { picked: Scored[]; gaps: Gap[]; clues: Clue[] } {
   const { species, intents } = found;
-  const direction = resolveDirection(found.normalized);
+  const namedSources = found.sources;
+  // 方向也要在"摘掉源名"的文本上判：`WheatOmics` 里的 `wheat` 会凭空造出一个物种 span。
+  const direction = resolveDirection(stripSourceNames(found.normalized));
   const enabled = enabledTools ? new Set(enabledTools) : undefined;
   const wanted = new Set(intents);
   const scored: Scored[] = [];
   const gaps: Gap[] = [];
   const clues: Clue[] = [];
+
+  /**
+   * 未覆盖物种否决。
+   *
+   * 问题里出现**本服务没有任何源按物种覆盖**的物种（大豆/番茄/油菜/人类…）时，
+   * 整题不返回任何源工具。理由：拿小麦的工具答大豆，是"用错物种作答"，
+   * 比"答不出来"严重得多。即使问题同时还提到被覆盖的物种
+   * （「用草莓的共线数据看番茄基因」），也**不做例外**——只答一半，
+   * 会让人以为两半都有覆盖。
+   *
+   * 判据用 `speciesKnownInCatalog`（只算按物种查询的 scope，不算"按精确 ID"），
+   * 因为"不限物种（按精确 ID）"不构成"覆盖了这个物种"的证据。
+   */
+  const uncoveredSpecies = species.filter((sp) => !speciesKnownInCatalog(sp));
+  const vetoed = uncoveredSpecies.length > 0;
 
   // 按注册顺序遍历，天然实现 k3 平局键
   for (const tool of TOOL_CAPABILITIES) {
@@ -153,6 +275,28 @@ export function selectCandidates(
     if (enabled && !enabled.has(tool.tool)) continue;
     const semantics = SOURCE_SEMANTICS[tool.sourceId];
     if (!semantics) continue;
+
+    /**
+     * 点名源限制：问题点名了源，就**只答这个源**。
+     *
+     * 「Gramene 里查小麦的基因」要的是 gramene 的覆盖结论；回一个 wheatomics 的
+     * 工具是答非所问，还会让用户以为 Gramene 里有小麦。未被点名的源也不列成缺口——
+     * 它们不覆盖小麦这件事与用户的提问无关，列出来只是噪音。
+     */
+    if (namedSources.length > 0 && !namedSources.includes(tool.sourceId)) continue;
+
+    if (vetoed) {
+      // 同物种多源会被 dedup 合并，不会刷屏
+      if (semantics.policy === 'coverage') {
+        gaps.push({ sourceId: tool.sourceId, reason: `不覆盖物种：${uncoveredSpecies.join('、')}` });
+      } else {
+        clues.push({
+          sourceId: tool.sourceId,
+          reason: `按精确 ID 或已验示例才有结果，而问题问的是 ${uncoveredSpecies.join('、')}`,
+        });
+      }
+      continue;
+    }
 
     // G1 意图级明确不做——但只有"这个工具本来可能覆盖该问题"时才算缺口。
     // 否则 strawberry 的"模糊搜索"禁令会在"小麦基因"这种问题上冒出来，纯噪音。
@@ -180,6 +324,38 @@ export function selectCandidates(
     const intentHit = intents.filter((id) => tool.intents.includes(id)).length;
     if (intents.length > 0 && intentHit === 0) continue;
 
+    /**
+     * G3b 分句绑定（**只在问题真的有分句时**启用；单分句与带 hint 时关掉）。
+     *
+     * 反例驱动：「小麦的表达量，另外玉米的变异位点」——全局物种集是 {小麦, 玉米}，
+     * 而 wheatomics 的变异工具只要"命中维度非空"就放行（小麦来自另一个分句），
+     * 于是拿小麦的变异工具去答玉米。集合交集在这里把"用户问的是哪个物种"糊过去了。
+     *
+     * 判据：命中意图的那一分句里的物种，必须**全**落在该工具的物种范围（query 或 target）内。
+     * 分句没有物种时不算通过——物种未知时不许靠另一个分句的物种搭便车。
+     */
+    if (found.clauses.length > 0 && species.length > 0) {
+      const intentClauses = found.clauses.filter((clause) => clause.intents.some((id) => tool.intents.includes(id)));
+      if (intentClauses.length > 0) {
+        const allows = (sp: string): boolean => {
+          const query = tool.speciesScope.query ?? [];
+          const target = tool.speciesScope.target ?? [];
+          return query.some((sc) => speciesSatisfies(sp, sc)) || target.some((sc) => speciesSatisfies(sp, sc));
+        };
+        const bound = intentClauses.some((clause) => clause.species.length > 0 && clause.species.every(allows));
+        if (!bound) {
+          const asked = [...new Set(intentClauses.flatMap((clause) => clause.species))];
+          const declared = (tool.speciesScope.query ?? []).join('/') || '未声明';
+          gaps.push({
+            sourceId: tool.sourceId,
+            reason: `分句不匹配：命中意图的那一分句问的是 ${asked.length > 0 ? asked.join('、') : '未指定物种'}`
+              + `，不在该工具的物种范围（${declared}）内`,
+          });
+          continue;
+        }
+      }
+    }
+
     // G3 物种门（只对 query 判定；target 交给 G4）
     let speciesHit = 0;
     if (species.length > 0) {
@@ -188,7 +364,15 @@ export function selectCandidates(
       if (hitSpecies.length > 0) {
         speciesHit = hitSpecies.length;
       } else if (semantics.policy === 'coverage') {
-        gaps.push({ sourceId: tool.sourceId, reason: `不覆盖物种：${species.join('、')}` });
+        const declared = scope.length > 0 ? scope.join('/') : '未声明';
+        const boundary = tool.blindSpots[0] ? `；已知边界：${tool.blindSpots[0].slice(0, 40)}` : '';
+        gaps.push({
+          sourceId: tool.sourceId,
+          // 点名源要给出**它自己的覆盖范围**，否则用户只知道"不行"、不知道"为什么不行"
+          reason: namedSources.includes(tool.sourceId)
+            ? `点名来源未覆盖物种：${species.join('、')}（该源声明的物种范围是 ${declared}${boundary}）`
+            : `不覆盖物种：${species.join('、')}`,
+        });
         continue;
       } else if (semantics.policy === 'example-only') {
         const exampleHit = species.filter((sp) => (semantics.example ?? []).includes(sp));
@@ -421,6 +605,11 @@ export function findSources(input: FindSourcesInput, context: {
     const extra = detectIntents(normalize(intentHintText));
     for (const id of extra) if (!found.intents.includes(id)) found.intents.push(id);
   }
+  /**
+   * 显式 hint 是用户给的权威信息，此时关掉分句绑定：
+   * 分句推断本来就是"猜物种与意图的对应关系"，用户已经把答案给出来了，再猜只会添乱。
+   */
+  if (speciesHintText || intentHintText) found.clauses.length = 0;
 
   const { picked, gaps, clues } = selectCandidates(found, context.enabledTools);
   const grouped = groupBySource(picked);
@@ -436,6 +625,52 @@ export function findSources(input: FindSourcesInput, context: {
     ? found.intents.map((id) => INTENT_BY_ID.get(id)?.label ?? id).join('、')
     : '未识别出意图';
 
+  /**
+   * 题级硬门 ①：分析/计算类任务不是查询。
+   *
+   * 为什么要在**题级**挡，而不是登记成某个工具的 hardExclude：
+   * 「设计引物」「画热图」「做富集分析」不是"某个源恰好不做"，而是**本服务整体不做**。
+   * 登记到工具上就变成了"这个源不覆盖"，用户会以为换个源就能做。
+   *
+   * 也不靠意图识别兜底：`设计引物` 里含 `引物`（内参基因意图的关键词），
+   * 不挡就会拿 ICG 的内参引物工具去答"帮我设计引物"——ICG 只给已验证的内参引物，
+   * 不负责设计。命中关键词不等于该问答得了。
+   */
+  const computation = detectComputation(found.normalized);
+  if (computation) {
+    const lines = [
+      `不是数据查询：${summarize(question)}`,
+      `- 判定：这条是「${computation}」，属于分析/计算任务，不是"把已有数据问出来"`,
+      '- 本服务只做查询（把上游已有的记录取回来），不做分析与绘图，因此不提供任何工具',
+      '- 说明：这是「本服务不支持该任务」，不是没有覆盖，也不是数据不存在',
+      '- 可以先调查询工具拿到原始数据，再放到自己的分析流程里做这一步',
+    ];
+    return finish(lines.join('\n'), tail, { recognized: found, candidates: [], gaps: [], clues: [], state: 'B' });
+  }
+
+  /**
+   * 题级硬门 ②：物种未识别时**不许回落全库**。
+   *
+   * 这是 2026-10-30 R1 负向评测暴露出来的真实缺陷：问「大豆里调控种子油分的基因有哪些」，
+   * 物种没识别出来，于是按意图（"有哪些"→目录/发现）匹配，把 5 个源全算成命中——
+   * 用户问的是大豆，系统回的是小麦、水稻、甘蔗、玉米、草莓的工具。
+   *
+   * 判据：本服务靠"工具声明的物种范围"判断覆盖；物种未知就判不了覆盖，
+   * 判不了就不给候选。**宁可少答，也不拿不相干的源凑数。**
+   */
+  if (found.species.length === 0 && found.intents.length > 0) {
+    const lines = [
+      `未识别出物种：${summarize(question)}`,
+      `- 已识别意图：${intentText}；但没有识别出物种`,
+      '- 本服务按物种判定"这个工具覆不覆盖你问的东西"；物种未知时判定不了，因此不列任何候选',
+      '- 为什么不按意图凑一个：物种未知时，弱的意图词（如"有哪些"）会把全库工具都算成命中，'
+        + '那不是命中，是拿不相干的源凑数',
+      '- 请补充物种（species_hint），或换更具体的问法（例：「小麦 春化 已知基因」）',
+      '- 说明：这是「检索无法判定覆盖」，既不是「本服务未覆盖该物种」，也不是数据不存在',
+    ];
+    return finish(lines.join('\n'), tail, { recognized: found, candidates: [], gaps: [], clues: [], state: 'B' });
+  }
+
   // 状态 A：物种与意图都没识别出
   if (found.species.length === 0 && found.intents.length === 0) {
     const body = [
@@ -449,6 +684,8 @@ export function findSources(input: FindSourcesInput, context: {
   // 状态 B：有识别但没有可执行候选
   if (grouped.length === 0) {
     const lines = [`没有覆盖：${summarize(question)}`];
+    /** 是否已经解释过"点名来源缺这类工具"——决定"下一步"该给哪个动作 */
+    let namedIntentGap = false;
     // "没有源"只在**确实没有任何源覆盖这些物种**时才写；否则写了就是自相矛盾
     const knownSpecies = found.species.filter((sp) => speciesKnownInCatalog(sp));
     const unknownSpecies = found.species.filter((sp) => !speciesKnownInCatalog(sp));
@@ -468,6 +705,28 @@ export function findSources(input: FindSourcesInput, context: {
       if (missing.length > 0) {
         const labels = missing.map((id) => INTENT_BY_ID.get(id)?.label ?? id).join('、');
         lines.push(`- 没有工具：目录里没有「${labels}」类工具`);
+      }
+
+      /**
+       * 点名了源、物种也在该源范围内，但这个源**没有该意图的工具**。
+       *
+       * 必须单独说：此时不是"没有覆盖"（物种是覆盖的），只是这个源没有这类功能。
+       * 不说的话，用户看到"没有覆盖"会以为数据不存在，而实际上换个源就能查。
+       * 这里**不给工具名**——用户点名了来源，替他换一个源作答是答非所问；
+       * 只告诉他去掉来源名再问一次即可。
+       */
+      if (found.sources.length > 0) {
+        for (const id of found.sources) {
+          const caps = TOOL_CAPABILITIES.filter((capability) => capability.sourceId === id);
+          if (caps.length === 0) continue;
+          if (caps.some((capability) => capability.intents.some((want) => found.intents.includes(want)))) continue;
+          const wantedLabels = found.intents.map((i) => INTENT_BY_ID.get(i)?.label ?? i).join('、');
+          const available = [...new Set(caps.flatMap((capability) => [...capability.intents]))]
+            .map((i) => INTENT_BY_ID.get(i)?.label ?? i).join('、');
+          lines.push(`- 点名来源 ${id} 没有「${wantedLabels}」类工具（它有：${available}）`);
+          namedIntentGap = true;
+        }
+        lines.push('- 若不限来源：去掉问题里的来源名再问一次，本服务其他源可能有这类工具');
       }
     }
     lines.push(`- 说明：这是「本服务未覆盖」，不是「该数据不存在」；上游数据库可能存在，只是未接入`);
@@ -492,7 +751,10 @@ export function findSources(input: FindSourcesInput, context: {
       for (const gap of others.slice(0, 3)) lines.push(`- 缺口：${gap.sourceId}：${gap.reason}`);
       for (const clue of clues.slice(0, 3)) lines.push(`- 线索（未验证）：${clue.sourceId}：${clue.reason}`);
     }
-    lines.push('下一步：需要覆盖请走源接入流程（docs/新增一个源.md）；不要用其他物种或别的意图的工具代替作答。');
+    lines.push(namedIntentGap
+      // 此时"需要覆盖请走源接入流程"是错的动作：物种是覆盖的，只是这个源没有这类工具
+      ? '下一步：先去掉问题里的来源名再问一次；确认所有源都没有覆盖时再走源接入流程（docs/新增一个源.md）。不要用其他物种或别的意图的工具代替作答。'
+      : '下一步：需要覆盖请走源接入流程（docs/新增一个源.md）；不要用其他物种或别的意图的工具代替作答。');
     return finish(lines.join('\n'), tail, { recognized: found, candidates: [], gaps, clues, state: 'B' });
   }
 

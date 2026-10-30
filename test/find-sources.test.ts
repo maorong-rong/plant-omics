@@ -77,10 +77,13 @@ describe('golden 题集：候选真实相关', () => {
     expect(result.raw.recognized.intents).toEqual(expect.arrayContaining(['expression', 'sequence']));
   });
 
-  it('「这个基因叫什么」→ 意图识别到但物种缺失，仍给出候选（不硬判状态 A）', async () => {
+  it('「这个基因叫什么」→ 意图识别到但物种缺失，不给候选（不回落全库）', async () => {
     const result = await run('这个基因叫什么');
-    // 命中"基因详情"意图；物种缺失时不出"不覆盖"结论
+    // 命中"基因详情"意图；但物种未知时判不了覆盖，宁可少答也不列全库工具
     expect(result.raw.recognized.intents).toContain('gene-detail');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).toContain('未识别出物种');
+    // 这不是"没有覆盖"——我们并不知道用户问的物种覆不覆盖
     expect(result.text).not.toContain('没有覆盖');
   });
 
@@ -170,6 +173,99 @@ describe('输出预算与出处', () => {
       const result = await run(question);
       expect(result.text).toContain('未探测上游；工具是否可用以上游实际响应为准。');
     }
+  });
+});
+
+describe('R1 负向评测暴露的缺陷（2026-10-30 修复，逐条钉住）', () => {
+  it('未识别物种不得回落全库：大豆题不许返回任何源', async () => {
+    const result = await run('大豆里调控种子油分的基因有哪些');
+    expect(candidateIds(result.text)).toEqual([]);
+    // 命中意图 + 物种未识别 ≠ 可以按意图把全库工具算成命中
+    expect(result.text).toMatch(/未识别出物种|不在本服务目录/);
+  });
+
+  it('大豆题不得把"有哪些"这类弱意图词当成命中依据', async () => {
+    const result = await run('大豆里调控种子油分的基因有哪些');
+    expect(result.text).not.toContain('下一步：直接调');
+  });
+
+  it('已知但不覆盖的物种要点名说"不在本服务目录"，不是含糊的"没找到"', async () => {
+    const result = await run('番茄的抗病基因表达谱');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).toContain('番茄');
+    expect(result.text).toContain('不是「该数据不存在」');
+  });
+
+  it('人类基因不得用小麦的变异工具作答', async () => {
+    const result = await run('人类基因 TP53 的突变位点');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).not.toContain('wheatomics_variant');
+  });
+
+  it('未被任何源按物种覆盖 → 连"按精确 ID、不限物种"的 gwh 也不许当候选', async () => {
+    const result = await run('油菜的基因组组装在哪里下载');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).not.toContain('gwh_assembly_lookup');
+  });
+
+  it('混合物种也不做例外：用草莓共线看番茄 → 整题不给候选', async () => {
+    const result = await run('用草莓的共线数据看番茄基因');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).not.toContain('strawberry_synteny');
+  });
+
+  it('计算类任务独立硬排除：命中关键词也不放行（ICG 内参引物 ≠ 设计引物）', async () => {
+    const result = await run('帮我设计 PCR 引物');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).not.toContain('icg_lookup');
+    expect(result.text).toContain('不支持该任务');
+  });
+
+  it.each([
+    ['帮我用这批表达数据做差异表达分析并画热图', '差异表达分析'],
+    ['对小麦这批基因做 GO 富集分析', '富集分析'],
+    ['用这些基因组做比较基因组共线性图', '比较基因组/共线性作图'],
+    ['帮我预测这个蛋白的三维结构', '三维结构预测'],
+  ])('计算类「%s」被硬排除（规则：%s）', async (question, rule) => {
+    const result = await run(question);
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).toContain(rule);
+    expect(result.text).toContain('不是数据查询');
+  });
+
+  it('点名了源就只答这个源：Gramene 查小麦 → 说明 gramene 未覆盖小麦', async () => {
+    const result = await run('Gramene 里查小麦的基因');
+    expect(candidateIds(result.text)).toEqual([]);
+    // 不得回一个 wheatomics 的工具当作答案（答非所问，且暗示 Gramene 能查小麦）
+    expect(result.text).not.toContain('wheatomics_search_known_genes');
+    expect(result.text).toContain('点名来源未覆盖物种');
+    expect(result.text).toContain('gramene');
+  });
+
+  it('源名不再凭空造出物种：WheatOmics 查玉米 → 不得按"小麦+玉米"放行', async () => {
+    const result = await run('WheatOmics 查玉米的变异位点');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).not.toContain('wheatomics_variant');
+    expect(result.text).toContain('玉米');
+  });
+
+  it('IC4R 只收粳稻：问籼稻不得推荐 ic4r_annotation', async () => {
+    const result = await run('IC4R 查籼稻的基因注释');
+    expect(candidateIds(result.text)).toEqual([]);
+    expect(result.text).not.toContain('ic4r_annotation');
+    expect(result.text).toContain('籼稻');
+  });
+
+  it('正向对照：Gramene 实测覆盖籼稻（Indica Group），问籼稻要能给出候选', async () => {
+    const result = await run('Gramene 查籼稻的表达数据');
+    expect(result.raw.state).toBe('ok');
+    expect(result.text).toContain('gramene_expression');
+    expect(result.text).toContain('识别：物种=籼稻');
+  });
+
+  it('「已克隆」算基因搜索意图，不再回落成目录/发现', async () => {
+    const result = await run('小麦里有哪些已克隆的抗旱基因');
+    expect(result.text).toContain('wheatomics_search_known_genes');
   });
 });
 

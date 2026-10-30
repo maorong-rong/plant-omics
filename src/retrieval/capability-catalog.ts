@@ -25,7 +25,7 @@ export interface IntentSpec {
 }
 
 export const INTENTS: readonly IntentSpec[] = [
-  { id: 'gene-search', label: '基因搜索', keywords: ['基因搜索', '搜基因', '查找基因', '已知基因', '基因列表', 'known gene', 'search gene', 'gene list'] },
+  { id: 'gene-search', label: '基因搜索', keywords: ['基因搜索', '搜基因', '查找基因', '已知基因', '已克隆', '克隆基因', '基因列表', 'known gene', 'search gene', 'gene list'] },
   { id: 'gene-detail', label: '基因详情', keywords: ['基因详情', '基因记录', '基因信息', '这个基因', 'gene detail', 'gene info'] },
   { id: 'expression', label: '表达', keywords: ['表达', '表达量', '表达谱', 'fpkm', 'tpm', '组织表达', 'expression'] },
   { id: 'variant', label: '变异', keywords: ['变异', '变异位点', 'snp', '多态', '突变', 'variant', 'variation'] },
@@ -73,9 +73,22 @@ export const SOURCE_SEMANTICS: Readonly<Record<string, SourceSemantics>> = {
   scod: { semantics: '实测', policy: 'coverage' },
 };
 
-/** 物种别名：规范名 → 归一化后的匹配词。 */
+/**
+ * 物种别名：规范名 → 归一化后的匹配词。
+ *
+ * 分两类，**判据不同，别混**：
+ *   - 本服务**覆盖**的物种：见 `SPECIES_SATISFIES`，它们的 scope 会真的放行候选；
+ *   - 已知但**不覆盖**的物种（`SPECIES_WITHOUT_COVERAGE`）：进这张表的唯一目的是
+ *     **能识别、从而能精确拒答**（"大豆不在本服务目录"），而不是回落成全库候选。
+ *     识别不出来时宁可说"未识别出物种"，也不许拿不相干的源凑数。
+ *
+ * 粳稻与籼稻各自成项，**都不并进「水稻」**：IC4R 只收粳稻，gramene 实测的是 Indica。
+ * 合并成一个「水稻」的后果不是拒答，而是**看起来合规的错答**——比拒答危险得多。
+ */
 export const SPECIES_ALIASES: Readonly<Record<string, readonly string[]>> = {
-  水稻: ['水稻', '粳稻', '籼稻', 'oryza sativa', 'oryza', 'japonica', 'indica', 'rice'],
+  水稻: ['水稻', 'oryza sativa', 'oryza', 'rice'],
+  粳稻: ['粳稻', 'japonica'],
+  籼稻: ['籼稻', 'indica'],
   小麦: ['小麦', '普通小麦', 'triticum aestivum', 'triticum', '中国春', 'chinese spring', 'wheat'],
   玉米: ['玉米', '苞米', 'zea mays', 'zea', 'maize', 'corn'],
   拟南芥: ['拟南芥', 'arabidopsis thaliana', 'arabidopsis', 'thale cress'],
@@ -84,6 +97,35 @@ export const SPECIES_ALIASES: Readonly<Record<string, readonly string[]>> = {
   蒲公英: ['蒲公英', 'taraxacum', '橡胶草', 'kok-saghyz'],
   油菜: ['油菜', 'brassica napus', '甘蓝型油菜', 'rape'],
   甘蔗: ['甘蔗', 'saccharum', 'sugarcane'],
+  大豆: ['大豆', '黄豆', 'glycine max', 'soybean', 'soy'],
+  番茄: ['番茄', '西红柿', 'solanum lycopersicum', 'tomato'],
+  人类: ['人类', '智人', 'homo sapiens', 'human'],
+};
+
+/**
+ * 已知、但本服务**没有任何源按物种覆盖**的物种。
+ *
+ * 用途有二：① 拒答时能点名（"不覆盖大豆"），而不是笼统说"未识别"；
+ * ② `test/hub-status-catalog.test.ts` 据此豁免"表里有、目录查不到"的一致性断言——
+ * 这张表是**唯一真相**，测试不许另写一份名单。
+ */
+export const SPECIES_WITHOUT_COVERAGE: readonly string[] = ['油菜', '大豆', '番茄', '人类'];
+
+/**
+ * 源名别名：归一化后的匹配词 → sourceId。
+ *
+ * 为什么必须有：`WheatOmics`、`Strawberry` 里含物种别名（wheat / strawberry），
+ * 不先把源名从文本里摘掉，`WheatOmics 查玉米的变异位点` 会被识别成"小麦+玉米"，
+ * 于是拿小麦的变异工具去答玉米——用错物种作答比答不出来严重得多。
+ */
+export const SOURCE_NAME_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  wheatomics: ['wheatomics', 'wheat omics', '小麦组学'],
+  strawberry: ['strawberry', '草莓数据库'],
+  gwh: ['gwh'],
+  icg: ['icg'],
+  ic4r: ['ic4r'],
+  gramene: ['gramene'],
+  scod: ['scod'],
 };
 
 /**
@@ -92,6 +134,10 @@ export const SPECIES_ALIASES: Readonly<Record<string, readonly string[]>> = {
  */
 const SPECIES_SATISFIES: Readonly<Record<string, readonly string[]>> = {
   水稻: ['水稻'],
+  // 粳稻满足"水稻"（IC4R 就是粳稻单物种、gramene 的 Oryza sativa 也含粳稻），
+  // 籼稻**不满足**"水稻"——它是另一个亚种，合并进水稻会产生"看起来合规的错答"。
+  粳稻: ['水稻'],
+  籼稻: ['籼稻'],
   小麦: ['小麦族'],
   玉米: ['玉米'],
   拟南芥: ['拟南芥'],
@@ -100,6 +146,11 @@ const SPECIES_SATISFIES: Readonly<Record<string, readonly string[]>> = {
   蒲公英: ['蒲公英'],
   油菜: ['油菜'],
   甘蔗: ['甘蔗'],
+  // 已知但不覆盖：声明为空数组，表示"任何 scope 都不接"。
+  // 不能省成 undefined——省了会被读成"没登记"，与"登记为不覆盖"混为一谈。
+  大豆: [],
+  番茄: [],
+  人类: [],
 };
 
 export interface ToolCapability {
@@ -226,10 +277,10 @@ export const TOOL_CAPABILITIES: readonly ToolCapability[] = [
   },
 
   // ---- gramene（实测水稻）----
-  { tool: 'gramene_search', sourceId: 'gramene', intents: ['gene-search'], speciesScope: { query: ['水稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
-  { tool: 'gramene_gene', sourceId: 'gramene', intents: ['gene-detail'], speciesScope: { query: ['水稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
-  { tool: 'gramene_expression', sourceId: 'gramene', intents: ['expression'], speciesScope: { query: ['水稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
-  { tool: 'gramene_taxonomy', sourceId: 'gramene', intents: ['taxonomy'], speciesScope: { query: ['水稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
+  { tool: 'gramene_search', sourceId: 'gramene', intents: ['gene-search'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
+  { tool: 'gramene_gene', sourceId: 'gramene', intents: ['gene-detail'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
+  { tool: 'gramene_expression', sourceId: 'gramene', intents: ['expression'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
+  { tool: 'gramene_taxonomy', sourceId: 'gramene', intents: ['taxonomy'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
 ];
 
 /** 该物种能否满足某个 scope 写法（如 小麦 满足 小麦族）。 */

@@ -14,6 +14,7 @@ import {
   INTENTS,
   SOURCE_SEMANTICS,
   SPECIES_ALIASES,
+  SPECIES_WITHOUT_COVERAGE,
   TOOL_CAPABILITIES,
   speciesSatisfies,
 } from '../src/retrieval/capability-catalog.js';
@@ -92,15 +93,29 @@ describe('能力目录 ↔ 注册表双向一致', () => {
         scopes.add(scope);
       }
     }
-    // 刻意保留：油菜 = 有别名、无源（拒答测试样本）。
-    // 灰霉挂在"草莓及相关病原"、蒲公英走 gwh 的 any-by-id，都该被 speciesSatisfies 判定为已承接。
-    const intentionallyUncovered = new Set(['油菜']);
+    // 刻意保留：已知但**不覆盖**的物种（油菜/大豆/番茄/人类…）。
+    // 它们进别名表的目的是"能识别、从而能精确拒答"，不是"有源承接"。
+    // 名单只从目录取，测试不另写一份，否则两边会分叉。
+    const intentionallyUncovered = new Set<string>(SPECIES_WITHOUT_COVERAGE);
     const orphans = Object.keys(SPECIES_ALIASES).filter((species) => {
       if (intentionallyUncovered.has(species)) return false;
       // 用目录自己的判定函数，不另写一套子串匹配（否则断言口径与检索口径会分叉）
       return ![...scopes].some((scope) => speciesSatisfies(species, scope));
     });
     expect(orphans, `以下物种在别名表里但没有任何 speciesScope 承接：${orphans.join(', ')}`).toEqual([]);
+  });
+
+  it('不覆盖名单里的物种确实没有任何源按物种承接（否则"拒答"会误杀真能查的物种）', () => {
+    const falsePositives = SPECIES_WITHOUT_COVERAGE.filter((species) => {
+      return TOOL_CAPABILITIES.some((capability) =>
+        (capability.speciesScope.query ?? []).some(
+          (scope) => scope !== '不限物种（按精确 ID）' && speciesSatisfies(species, scope),
+        ));
+    });
+    expect(
+      falsePositives,
+      `以下物种被列进 SPECIES_WITHOUT_COVERAGE，但目录里其实有源按物种承接它：${falsePositives.join(', ')}`,
+    ).toEqual([]);
   });
 
   it('元工具（hub_*）不在能力目录里，也不占用源', () => {
