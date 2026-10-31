@@ -27,10 +27,10 @@ const goodTool = {
 };
 
 describe('注册表硬校验', () => {
-  it('默认注册表装配七源32工具+2元工具并保留源级断言', () => {
+  it('默认注册表装配八源35工具+2元工具并保留源级断言', () => {
     const built = createRegistry();
-    expect(built.listSources().map((bundle) => bundle.manifest.id)).toEqual(['wheatomics', 'strawberry', 'gwh', 'icg', 'ic4r', 'gramene', 'scod']);
-    expect(built.listTools()).toHaveLength(34);
+    expect(built.listSources().map((bundle) => bundle.manifest.id)).toEqual(['wheatomics', 'strawberry', 'gwh', 'icg', 'ic4r', 'gramene', 'scod', 'ensemblplants']);
+    expect(built.listTools()).toHaveLength(37);
     const source = built.getSource('strawberry');
     expect(typeof source?.validateProbe).toBe('function');
     expect(() => source?.validateProbe?.({})).toThrow();
@@ -91,7 +91,7 @@ describe('注册表硬校验', () => {
  */
 describe('按需启用源子集', () => {
   it('不传 enabled = 全部启用', () => {
-    expect(createRegistry().listSources()).toHaveLength(7);
+    expect(createRegistry().listSources()).toHaveLength(8);
   });
 
   it('传 enabled = 只启用指定的源', () => {
@@ -101,8 +101,8 @@ describe('按需启用源子集', () => {
   });
 
   it('空数组按「全启用」处理，不当成「一个都不要」', () => {
-    expect(createRegistry({ enabled: [] }).listTools()).toHaveLength(34);
-    expect(createRegistry({ enabled: ['  '] }).listTools()).toHaveLength(34);
+    expect(createRegistry({ enabled: [] }).listTools()).toHaveLength(37);
+    expect(createRegistry({ enabled: ['  '] }).listTools()).toHaveLength(37);
     expect(createRegistry({ enabled: ['strawberry'] }).listTools().filter((t) => !t.name.startsWith('hub_'))).toHaveLength(5);
   });
 

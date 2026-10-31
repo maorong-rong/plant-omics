@@ -15,9 +15,9 @@ import type { SourceManifest } from '../core/types.js';
 import { createRegistry } from '../sources/index.js';
 
 /**
- * 预算上限。与 `scripts/stats.mjs` 是同一口径，但这里是**客户端展示**用的副本：
+ * 预算上限。与 `scripts/counts.mjs` 是同一口径，但这里是**客户端展示**用的副本：
  * 客户端 bundle 拿不到 scripts/，也不能在浏览器里跑 registry。
- * `test/client.test.ts` 会解析 stats.mjs 的常量并断言两边一致——漂移即测试红。
+ * `npm run check:counts` 与 `test/client.test.ts` 都会核这几处常量——漂移即测试红。
  */
 export const MAX_SOURCES = 20;
 export const MAX_TOOLS = 40;

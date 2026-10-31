@@ -547,10 +547,172 @@ describe('wheatomics_variant_query', () => {
     expect(result.text).toContain('HTTP 200');
     // 未展示的条目必须如实计数，且不能出现负数
     expect(result.text).not.toContain('另有 -');
-    const shownMatch = /本次正文展示 (\d+) 条，另有 (\d+) 条未展示/.exec(result.text);
-    if (shownMatch) {
-      expect(Number(shownMatch[1]) + Number(shownMatch[2])).toBe(40);
-    }
+    // 三层计数 + 两个缺口的恒等式（WHT-01，负责人 2026-10-30 口径）
+    expect(result.text).toContain('命中 40 条；本次取回 40 条');
+    const shownMatch = /正文展示 (\d+) 条/.exec(result.text);
+    expect(shownMatch, '40 条超预算时必须写明正文展示数').not.toBeNull();
+    const shownN = Number(shownMatch![1]);
+    expect(shownN).toBeLessThan(40); // 确实被字节闸裁过
+    // 报出来的条数必须等于表格实际数据行数——不许谎报
+    expect(dataRows(result.text)).toBe(shownN);
+    // 缺口一：本页内未展示 = 40 − 展示；恒等式一
+    const gapOne = /本页另有 (\d+) 条未展示/.exec(result.text);
+    expect(gapOne, '本页放不下时必须报「本页另有 N 条未展示」').not.toBeNull();
+    expect(Number(gapOne![1]) + shownN).toBe(40);
+    // total = 本次取回，所以缺口二为 0，不许出现"未取回"
+    expect(result.text).not.toContain('未取回');
+    expect(result.text).toMatch(/可减小 limit 让本页放得下，或缩小区间后重查/);
+  });
+
+  /**
+   * `total` 远大于本次返回（分页）时的计数口径（2026-10-30 调研者指出的边界：
+   * 他读到的是旧字节，但这一档确实没有测试覆盖）。
+   *
+   * 实测形态：`limit=5` 打在 `chr1A:1-2000000`（`total=427`）上 → 本页 `records=5`、`has_more=true`。
+   * 此时「另有 X 条未展示」**只能**是 本页 5 − 展示数，**不能**是 427 − 展示数：
+   * 没取到的分页记录由「上游 total」表达，"没取到的"和"取到了没展示的"是两种缺失。
+   */
+  it('total(427) 远大于本次取回(40)：两个缺口分开报，各自恒等式成立', async () => {
+    const { ctx } = replay('variant-query.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        const first = (data.records as Array<Record<string, unknown>>)[0]!;
+        data.records = Array.from({ length: 40 }, (_, i) => ({
+          ...first,
+          pos: 1000 + i * 100,
+          id: `WTa_page_${i}`,
+        }));
+        data.total = 427;
+        data.total_shown = 40;
+        data.has_more = true;
+      },
+    });
+    const result = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', limit: 40 },
+      ctx,
+    );
+
+    // 三层计数：命中 / 本次取回 / 正文展示 必须分开报
+    expect(result.text).toContain('命中 427 条；本次取回 40 条');
+    const shownMatch = /正文展示 (\d+) 条/.exec(result.text);
+    const shownN = Number(shownMatch![1]);
+    expect(shownN).toBeLessThan(40); // 40 条必然被字节闸裁过
+
+    // 缺口一（本页内未展示）与缺口二（未取回）必须是两句，不许合并成一句
+    const gapOne = /本页另有 (\d+) 条未展示/.exec(result.text);
+    const gapTwo = /另有 (\d+) 条未取回/.exec(result.text);
+    expect(gapOne, '本页放不下时必须报「本页另有 N 条未展示」').not.toBeNull();
+    expect(gapTwo, 'total 大于本页时必须单独报「另有 N 条未取回」').not.toBeNull();
+    // 恒等式一：展示 + 本页未展示 = 本次取回(40)
+    expect(shownN + Number(gapOne![1])).toBe(40);
+    // 恒等式二：本次取回(40) + 未取回 = 命中(427)
+    expect(40 + Number(gapTwo![1])).toBe(427);
+    // 关键：本页缺口绝不能把没取到的 387 条算进来
+    expect(Number(gapOne![1])).toBeLessThanOrEqual(40);
+    expect(result.text).not.toContain(`本页另有 ${427 - shownN} 条`);
+    // 用户视角的算术必须闭合：两个缺口之和 = 真正没看到的条数（427 − 6 = 34 + 387）
+    // ——这样才能证明"拆两句"没有把任何一段漏报掉（调研者担心的少报 377 就是这一层）。
+    expect(Number(gapOne![1]) + Number(gapTwo![1])).toBe(427 - shownN);
+    // 未取回那条要给出可执行路径：limit 未到 100 时"调大 limit"是可行的
+    expect(result.text).toMatch(/另有 387 条未取回（本仓不分页）——可调大 limit（本仓上限 100）或缩小区间后重查/);
+  });
+
+  it('limit 已到本仓上限 100 时，未取回缺口只能写"请缩小区间后重查"', async () => {
+    const { ctx } = replay('variant-query.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        const first = (data.records as Array<Record<string, unknown>>)[0]!;
+        data.records = Array.from({ length: 100 }, (_, i) => ({
+          ...first,
+          pos: 1000 + i * 10,
+          id: `WTa_cap_${i}`,
+        }));
+        data.total = 427;
+        data.total_shown = 100;
+        data.has_more = true;
+      },
+    });
+    const result = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', limit: 100 },
+      ctx,
+    );
+
+    const gapTwo = /另有 (\d+) 条未取回/.exec(result.text);
+    expect(gapTwo).not.toBeNull();
+    expect(100 + Number(gapTwo![1])).toBe(427); // 327 条未取回：427 − 100
+    expect(result.text).toMatch(/另有 327 条未取回（limit 已到本仓上限 100，本仓不分页）——请缩小区间后重查/);
+    expect(result.text).not.toContain('可调大 limit');
+  });
+
+  it('空结果 + has_more=true → 抛错（矛盾不许当成功返回）', async () => {
+    // 2026-10-30 审查复现：空结果分支此前不查 has_more，于是"0 条"却声称还有更多被当成功。
+    const { ctx } = replay('variant-query-empty.json', {
+      mutate: (payload) => {
+        (payload.data as Record<string, unknown>).has_more = true;
+      },
+    });
+    await expect(
+      tool('wheatomics_variant_query').run({ dataset: 'whealbi_minocc10', region: 'chr1A:1-100' }, ctx),
+    ).rejects.toThrow(/has_more=true/);
+  });
+
+  it('缺口提示必须进正文：即使顶到字节预算也不许被裁掉', async () => {
+    // 2026-10-30 审查复现：缺口文案原来拼在 fitTable 之后，正文一满就被裁。
+    // 构造 100 条 + 长注释顶满预算，断言缺口那句仍在正文里、整包 ≤4 KB。
+    const { ctx } = replay('variant-query.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        const first = (data.records as Array<Record<string, unknown>>)[0]!;
+        data.records = Array.from({ length: 100 }, (_, i) => ({
+          ...first,
+          pos: 1000 + i,
+          id: `WTa_budget_${i}`,
+          info: { ANN: `${'A'.repeat(20)}|downstream_gene_variant|MODIFIER|TraesCS1A02G0007${i}|TraesCS1A02G0007${i}.1|protein_coding|1/2` },
+        }));
+        data.total = 427;
+        data.total_shown = 100;
+        data.has_more = true;
+      },
+    });
+    const result = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', limit: 100 },
+      ctx,
+    );
+
+    // 正文必须同时含：本页未展示（若有）+ 未取回 327 条
+    expect(result.text).toMatch(/另有 327 条未取回/);
+    expect(result.text).toContain('请缩小区间后重查');
+    expect(utf8Bytes(result.text)).toBeLessThanOrEqual(4096);
+    // 出处仍完整
+    expect(result.text).toContain('源：WheatOmics');
+  });
+
+  it('对外描述不写内部字节常数；共享常量保留给"后拼省略句"的调用点', async () => {
+    const def = tool('wheatomics_variant_query');
+    // 描述只承诺"会发生什么"，不写内部预算数字（写了就会随实现漂移，模型还会当真）
+    const desc = def.parameters.properties!.limit!.description!;
+    expect(desc).not.toMatch(/\d{3,4}\s*B/);
+    expect(desc).not.toContain('1208');
+    expect(desc).toContain('输出侧预算统一裁剪');
+
+    // variant_datasets 仍是"先排表、后拼省略句"的形态：它的 200 B 预留不能被顺手改掉。
+    // 把 3 个参考基因组各塞满 40 个数据集顶到预算，省略句必须还在、整包 ≤4 KB。
+    const { ctx } = replay('variant-datasets.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        (data.references as Array<Record<string, unknown>>).forEach((ref, r) => {
+          const list = ref.datasets as Array<Record<string, unknown>>;
+          const first = list[0]!;
+          // key 必须跨参考基因组唯一，否则工具会按"同一 key 多处出现"判漂移
+          ref.datasets = Array.from({ length: 40 }, (_, i) => ({
+            ...first, key: `ds_${r}_${i}`, label: `ds_${r}_${i}`,
+          }));
+        });
+      },
+    });
+    const out = await tool('wheatomics_variant_datasets').run({}, ctx);
+    expect(out.text).toMatch(/另有 \d+ 个数据集未展示|共 \d+ 个/);
+    expect(utf8Bytes(out.text)).toBeLessThanOrEqual(4096);
   });
 
   it('raw 是白名单投影：去掉 info/info_raw，保留 chrom/pos/id/ref/alt/filter', async () => {
@@ -717,13 +879,88 @@ describe('wheatomics_variant_query', () => {
     expect(ok.text).toContain('0 条不等于该区间没有变异');
   });
 
-  it('描述写清 region 是单个字符串参数，且不支持按变异 ID 查询', () => {
+  it('描述写清 region 是单个字符串参数，且「本仓不暴露」按变异 ID 查询（归因到本仓，不说成上游缺陷）', () => {
     const def = tool('wheatomics_variant_query');
     expect(def.description).toContain('单个字符串参数');
     expect(def.description).toContain('0 条不等于该区间没有变异');
-    expect(def.description).toContain('不支持按变异 ID 查询');
-    // variant_id 不在参数表里（19 秒全文件扫描，超出超时预算）
+    // 措辞：上游支持 variant_id，是本仓为性能不暴露——不许写成"上游不支持"
+    expect(def.description).toContain('本仓不暴露按变异 ID 查询');
+    expect(def.description).toContain('19 s');
+    expect(def.description).not.toMatch(/不支持按变异 ID 查询/);
+    // 能力面差异要在描述里说清：只按区间查
+    expect(def.parameters.properties!.region!.description).toContain('只支持按区间查');
+    // variant_id 不在参数表里（19 秒全表扫描，超出超时预算）
     expect(Object.keys(def.parameters.properties ?? {})).not.toContain('variant_id');
+  });
+
+  it('本仓不暴露 offset：has_more 时正文给「缩小区间」这条可执行路径，不留悬空承诺', async () => {
+    const def = tool('wheatomics_variant_query');
+    expect(Object.keys(def.parameters.properties ?? {})).not.toContain('offset');
+    expect(def.description).toContain('不提供 offset');
+    expect(def.parameters.properties!.limit!.maximum).toBe(100);
+
+    // 真实形态：total 远大于本次取回，且上游标记 has_more
+    const { ctx } = replay('variant-query.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        data.total = 427;
+        data.total_shown = 1;
+        data.has_more = true;
+      },
+    });
+    const result = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' },
+      ctx,
+    );
+    expect(result.text).toContain('还有更多');
+    expect(result.text).toContain('未暴露 offset');
+    // 只写"还有更多"就是悬空承诺；必须给出现在就能走的路
+    expect(result.text).toMatch(/另有 426 条未取回/);
+    expect(result.text).toMatch(/可调大 limit（本仓上限 100）或缩小区间后重查/);
+  });
+
+  it('上游自相矛盾（has_more=true 但本次取回已等于命中）→ 抛错，不猜"还有多少"', async () => {
+    const { ctx } = replay('variant-query.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        // total 与 records 都是 1，却声称还有更多
+        data.has_more = true;
+      },
+    });
+    await expect(
+      tool('wheatomics_variant_query').run({ dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' }, ctx),
+    ).rejects.toThrow(/has_more=true，但本次取回/);
+  });
+
+  it('limit 入参范围不动（1–100）：100 原样发上游，200 夹到 100；体积只由输出侧字节闸兜', async () => {
+    // WHT-02 裁定：**收紧参数**与**收紧输出**是两件事。缩到 50 会拒绝原本合法的 51–100 输入，
+    // 那是参数契约的实际收缩；本仓不改范围，只裁输出。
+    const def = tool('wheatomics_variant_query');
+    expect(def.parameters.properties!.limit!.maximum).toBe(100);
+    expect(def.parameters.properties!.limit!.minimum).toBe(1);
+
+    const hundred = replay('variant-query.json');
+    await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', limit: 100 },
+      hundred.ctx,
+    );
+    expect(hundred.urls[0], '100 是已发布的合法入参，必须原样发出').toContain('limit=100');
+
+    // 超上限仍按既有夹取语义处理（所有工具一致），不会把 200 发给上游
+    const over = replay('variant-query.json');
+    await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', limit: 200 },
+      over.ctx,
+    );
+    expect(over.urls[0]).toContain('limit=100');
+    expect(over.urls[0]).not.toContain('limit=200');
+
+    const zero = replay('variant-query.json');
+    await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', limit: 0 },
+      zero.ctx,
+    );
+    expect(zero.urls[0]).toContain('limit=1');
   });
 });
 
@@ -948,12 +1185,14 @@ describe('WHT3-04 展示条数在首行、表格、尾行必须一致', () => {
     const tableRows = result.text.split('\n').filter((line) => line.trim().startsWith('|')).length - 2;
     expect(tableRows).toBe(headShown);
 
-    // 尾行口径一致
-    const tailMatch = /本次正文展示 (\d+) 条，另有 (\d+) 条未展示/.exec(result.text);
-    if (tailMatch) {
-      expect(Number(tailMatch[1])).toBe(headShown);
-      expect(Number(tailMatch[1]) + Number(tailMatch[2])).toBe(20);
-    }
+    // 尾行口径一致：**恒等式硬断言**，不再用 `if (tailMatch)` 空转
+    // （2026-10-30 修订：WHT3-04 那轮写成条件式，措辞一改就整段跳过，等于没测）
+    const tailMatch = /本页另有 (\d+) 条未展示/.exec(result.text);
+    expect(tailMatch, '20 条超预算时必须报「本页另有 N 条未展示」').not.toBeNull();
+    expect(Number(tailMatch![1]) + headShown).toBe(20); // 恒等式一：展示 + 本页未展示 = 本次取回
+    expect(result.text).toContain('命中 20 条；本次取回 20 条');
+    expect(result.text).not.toContain('未取回'); // total = 本次取回，缺口二为 0
+    expect(result.text).toMatch(/可减小 limit 让本页放得下，或缩小区间后重查/);
 
     expect(utf8Bytes(result.text)).toBeLessThanOrEqual(4096);
     expect(result.text).not.toContain('另有 -');
@@ -983,5 +1222,4 @@ describe('WHT3-04 展示条数在首行、表格、尾行必须一致', () => {
     expect(utf8Bytes(result.text)).toBeLessThanOrEqual(4096);
   });
 });
-
 

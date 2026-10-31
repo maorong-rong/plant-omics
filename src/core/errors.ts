@@ -23,6 +23,13 @@ export class UpstreamError extends PlantOmicsError {
       contentType?: string;
       /** 完整请求及本地呈现参数，不用响应正文替代证据。 */
       request?: string;
+      /**
+       * **未经处理**的响应原体（不压平、不裁剪空白），供源层做严格结构判定。
+       * 上限见 `src/core/http.ts` 的 `RAW_BODY_LIMIT_BYTES`；缺失即不可判定。
+       */
+      rawBody?: string;
+      /** true = 原体超上限被截断。截断体**不得**参与结构判定，须按未知处理。 */
+      rawBodyTruncated?: boolean;
     },
   ) {
     super(message, meta as unknown as Record<string, unknown>);

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { describeError } from '../src/core/errors.js';
-import { createFetcher, retryDelayMs } from '../src/core/http.js';
+import { utf8Bytes } from '../src/core/format.js';
+import { RAW_BODY_LIMIT_BYTES, createFetcher, retryDelayMs } from '../src/core/http.js';
 import type { HttpResult } from '../src/core/types.js';
 
 /**
@@ -196,19 +197,24 @@ describe('错误文本不得带出上游原文（哨兵断言）', () => {
     try {
       await fetchJson('https://example.org/x');
     } catch (error) {
-      return error as { message: string; meta: { bodySnippet?: string } };
+      return error as { message: string; meta: { bodySnippet?: string; rawBody?: string; rawBodyTruncated?: boolean } };
     }
     throw new Error('本用例要求上游失败，但 fetchJson 没有抛错');
   };
 
   /**
    * 断言分两半，缺一不可：
-   *   ① 哨兵确实被收进了 `bodySnippet`（证明这次响应里真有哨兵）；
+   *   ① 哨兵确实被收进了 `bodySnippet` 与 `rawBody`（证明这次响应里真有哨兵）；
    *   ② 模型可见的错误文本里没有哨兵。
+   *
+   * 2026-10-30 起 `rawBody` 也进 `meta`（给源层做严格结构判定）。它携带**完整**上游正文，
+   * 所以"不进模型可见文本"这条比只靠 `bodySnippet` 时更值得钉：唯一出口 `describeError()`
+   * 只拼 message 与元数据，不拼 `rawBody`。
    */
   const expectLeakFree = async (status: number, body: string, contentType: string) => {
     const error = await captureError(failingWith(status, body, contentType));
     expect(error.meta.bodySnippet, `HTTP ${status} 的响应正文应被收进 bodySnippet`).toContain(SENTINEL);
+    expect(error.meta.rawBody, `HTTP ${status} 的响应正文应被原样收进 rawBody`).toContain(SENTINEL);
     expect(describeError(error)).not.toContain(SENTINEL);
     return error;
   };
@@ -216,6 +222,20 @@ describe('错误文本不得带出上游原文（哨兵断言）', () => {
   it('502 纯文本正文含哨兵：错误文本只有分类文案，不带正文', async () => {
     const error = await expectLeakFree(502, `upstream said ${SENTINEL}`, 'text/plain');
     expect(error.message).toMatch(/上游后端暂时不可用/);
+  });
+
+  /**
+   * 5xx 文案不许替上游下结论（2026-10-30，ENSP-04）。
+   *
+   * 旧文案写「通常是对面接口服务在重启或过载，不是本工具配置问题」——两半都观测不到：
+   * 重启/过载是本机看不到的因果，而"不是本工具配置问题"是排除性结论。
+   * 同一份规则见 AGENTS §十一（HTTP 5xx/DNS/代理错误不足以确定"上游重启"或排除本机配置原因）。
+   */
+  it('5xx 文案只写观测到的状态与"未验证"，不断言上游原因', async () => {
+    const error = await expectLeakFree(503, `upstream said ${SENTINEL}`, 'text/plain');
+    expect(error.message).toMatch(/上游后端暂时不可用（HTTP 503/);
+    expect(error.message).toMatch(/未验证/);
+    expect(error.message).not.toMatch(/重启|过载|不是本工具配置问题|与本工具无关/);
   });
 
   it('500 HTML 错误页含哨兵：不带出 HTML', async () => {
@@ -262,5 +282,69 @@ describe('错误文本不得带出上游原文（哨兵断言）', () => {
     expect(visible).not.toContain(deepSentinel);
     expect(visible, '上游 message 的开头（旧例外会带出的那段）也不得进模型可见文本').not.toContain(head);
     expect(visible).toMatch(/上游返回 HTTP 400/);
+  });
+});
+
+/**
+ * `rawBody`：给源层做**严格结构判定**用的未经处理原体（2026-10-30，ENSP-02）。
+ *
+ * 为什么必须与 `bodySnippet` 并存：`snippet()` 会把空白压平成一行，上游若在 JSON 字符串里
+ * 塞了非法换行，压平后反而合法化，源层就会把畸形响应读成"查无"。只有未处理的原体才能
+ * 严格 `JSON.parse`。
+ *
+ * 为什么必须有上限与截断标记：上游正文实测可达 1.9 MB（Ensembl Plants variation 50 kb 区间）。
+ * 截断后**必须**置 `rawBodyTruncated`，源层见到它要放弃判定——不能只靠"截断后恰好解析失败"兜住。
+ */
+describe('上游响应原体（rawBody）', () => {
+  const failingWith = (status: number, body: string, contentType = 'application/json') =>
+    createFetcher({ timeoutMs: 500, retries: 0 }, (async () =>
+      response(status, body, { 'content-type': contentType })) as typeof fetch);
+
+  const captureError = async (fetchJson: ReturnType<typeof createFetcher>) => {
+    try {
+      await fetchJson('https://example.org/x');
+    } catch (error) {
+      return error as { message: string; meta: { bodySnippet?: string; rawBody?: string; rawBodyTruncated?: boolean } };
+    }
+    throw new Error('本用例要求上游失败，但 fetchJson 没有抛错');
+  };
+
+  it('小正文原样保留：不压平、不裁掉换行（snippet 会压平，rawBody 不会）', async () => {
+    const raw = '{\n  "error": "No valid lookup found for symbol NO_SUCH_GENE_ZZZ\\n"\n}';
+    const error = await captureError(failingWith(400, raw));
+    // 逐字符相等 = 未经处理。若有人把这里改成 `snippet(body)`，本断言立刻红。
+    expect(error.meta.rawBody).toBe(raw);
+    expect(error.meta.rawBodyTruncated).toBeUndefined();
+    // 对照：片段是压平过的，正是它会把畸形 JSON"洗"成合法。
+    expect(error.meta.bodySnippet).not.toContain('\n');
+  });
+
+  it('超 4 KB 截断并显式标记，落下的部分不超字节上限', async () => {
+    const raw = `{"error":"${'A'.repeat(6_000)}"}`;
+    const error = await captureError(failingWith(400, raw));
+    expect(error.meta.rawBodyTruncated).toBe(true);
+    expect(utf8Bytes(error.meta.rawBody!)).toBeLessThanOrEqual(RAW_BODY_LIMIT_BYTES);
+    expect(raw.startsWith(error.meta.rawBody!)).toBe(true);
+  });
+
+  it('截断按字符边界：不切出坏编码，也不多截', async () => {
+    const raw = `{"error":"${'中'.repeat(2_000)}"}`; // 3 字节/字，远超 4 KB
+    const error = await captureError(failingWith(400, raw));
+    expect(error.meta.rawBodyTruncated).toBe(true);
+    expect(error.meta.rawBody).not.toContain('\uFFFD');
+    expect(raw.startsWith(error.meta.rawBody!)).toBe(true);
+    // 边界效率：4291 → 4288 字节（4096 向下取到 3 的倍数 + 11 字节头部），不该退到 4000 以下。
+    expect(utf8Bytes(error.meta.rawBody!)).toBeGreaterThan(RAW_BODY_LIMIT_BYTES - 4);
+  });
+
+  it('重试后仍失败：原体随最后一次尝试交给调用方', async () => {
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls += 1;
+      return response(503, `{"try":${calls}}`);
+    }) as typeof fetch;
+    const error = await captureError(createFetcher({ timeoutMs: 500, retries: 1 }, fetchImpl));
+    expect(calls).toBe(2);
+    expect(error.meta.rawBody).toBe('{"try":2}');
   });
 });

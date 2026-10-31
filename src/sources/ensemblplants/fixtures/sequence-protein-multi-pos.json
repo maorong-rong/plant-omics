@@ -1,0 +1,39 @@
+{
+  "capture": {
+    "date": "2026-10-30",
+    "request": "GET https://rest.ensembl.org/sequence/id/AT1G65480?type=protein;multiple_sequences=1;content-type=application/json",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 591,
+    "sourceSha256": "629BD2CD83BFD150623CB4DC5DFD29EE888EF33EEFE7BEA3E697BE8171B37CED",
+    "simulated": false,
+    "cropping": "verbatim; no fields removed (seq must stay intact to verify length)",
+    "client": "curl 8.x (schannel) via PowerShell, --connect-timeout 40",
+    "duplicatedBy": "已撤回：sequence 两次抓取长度相同但 seq 内容不同（见 记录/20261030-更正-Ensembl序列两次抓取内容不一致.md）；本件仅代表单次抓取",
+    "firstCommittedAt": "2026-10-30T16:22:44+08:00",
+    "firstCommittedNote": "git log --diff-filter=A 实测首次入库时间，仅作入库留痕，不替代抓取时刻",
+    "captureTimeStatus": "未知",
+    "captureTimeImpact": "不影响 payload 字节/结构/字段与解析回归；不足以证明\"对应某一次具体上游请求\"",
+    "captureTimeNote": "抓取时刻不可确证：原始抓取目录无任何日志/curl 输出可回溯；原记录只有本地时间且未记时区。按负责人口径，mtime 不能证明抓取时刻，故不填任何抓取时间值。",
+    "fileWriteTimeMtime": "2026-10-30T12:50:28+08:00",
+    "fileWriteTimeNote": "仅为文件写入磁盘的时间（mtime），不代表抓取上游响应的时刻；拷贝/检出/同步都会改写它"
+  },
+  "payload": [
+    {
+      "desc": null,
+      "molecule": "protein",
+      "version": null,
+      "id": "AT1G65480.2",
+      "seq": "MQIRNSINMCRGFMPMIQIKEAETKTSKTETINTEKPPVCSRSKMSINIRDPLIVSRVVGDVLDPFNRSITLKVTYGQREVTNGLDLRPSQVQNKPRVEIGGEDLRNFYTLVMVDPDVPSPSNPHLREYLHWLVTDIPATTGTTFGNEIVCYENPSPTAGIHRVVFILFRQLGRQTVYAPGWRQNFNTREFAEIYNLGLPVAAVFYNCQRESGCGGRRL",
+      "query": "AT1G65480"
+    },
+    {
+      "seq": "MSINIRDPLIVSRVVGDVLDPFNRSITLKVTYGQREVTNGLDLRPSQVQNKPRVEIGGEDLRNFYTLVMVDPDVPSPSNPHLREYLHWLVTDIPATTGTTFGNEIVCYENPSPTAGIHRVVFILFRQLGRQTVYAPGWRQNFNTREFAEIYNLGLPVAAVFYNCQRESGCGGRRL",
+      "query": "AT1G65480",
+      "version": null,
+      "id": "AT1G65480.1",
+      "molecule": "protein",
+      "desc": null
+    }
+  ]
+}

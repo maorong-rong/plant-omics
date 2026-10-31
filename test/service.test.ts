@@ -84,7 +84,7 @@ async function startService(overrides: Partial<Parameters<typeof parseServiceCon
 describe('启动期预算门禁', () => {
   it('正常注册表通过，并报出工具名预算', () => {
     const report = assertBudget(defaultRegistry, 'plantomics-hub');
-    expect(report.tools).toBe(34);
+    expect(report.tools).toBe(37);
     expect(report.nameBudget).toBe(43);
     expect('mcp__plantomics-hub__'.length).toBe(21);
   });
@@ -181,7 +181,7 @@ describe('HTTP 鉴权', () => {
       requestInit: { headers: { authorization: `Bearer ${TOKEN}` } },
     }));
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(34);
+    expect(tools.length).toBe(37);
   });
 
   it('认证失败发生在传输层：零上游调用，也不伪装成"本次未返回"', async () => {
@@ -631,7 +631,7 @@ describe('健康检查（上云探针）', () => {
     expect(status.code).toBe(200);
     const payload = JSON.parse(status.body) as { status: string; version: string; tools: number };
     expect(payload.status).toBe('ok');
-    expect(payload.tools).toBe(34);
+    expect(payload.tools).toBe(37);
     expect(payload.version).toBeTruthy();
     // 不泄露工具清单
     expect(status.body).not.toContain('wheatomics_');
@@ -664,13 +664,13 @@ describe('服务端版本独立于包版本', () => {
     expect(payload.version.startsWith(serviceVersion(payload.package))).toBe(true);
     expect(payload.version).toMatch(/^0\.1\.0\+svc\.\d+(\.g[0-9a-f]{7,}(-dirty)?)?$/);
     expect(payload.package).toBe('0.1.0');
-    expect(payload.sources).toBe(7);
-    expect(payload.tools).toBe(34);
+    expect(payload.sources).toBe(8);
+    expect(payload.tools).toBe(37);
   });
   it('版本可带构建 sha：+svc.N.g<sha>，拿不到 sha 时退化', () => {
-    expect(serviceVersion('0.1.0')).toBe('0.1.0+svc.5');
-    expect(serviceVersion('0.1.0', 'abc1234')).toBe('0.1.0+svc.5.gabc1234');
-    expect(serviceVersion('0.1.0', 'abc1234-dirty')).toBe('0.1.0+svc.5.gabc1234-dirty');
+    expect(serviceVersion('0.1.0')).toBe('0.1.0+svc.6');
+    expect(serviceVersion('0.1.0', 'abc1234')).toBe('0.1.0+svc.6.gabc1234');
+    expect(serviceVersion('0.1.0', 'abc1234-dirty')).toBe('0.1.0+svc.6.gabc1234-dirty');
     expect(readBuildRev(() => JSON.stringify({ sourceRev: 'deadbee' }), 'x')).toBe('deadbee');
     expect(readBuildRev(() => 'not json', 'x')).toBeUndefined();
     expect(readBuildRev(() => JSON.stringify({}), 'x')).toBeUndefined();

@@ -164,17 +164,21 @@ describe('确定性口径：除查询时刻外逐字节一致', () => {
   });
 });
 
-describe('RETR-09 同类：正文截断时免责行与尾注必须保留', () => {
-  // 构造能真正触达 1408 B 正文预算的问题：多物种 + 多意图，命中多源且盲区较长。
-  // （短问题不会触发截断，这也是此前"未能复现"的原因。）
+describe('RETR-09 同类：正文超预算时免责行与尾注必须保留', () => {
+  // 2026-10-30 口径变更（v2.2 + 去掉 slice(0,5)）后，超预算不再靠"硬截断正文"，
+  // 而是**少列几个命中源并明说"另有 N 个命中源未展示"**。这里保护的东西不变：
+  // 免责行只出现一次、尾注完整且以查询时刻收尾、整包 ≤4 KB——只是触发路径换了。
   const LONG_QUESTION = '小麦、水稻、草莓、玉米的基因表达与变异、同源、序列、注释、转录因子、共线、组装、样本、内参基因都要';
 
-  it('触发截断时，免责行与查询时刻仍然完整，且整包 ≤4 KB', async () => {
+  it('命中源装不下时：明说省略几个，免责行与查询时刻仍完整，整包 ≤4 KB', async () => {
     const tool = createRegistry().getTool('hub_find_sources')!;
     const out = await tool.run({ question: LONG_QUESTION }, { http: forbiddenHttp });
     const text = out.text;
 
-    expect(text).toContain('正文已截断'); // 证明真的走到了截断分支
+    // 命中多于正文容量：必须显式说明省略了几个（不许静默丢源）
+    expect(text).toMatch(/另有 \d+ 个命中源未展示/);
+    expect(out.raw.candidates.length).toBeGreaterThan(0);
+    // 出处契约
     expect(text).toContain('未探测上游；工具是否可用以上游实际响应为准。');
     expect(text).toMatch(/查询时刻/);
     expect(text.trimEnd().endsWith(`查询时刻 ${text.match(/查询时刻 ([^\n]+)/)![1]}`)).toBe(true);
@@ -183,10 +187,10 @@ describe('RETR-09 同类：正文截断时免责行与尾注必须保留', () =>
     expect(new TextEncoder().encode(text).length).toBeLessThanOrEqual(4096);
   });
 
-  it('不截断的短问题同样带免责行与尾注（回归旧行为）', async () => {
+  it('不省略的短问题同样带免责行与尾注（回归旧行为）', async () => {
     const tool = createRegistry().getTool('hub_find_sources')!;
     const text = (await tool.run({ question: '小麦春化已知基因' }, { http: forbiddenHttp })).text;
-    expect(text).not.toContain('正文已截断');
+    expect(text).not.toMatch(/另有 \d+ 个命中源未展示/);
     expect(text).toContain('未探测上游；工具是否可用以上游实际响应为准。');
     expect(text).toMatch(/查询时刻/);
   });

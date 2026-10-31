@@ -84,7 +84,7 @@ describe('MCP 协议层', () => {
     const { client, server } = await connect();
     try {
       const listed = await client.listTools();
-      expect(listed.tools).toHaveLength(34);
+      expect(listed.tools).toHaveLength(37);
       expect(listed.tools.map((tool) => tool.name)).toContain('strawberry_catalog');
       expect(listed.tools.map((tool) => tool.name)).toContain('wheatomics_search_known_genes');
       for (const tool of listed.tools) {

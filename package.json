@@ -42,9 +42,12 @@
     "test:watch": "vitest",
     "probe": "node scripts/probe.mjs",
     "stats": "node scripts/stats.mjs",
+    "counts": "node scripts/counts.mjs",
+    "check:counts": "node scripts/counts.mjs --check",
+    "counts:published": "node scripts/counts.mjs --published",
     "doctor": "node scripts/doctor.mjs",
     "install:dsh": "node scripts/install-dsh.mjs",
-    "check": "npm run typecheck && npm run test && npm run build && npm run stats",
+    "check": "npm run typecheck && npm run test && npm run build && npm run check:counts && npm run stats",
     "mcp": "node dist/mcp/cli.js",
     "serve": "node dist/service/cli.js"
   },
@@ -70,6 +73,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "gpt-tokenizer": "2.9.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0",
     "yaml": "^2.9.1"

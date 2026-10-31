@@ -1,0 +1,128 @@
+{
+  "capture": {
+    "date": "2026-10-30",
+    "request": "GET https://rest.ensembl.org/xrefs/id/AT1G65480?content-type=application/json",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 2030,
+    "sourceSha256": "DBFA1BAF6F46F378F98F9BD95EA6DE5E3649B42F59362866018353C7A2A4982D",
+    "simulated": false,
+    "cropping": "verbatim; all 9 entries kept to verify count and truncation",
+    "client": "curl 8.x (schannel) via PowerShell, --connect-timeout 40",
+    "duplicatedBy": "Node fetch 抓取件规范化后语义等值（键序不同、字节不同）；xrefs 内容一致",
+    "firstCommittedAt": "2026-10-30T16:22:44+08:00",
+    "firstCommittedNote": "git log --diff-filter=A 实测首次入库时间，仅作入库留痕，不替代抓取时刻",
+    "captureTimeStatus": "未知",
+    "captureTimeImpact": "不影响 payload 字节/结构/字段与解析回归；不足以证明\"对应某一次具体上游请求\"",
+    "captureTimeNote": "抓取时刻不可确证：原始抓取目录无任何日志/curl 输出可回溯；原记录只有本地时间且未记时区。按负责人口径，mtime 不能证明抓取时刻，故不填任何抓取时间值。",
+    "fileWriteTimeMtime": "2026-10-30T12:51:59+08:00",
+    "fileWriteTimeNote": "仅为文件写入磁盘的时间（mtime），不代表抓取上游响应的时刻；拷贝/检出/同步都会改写它"
+  },
+  "payload": [
+    {
+      "version": "0",
+      "info_text": "",
+      "db_display_name": "NASC Gene ID",
+      "dbname": "NASC_GENE_ID",
+      "synonyms": [],
+      "primary_id": "AT1G65480",
+      "info_type": "DIRECT",
+      "display_id": "AT1G65480-TAIR-G",
+      "description": "PEBP (phosphatidylethanolamine-binding protein) family protein"
+    },
+    {
+      "dbname": "TAIR_LOCUS",
+      "db_display_name": "TAIR",
+      "version": "0",
+      "info_text": "",
+      "info_type": "DIRECT",
+      "primary_id": "AT1G65480",
+      "synonyms": [],
+      "description": "PEBP (phosphatidylethanolamine-binding protein) family protein",
+      "display_id": "AT1G65480"
+    },
+    {
+      "dbname": "TAIR_SYMBOL",
+      "db_display_name": "TAIR Gene Name",
+      "version": "0",
+      "info_text": "",
+      "display_id": "FT",
+      "description": "",
+      "primary_id": "FT",
+      "info_type": "DIRECT",
+      "synonyms": []
+    },
+    {
+      "version": "0",
+      "info_text": "",
+      "db_display_name": "Expression Atlas",
+      "dbname": "ArrayExpress",
+      "synonyms": [],
+      "info_type": "DIRECT",
+      "primary_id": "AT1G65480",
+      "description": null,
+      "display_id": "AT1G65480"
+    },
+    {
+      "info_text": "",
+      "version": "0",
+      "db_display_name": "NCBI gene (formerly Entrezgene)",
+      "dbname": "EntrezGene",
+      "display_id": "FT",
+      "description": "PEBP (phosphatidylethanolamine-binding protein) family protein",
+      "synonyms": [
+        "F5I14.3",
+        "F5I14_3",
+        "FLOWERING LOCUS T",
+        "REDUCED STEM BRANCHING 8",
+        "RSB8"
+      ],
+      "primary_id": "842859",
+      "info_type": "DEPENDENT"
+    },
+    {
+      "version": "0",
+      "info_text": "",
+      "db_display_name": "KNETMINER_ARA",
+      "dbname": "KNETMINER_ARA",
+      "display_id": "AT1G65480",
+      "description": null,
+      "synonyms": [],
+      "primary_id": "AT1G65480",
+      "info_type": "DEPENDENT"
+    },
+    {
+      "description": null,
+      "display_id": "FT",
+      "info_type": "DEPENDENT",
+      "primary_id": "Q9SXZ2",
+      "synonyms": [],
+      "db_display_name": "UniProtKB Gene Name",
+      "dbname": "Uniprot_gn",
+      "info_text": "",
+      "version": null
+    },
+    {
+      "db_display_name": "WikiGene",
+      "dbname": "WikiGene",
+      "info_text": "",
+      "version": "0",
+      "description": "PEBP (phosphatidylethanolamine-binding protein) family protein",
+      "display_id": "FT",
+      "info_type": "DEPENDENT",
+      "primary_id": "842859",
+      "synonyms": []
+    },
+    {
+      "synonyms": [],
+      "info_type": "DEPENDENT",
+      "primary_id": "A0A1P8AMK0",
+      "description": null,
+      "display_id": "FT",
+      "info_text": "",
+      "version": null,
+      "dbname": "Uniprot_gn",
+      "db_display_name": "UniProtKB Gene Name"
+    }
+  ]
+}

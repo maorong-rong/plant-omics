@@ -71,6 +71,9 @@ export const SOURCE_SEMANTICS: Readonly<Record<string, SourceSemantics>> = {
   icg: { semantics: '示例非承诺', policy: 'example-only', example: ['玉米'] },
   gwh: { semantics: '示例非承诺', policy: 'any-by-id', example: ['蒲公英'] },
   scod: { semantics: '实测', policy: 'coverage' },
+  // 实测口径：四物种（拟南芥 TAIR10 / 水稻 IRGSP-1.0 / 小麦 IWGSC / 玉米 NAM-5.0）的
+  // lookup/id 均 200（release 116）。只承诺这四物种，不按"267 物种目录"声称覆盖。
+  ensemblplants: { semantics: '实测', policy: 'coverage' },
 };
 
 /**
@@ -126,6 +129,7 @@ export const SOURCE_NAME_ALIASES: Readonly<Record<string, readonly string[]>> = 
   ic4r: ['ic4r'],
   gramene: ['gramene'],
   scod: ['scod'],
+  ensemblplants: ['ensemblplants', 'ensembl plants'],
 };
 
 /**
@@ -138,7 +142,10 @@ const SPECIES_SATISFIES: Readonly<Record<string, readonly string[]>> = {
   // 籼稻**不满足**"水稻"——它是另一个亚种，合并进水稻会产生"看起来合规的错答"。
   粳稻: ['水稻'],
   籼稻: ['籼稻'],
-  小麦: ['小麦族'],
+  // 小麦同时承接两种口径：「小麦族」= 小麦族整族（WheatOmics 的覆盖口径），
+  // 「小麦」= 仅普通小麦 Triticum aestivum 单物种（Ensembl Plants 实测口径）。
+  // 两者不能合并：把单物种源写成"小麦族"是夸大覆盖，把整族源写成"小麦"会漏召回。
+  小麦: ['小麦族', '小麦'],
   玉米: ['玉米'],
   拟南芥: ['拟南芥'],
   草莓: ['草莓', '草莓及相关病原', '草莓属（Fragaria）', '草莓属'],
@@ -180,6 +187,11 @@ export interface ToolCapability {
 
 const WHEAT_BLIND = ['只覆盖小麦族（Triticum/Aegilops），不代表网站全部模块已接入'];
 const GRAMENE_BLIND = ['实测物种只有 Oryza sativa / Indica Group，不声称覆盖禾本科'];
+const ENSEMBL_BLIND = [
+  '只覆盖已实测四物种（拟南芥/水稻/小麦/玉米）；该 REST 跨分区、也服务非植物对象，按物种白名单与响应侧 species 双重拦截',
+  '基因 ID 分代次：玉米 B73 v4 旧编号（Zm00001d…）当前查无，且与"基因不存在"同形',
+  '查无是 HTTP 400 而非 404，与参数错误同码；未知形态一律报错，不归空',
+];
 const IC4R_BLIND = ['仅粳稻单物种；文档为 2018 版；不支持按基因名或区间检索'];
 const ICG_BLIND = ['实为物种目录（约 540 物种），仅实测玉米；不提供按名称搜索'];
 const GWH_BLIND = ['按精确 ID 查，不提供物种或关键词检索；不保证该 ID 有记录'];
@@ -281,6 +293,34 @@ export const TOOL_CAPABILITIES: readonly ToolCapability[] = [
   { tool: 'gramene_gene', sourceId: 'gramene', intents: ['gene-detail'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
   { tool: 'gramene_expression', sourceId: 'gramene', intents: ['expression'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
   { tool: 'gramene_taxonomy', sourceId: 'gramene', intents: ['taxonomy'], speciesScope: { query: ['水稻', '籼稻'] }, hardExcludes: [{ rule: '按字段精确过滤', blocks: ['variant'], when: /按字段|精确过滤|字段过滤/ }], blindSpots: GRAMENE_BLIND },
+
+  // ---- ensemblplants（实测四物种：拟南芥/水稻/小麦/玉米）----
+  {
+    tool: 'ensemblplants_lookup_gene',
+    sourceId: 'ensemblplants',
+    intents: ['gene-detail'],
+    speciesScope: { query: ['拟南芥', '水稻', '小麦', '玉米'] },
+    blindSpots: [...ENSEMBL_BLIND, '按符号或基因 ID 精确查单个基因，不做模糊/批量搜索，也不返回序列或外链 ID'],
+  },
+  {
+    tool: 'ensemblplants_sequence',
+    sourceId: 'ensemblplants',
+    intents: ['sequence'],
+    speciesScope: { query: ['拟南芥', '水稻', '小麦', '玉米'] },
+    hardExcludes: [{ rule: '按基因组区间取序列', blocks: ['sequence'], when: /区间|interval|坐标|chr\w*\s*[:：]\s*\d+\s*[-–~]\s*\d+/i }],
+    blindSpots: [
+      ...ENSEMBL_BLIND,
+      '只接 genomic（bp）与 protein（aa）；cdna/cds 未开放，不拼接多条转录本',
+      '序列接口无 species 字段，转录本物种靠前置 lookup 核验，属已知残余风险',
+    ],
+  },
+  {
+    tool: 'ensemblplants_xrefs',
+    sourceId: 'ensemblplants',
+    intents: ['id-convert'],
+    speciesScope: { query: ['拟南芥', '水稻', '小麦', '玉米'] },
+    blindSpots: [...ENSEMBL_BLIND, '映射接口既无物种也无组装字段，靠前置 lookup 核验；不按数据库过滤，不保证某库一定有条目'],
+  },
 ];
 
 /** 该物种能否满足某个 scope 写法（如 小麦 满足 小麦族）。 */

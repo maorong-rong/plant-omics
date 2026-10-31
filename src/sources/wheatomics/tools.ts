@@ -536,7 +536,18 @@ const convertGeneIds: ToolDefinition = {
 
 /** 正文预算：与 Gramene 一致的留白策略，给尾部计数行留位置。 */
 const HOMOLOG_BODY_BUDGET = MAX_BODY_BYTES - 160;
-const VARIANT_BODY_BUDGET = MAX_BODY_BYTES - 200;
+/**
+ * **变异数据集目录**的正文预算：`MAX_BODY_BYTES - 200`。
+ *
+ * 这 200 B 保护的是**表格后另拼的省略句**（"表中仅列 N 个，共 M 个；用 keyword 缩小范围"）——
+ * 目录工具是"先排表、后拼 tail"的形态，不留位就会在正文顶满时被裁。
+ * 不是给出处尾注（尾注由 `core/request.ts` 按整包 4096 B 另留，不与 1408 相减）。
+ * 凡"后拼省略句"的调用点都必须留位；曾误把这个常量放大到 1408，见 `9f488c4`。
+ */
+const VARIANT_CATALOG_BODY_BUDGET = MAX_BODY_BYTES - 200;
+
+/** 仅 `variant_query` 使用：缺口句已进 `fitTable` 试排，正文可用满 1408 B（表格让位）。 */
+const VARIANT_QUERY_BODY_BUDGET = MAX_BODY_BYTES;
 
 /** 同源结果的物种展示顺序：实测返回 Rice + Arabidopsis，其余物种原样追加。 */
 const SPECIES_ORDER = ['Rice', 'Arabidopsis'];
@@ -917,11 +928,12 @@ const variantDatasets: ToolDefinition = {
       ['参考基因组', 'dataset key', 'label', 'genome_concordant', '样本元数据'],
       rows,
       url,
-      VARIANT_BODY_BUDGET,
+      // 目录工具的省略句仍在 fitTable 之后后拼，必须留位（不用 variant_query 那个吃满预算的常量）
+      VARIANT_CATALOG_BODY_BUDGET,
       48,
     );
     const tail = shown < rows.length ? `\n（表中仅列 ${shown} 个，共 ${rows.length} 个；用 keyword 缩小范围）` : '';
-    return result(`${body}${tail}`, res, {
+    const out = result(`${body}${tail}`, res, {
       references: references.length,
       total: all.length,
       concordant: concordantCount,
@@ -933,6 +945,30 @@ const variantDatasets: ToolDefinition = {
         has_sample_meta: row.hasSampleMeta,
       })),
     }, `datasets=${all.length}`);
+    /**
+     * 后拼省略句的**最终文本**守卫（2026-10-30，按审查意见加强）。
+     *
+     * 目录工具是"先排表、后拼 tail"的形态：正文顶满预算时，`tail` 会被 `finishResult` 裁掉。
+     * 只检查 `body + tail` 不够——真正给用户看的是 `out.text`，所以这里断言的是**最终文本**：
+     *   ① 省略句完整出现在 `out.text`（被裁即抛错）；
+     *   ② 省略句里的数字与表格实际行数一致（不许"报的数"和"给的数"不同）；
+     *   ③ 整包 ≤ 4096 B、出处仍完整。
+     */
+    if (tail) {
+      const sentence = `（表中仅列 ${shown} 个，共 ${rows.length} 个；用 keyword 缩小范围）`;
+      const renderedRows = out.text.split('\n').filter((line) => line.trim().startsWith('|')).length - 2;
+      if (!out.text.includes(sentence) || renderedRows !== shown) {
+        throw new UpstreamShapeError(
+          `数据集目录的省略句未完整出现在最终正文（渲染 ${renderedRows} 行 / 报告 ${shown} 行）`
+          + '——被预算裁掉就等于没告诉用户"还有更多"，拒绝输出',
+          { url },
+        );
+      }
+    }
+    if (utf8Bytes(out.text) > 4096) {
+      throw new UpstreamShapeError(`数据集目录整包 ${utf8Bytes(out.text)} B 超 4096 B 上限`, { url });
+    }
+    return out;
   },
 };
 
@@ -1008,7 +1044,8 @@ const variantQuery: ToolDefinition = {
     + '**起点与终点不能相同**：上游会以 400 拒绝这种等端点区间，本仓在本地先拒（不是"该位点没有变异"）；查单位点请给 pos-1-pos+1。'
     + '**0 条不等于该区间没有变异**：数据集与坐标体系可能不匹配，请先用 wheatomics_variant_datasets 确认 genome_concordant=true。'
     + '**区间参数非法会被上游以 400 拒绝，那不是"没有变异"**，本仓在本地先做该校验。'
-    + '不支持按变异 ID 查询（上游该路径为全文件扫描，实测约 19 秒，超出本仓上游超时预算）。',
+    + '**本仓不暴露按变异 ID 查询**：上游该路径是全表扫描（实测约 19 s，超出本仓上游超时预算），能力面差异归本仓、不是上游缺陷；本工具只按区间查。'
+    + '**本仓不提供 offset**：上游支持分页，本仓未暴露分页参数；上游标记"还有更多"时请缩小 region 后重查，不要指望翻页。',
     parameters: {
       type: 'object',
       properties: {
@@ -1018,11 +1055,11 @@ const variantQuery: ToolDefinition = {
         },
         region: {
           type: 'string',
-          description: '染色体区间，单个字符串 chrom:start-end，闭区间两端都含（start 与 end 都包含；这是端点包含性实测，不涉及 1-based/0-based 命名），例如 chr1A:1-200000。起点与终点不能相同（上游会返回 400）；查单位点请给 pos-1-pos+1',
+          description: '染色体区间，单个字符串 chrom:start-end，闭区间两端都含（start 与 end 都包含；这是端点包含性实测，不涉及 1-based/0-based 命名），例如 chr1A:1-200000。起点与终点不能相同（上游会返回 400）；查单位点请给 pos-1-pos+1。**本工具只支持按区间查**（未暴露 offset，也不按变异 ID 查）',
         },
       limit: {
         type: 'integer',
-        description: '本次最多展示多少条（1–100，默认 20）。这是本仓的展示上限，不是上游 limit 的上限',
+        description: '本次最多取回多少条（1–100，默认 20）。**入参范围与已发布契约一致，本仓不收缩**；体积由**输出侧预算统一裁剪**（不在这里承诺具体字节数），被裁时正文分层报「命中 / 本次取回 / 正文展示 / 本页另有未展示 / 另有未取回」，并给出缩小区间或减小 limit 的重查指引',
         default: 20,
         minimum: 1,
         maximum: 100,
@@ -1105,12 +1142,24 @@ const variantQuery: ToolDefinition = {
     const summaryHead = (shownCount: number): string => (
       `dataset=${dataset}｜区间 ${region.text}｜`
       + (nSamples !== undefined ? `n_samples=${nSamples}｜` : '')
-      // 「上游 total」与「正文展示」分开说：前者是上游计数，后者只算真正进了正文的行（审查 WHT3-04）
-      + `上游 total=${total}｜上游返回 ${records.length} 条｜正文展示 ${shownCount} 条`
-      + (hasMore === true ? '｜上游标记还有更多（可缩小区间或调大 limit）' : '')
+      // 三个计数必须分开：命中（上游判定）/ 本次取回（本页）/ 正文展示（真正进了正文的行）
+      + `命中 ${total} 条；本次取回 ${records.length} 条；正文展示 ${shownCount} 条`
+      + (hasMore === true ? '｜上游标记还有更多（has_more=true，本仓未暴露 offset）' : '')
     );
 
     if (records.length === 0) {
+      /**
+       * 空结果也必须自洽（2026-10-30 审查复现）：`has_more=true` 却说"这次一条都没有"，
+       * 是上游自己矛盾。此前只有非空分支查这一条，空分支直接当成功返回——
+       * 那会让用户看到"0 条"，却不知道上游声称还有更多。
+       */
+      if (hasMore === true) {
+        throw new UpstreamShapeError(
+          `上游自相矛盾：records 为空（total=${total}、total_shown=${totalShown}）却标记 has_more=true`
+          + '——不猜"还有多少"，也不当作空结果返回',
+          { url },
+        );
+      }
       return result(
         `${summaryHead(0)}\n\n该数据集在该区间返回 0 条记录（上游 total=0、records 为空）。\n`
         + '⚠️ 0 条不等于该区间没有变异。若所用数据集 genome_concordant=false（坐标与参考基因组不一致），更不能据此判断无变异；'
@@ -1222,20 +1271,88 @@ const variantQuery: ToolDefinition = {
       annOf(record),
     ]);
 
+    /**
+     * 计数有**两个不同的缺口**，禁止合并成一句「另有 N 条」（WHT-01，负责人 2026-10-30 定口径）：
+     *
+     *   缺口一「本页内未展示」= 本次取回 − 正文展示 → 动作：减小 limit 让本页放得下，或缩小区间；
+     *   缺口二「未取回」      = 命中总数 − 本次取回 → 动作：调大 limit（≤100），仍不够只能缩小区间。
+     *
+     * 合并报的后果是真实的：`total=427 / 本页 50 / 展示 6` 时报「另有 44 条」，
+     * 用户以为快看完了，实际还剩 421 条——**少报 377**。
+     *
+     * **缺口文案必须参与字节预算**（2026-10-30 审查复现）：原来它拼在 `fitTable` 之后，
+     * 正文一顶到预算就被裁掉，用户看不到"还有 N 条没取回"这句——报数再准也没送到。
+     * 所以它进 headLines，由 fitTable 逐行试排时算进去。
+     */
+    const pageRecords = rows.length;
+    const notFetchedTotal = total - pageRecords;
+    const limitAtCap = limit >= 100;
+
+    const gapText = (shownCount: number): string => {
+      const parts: string[] = [];
+      const omittedHere = pageRecords - shownCount;
+      if (omittedHere > 0) {
+        parts.push(`本页另有 ${omittedHere} 条未展示——可减小 limit 让本页放得下，或缩小区间后重查`);
+      }
+      if (notFetchedTotal > 0) {
+        parts.push(limitAtCap
+          ? `另有 ${notFetchedTotal} 条未取回（limit 已到本仓上限 100，本仓不分页）——请缩小区间后重查`
+          : `另有 ${notFetchedTotal} 条未取回（本仓不分页）——可调大 limit（本仓上限 100）或缩小区间后重查`);
+      }
+      return parts.length ? `（${parts.join('；')}）` : '';
+    };
+
     const { body, shown } = fitTable(
-      (shownCount) => [
-        summaryHead(shownCount),
-        // 只写已证实的端点包含性，不写 1-based/0-based（基数命名无法从数据反推）
-        '注：区间为闭区间，两端都含（端点包含性实测，不涉及 1-based/0-based 命名）；`0 条` 与「无变异」不是一回事。'
-        + '每条只给位点与注释摘要，不含逐样本基因型。',
-      ],
+      (shownCount) => {
+        const gap = gapText(shownCount);
+        return [
+          summaryHead(shownCount),
+          // 只写已证实的端点包含性，不写 1-based/0-based（基数命名无法从数据反推）
+          '注：区间为闭区间，两端都含（端点包含性实测，不涉及 1-based/0-based 命名）；`0 条` 与「无变异」不是一回事。'
+          + '每条只给位点与注释摘要，不含逐样本基因型。',
+          ...(gap ? [gap] : []),
+        ];
+      },
       ['位点', '变异 ID', 'ref>alt', 'qual', 'filter', 'VEP 注释'],
       rows,
       url,
-      VARIANT_BODY_BUDGET,
+      // 只有这一个调用点用满 1408：缺口句已进 headLines 参与试排，表格让位即可
+      VARIANT_QUERY_BODY_BUDGET,
       46,
     );
-    const tail = shown < rows.length ? `\n（本次正文展示 ${shown} 条，另有 ${rows.length - shown} 条未展示；可缩小区间或调大 limit）` : '';
+
+    const omittedInPage = pageRecords - shown;
+    const notFetched = notFetchedTotal;
+
+    // 恒等式一：正文展示 + 本页未展示 = 本次取回
+    if (omittedInPage < 0 || shown + omittedInPage !== pageRecords) {
+      throw new UpstreamShapeError(
+        `计数不自洽（一）：展示 ${shown} + 本页未展示 ${omittedInPage} ≠ 本次取回 ${pageRecords}——拒绝输出不可信计数`,
+        { url },
+      );
+    }
+    // 恒等式二：本次取回 + 未取回 = 命中总数。不成立说明上游 total 与 records 互相矛盾。
+    if (notFetched < 0 || pageRecords + notFetched !== total) {
+      throw new UpstreamShapeError(
+        `计数不自洽（二）：本次取回 ${pageRecords} + 未取回 ${notFetched} ≠ 命中 ${total}——上游 total 与 records 矛盾`,
+        { url },
+      );
+    }
+    // has_more 与两个缺口必须自洽：说"还有更多"却一条都没少，就是上游自己矛盾——
+    // 不替它猜"还有多少"，也不留下一句没有动作的"还有更多"。
+    if (hasMore === true && notFetched === 0) {
+      throw new UpstreamShapeError(
+        `上游自相矛盾：has_more=true，但本次取回 ${pageRecords} 条已等于命中 ${total} 条——不猜还有多少，拒绝输出`,
+        { url },
+      );
+    }
+    // 报出的缺口必须真的出现在正文里（预算兜不住时宁可少排几行，也不能把这句话裁掉）
+    if (!body.includes(gapText(shown)) && gapText(shown) !== '') {
+      throw new UpstreamShapeError(
+        '缺口提示未进入正文（被字节预算裁掉）——拒绝输出"报数在 raw、正文看不到"的结果',
+        { url },
+      );
+    }
 
     /**
      * raw 白名单投影。
@@ -1259,7 +1376,7 @@ const variantQuery: ToolDefinition = {
       ann: annOf(record) === '-' ? undefined : annOf(record),
     }));
 
-    return result(`${body}${tail}`, res, {
+    return result(body, res, {
       dataset,
       region: region.text,
       n_samples: nSamples,

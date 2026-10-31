@@ -11,12 +11,13 @@
  */
 
 /** 服务端实现修订号：工具集/源集每变一次 +1 */
-export const SERVICE_REVISION = 5;
+export const SERVICE_REVISION = 6;
 
 /** 声明值：当前服务端应有的规模（改工具集时必须同步） */
 export const SERVICE_IDENTITY = {
-  sources: 7,
-  tools: 34,
+  // svc.6：接上第 8 个源 Ensembl Plants（3 工具），源 7→8、工具 34→37。
+  sources: 8,
+  tools: 37,
 } as const;
 
 /**

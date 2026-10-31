@@ -17,17 +17,22 @@
 
 | 源 | 等级 | 覆盖 | 工具数 | 鉴权 |
 |---|---|---|---|---|
-| **WheatOmics**（山东农大，小麦多组学） | T1 | 本仓已封装：小麦族基因、表达、文献、注释ID换算、跨物种同源（wheat/rice/arabidopsis，不区分直系旁系）、变异数据集目录与区间查变异（不含按变异 ID 查）；不代表网站全部模块已接入 | 9 | 无 |
+| **WheatOmics**（山东农大，小麦多组学） | T1 | 本仓已封装：小麦族基因、表达、文献、注释ID换算、跨物种同源（wheat/rice/arabidopsis，不区分直系旁系）、变异数据集目录与区间查变异（不含按变异 ID 查）、按基因取序列（本地分块）、按 Pfam 编号查注释；不代表网站全部模块已接入 | 11 | 无 |
 | **Strawberry Data Hub**（海南大学） | T1 | 草莓及相关病原：目录和精确基因注释；表达仅已证实草莓数据集、TF仅Fragaria、共线仅已证实装配 | 5 | 无 |
 | **GWH**（NGDC） | T1 | 精确基因组/组装、项目/样本元数据；物种示例非穷尽，不提供物种搜索 | 2 | 无 |
 | **ICG**（NGDC） | T1 | 物种目录及研究验证的内参基因/引物；不提供名称搜索，不作通用推荐 | 2 | 无 |
 | **IC4R**（NGDC） | T1 | 仅粳稻（japonica）单物种：基因、功能注释、circRNA、lncRNA、ID 映射，并按染色体分页列 locus；文档为 2018 版，不能按基因名/性状/区间检索 | 6 | 无 |
 | **Gramene v69** | T1 | 全文检索、基因、差异表达、分类单元；实测物种只有 Oryza sativa / Indica Group，不声称覆盖禾本科；按 ID 或全文查，不按名称精确匹配 | 4 | 无 |
 | **SCOD**（NGDC，甘蔗多组学） | T2 | 甘蔗（Saccharum spontaneum）及相关材料：基因组目录、按区间查基因（服务端分页）；区间需**包住整条基因**才返回，0 条不代表该位置没有基因；不是主粮 | 2 | 无 |
+| **Ensembl Plants**（EMBL-EBI） | T1 | 共享 REST：**只开拟南芥、水稻、小麦、玉米四个物种**（响应侧再核 `species`，同 host 也服务脊椎动物）；按符号/ID 查基因、取序列（本批仅 `genomic`）、外部 ID 映射；**查无是 HTTP 400 而非 404**，批量 `POST /lookup/id` 本批未接 | 3 | 无 |
 
-> **0.1.0（`plantomics-hub`）：7 源、34 工具（含 2 个元工具）。** 形态已改为「薄插件 + 远程 MCP 服务」，安装前必须先起服务，见下方「0.1.0 的形态变了」。0.7.x 及更早的 `dsh-plugin-plant-omics` 是「插件内置工具」的旧形态，可与新包共存但不可同时启用。
+<!-- counts:begin -->
+> **当前源码口径：8 源、37 工具（含 2 个元工具）。** 本块由 `npm run counts -- --write` 从 `dist/` 实测生成，勿手改；已发布包能装到什么另见 `npm run counts -- --published`（两者可以不同，发布滞后不是索引写错）。
+<!-- counts:end -->
+
+> 形态已改为「薄插件 + 远程 MCP 服务」，安装前必须先起服务，见下方「0.1.0 的形态变了」。0.7.x 及更早的 `dsh-plugin-plant-omics` 是「插件内置工具」的旧形态，可与新包共存但不可同时启用。
 >
-> 已验证：源码离线检查、候选包构建与包内内容一致性、六源最小 HTTP MCP 回放、服务层安全反例。**未验证**：真实宿主装载新包、动态刷新、公网部署；npm 尚未发布。源等级与实测以[源登记表](docs/源登记表.md)为准。
+> 已验证：源码离线检查、候选包构建与包内内容一致性、六源最小 HTTP MCP 回放（回放覆盖 6 个源，不等于全部源都有回放）、服务层安全反例。**未验证**：真实宿主装载新包、动态刷新、公网部署。npm 已发布 `plantomics-hub@0.1.0`（`latest`）；**包内实际数量以 `npm run counts -- --published` 现查，本行不写死**。源等级与实测以[源登记表](docs/源登记表.md)为准。
 
 ---
 
@@ -41,9 +46,11 @@
 | `wheatomics_expression_query` | 查基因在指定项目里的表达量：**均值 ± 标准差**；条件 ≤20 个时全部列出，可用 `condition` 精确看某类、`top` 控制条数 |
 | `wheatomics_search_papers` | 检索小麦族文献元数据（关键词 / 条数 / `sinceDays` 时间窗） |
 | `wheatomics_convert_gene_ids` | 基因 ID 跨注释版本换算，统一转成上游所称的 02G（IWGSC v1.1）格式；**只是 ID 表映射，不等于确认了组装版本** |
+| `wheatomics_sequence` | 按基因 ID 取基因或蛋白序列的**一个本地分块**；不接区间、不覆盖全植物；同 ID 完全相同的 FASTA 去重、不同记录报错不拼接；`offset` 是去重后单条序列的**本地 1 起位置，不是基因组坐标**；只有已验证的 by-gene JSON 404 才判"本次未找到" |
+| `wheatomics_gene_annotation` | 按 **Pfam 结构域编号**（如 `PF00319`）查注释，只查默认注释表；不是按基因 ID 查详情，不覆盖区间注释或全植物；**坐标单位是 Mb**；本地裁剪并报总数与展示数，不是上游分页 |
 | `wheatomics_cross_species_homologs` | 按基因 ID 查小麦/水稻/拟南芥同源基因；**不区分直系与旁系**（上游无该字段），`max_targets` 是**每物种**上限 |
 | `wheatomics_variant_datasets` | 列出变异数据集及 `genome_concordant` 标志；该标志未知时显示"未知"，不替上游推断 |
-| `wheatomics_variant_query` | 按区间查变异（`chrom` + 起止）；**`total=0` 不代表该区间没有变异**，正文会提示先确认数据集 `genome_concordant`；上游未给 `total` 时按结构漂移报错、不当作 0 条；返回的 `dataset` 与请求不符会拒绝展示；正文摘要分三段——**上游 total / 上游返回 N 条 / 正文展示 N 条**，其中"正文展示"与表格行数、尾行"另有 N 条"同源计算，三者必须一致；不支持按变异 ID 查 |
+| `wheatomics_variant_query` | 按区间查变异：`dataset` + `region`（**单个字符串** `chrom:start-end`，闭区间两端都含）；**`total=0` 不代表该区间没有变异**，正文会提示先确认数据集 `genome_concordant`；上游未给 `total` 时按结构漂移报错、不当作 0 条；返回的 `dataset` 与请求不符会拒绝展示；**计数分三层 + 两个缺口**：`命中 M 条；本次取回 R 条；正文展示 N 条`，缺口一「另有 X 条（本页内）未展示」（可减小 `limit` 或缩小区间，恒等式 `展示 + 本页未展示 = 本次取回`）、缺口二「另有 Y 条未取回」（`limit` 未到 100 时可调大，否则只能缩小区间，恒等式 `本次取回 + 未取回 = 命中`）；**两个缺口不许合并成一句「另有 N 条」**；正文展示数必须等于表格实际行数；`limit` 入参**保持 1–100 不变**（上游默认 200、上限 5000），体积由**输出侧** 1208 B 字节闸保证；**本仓不暴露 offset**（上游支持分页）、**也不按变异 ID 查**（上游全表扫描约 19 s，归因本仓不是上游缺陷） |
 | `strawberry_catalog` | 目录发现：模块、装配和限流；`module`仅本地过滤，不代表已支持所有目录模块 |
 | `strawberry_gene_lookup` | `geneId`精确查询；可选`species`/`version`消歧；`includeSequence=true`仅显示最多120 aa的**非完整蛋白前缀**，不能用于完整序列分析 |
 | `strawberry_expression` | 草莓组织表达：`geneId`、可选`dataset`/`top`；保留响应原单位batch-corrected TPM，不跨数据集比较 |
@@ -65,6 +72,9 @@
 | `scod_genome_list` | 列出甘蔗基因组目录（14 个材料）；裸数组响应，与基因接口的信封不同 |
 | `scod_gene_region` | 按 `genome_id`+`chrom`+`pos_start`+`pos_end` 查基因；**返回完全落在区间内的基因**（跨界的不会返回），服务端分页且**本地限制 `length ≤ 50`**；0 条不等于该位置没有基因 |
 | `ic4r_gene_list` | `chromosome`（仅页面给出的 1–12/`Sy`/`Un`，本仓白名单）+ `start`/`length`（本仓上限 50，上游上限未测）分页列 locus；报 `recordsTotal` 与本次返回条数 |
+| `ensemblplants_lookup_gene` | 按 `species`（白名单四物种）+ `symbol` 或 `id` 定位单个基因，给 `id`/`assembly_name`/`description`/位置等；**上游用 HTTP 400 表达"未找到"**，本仓按端点+请求身份+完整原体三重锚定才判未找到，未知形态一律报错、不归空；玉米旧编号（`Zm00001d…`，B73 v4）在本源查不到，正文会带当前组装名 NAM-5.0 |
+| `ensemblplants_sequence` | 按 `species`+`id` 取序列（`type` 本批**只开 `genomic`**；`cdna`/`cds`/`protein` 与多序列结构未实测，故未开放）；给出实际序列或明示截断与完整长度；物种逐条核验，任一条不符整次拒答 |
+| `ensemblplants_xrefs` | 按 `species`+`id`（或 `symbol`）取外部 ID 映射；数组本身可能不含物种字段，故同一请求内先 `lookup` 核验物种与 ID 一致性；空数组只表示本次未返回映射，不代表该基因没有对应记录 |
 
 分类分三轴：物种覆盖、数据类型、查询意图；官方MCP/公开API是接入方式，本仓工具是封装层，不重复计源。Strawberry首版仅GET，不包含批量序列、导出、单细胞、表观或GWAS实际查询。HTML404仅说明未获业务响应，不能断定基因不存在。
 
@@ -142,7 +152,7 @@ powershell -ExecutionPolicy Bypass -File "<包目录>\scripts\start-service.ps1"
 
 **开机自启**：把上面那条命令做成快捷方式放进 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`，目标写 `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<脚本完整路径>"`。
 
-**健康检查**：`GET /healthz` 返回 `{"status":"ok","version":"…","sources":6,"tools":25}`，**不需要 token、不校验 Host**（托管平台探针从内部地址打过来），也不泄露工具清单。
+**健康检查**：`GET /healthz` 返回 `{"status":"ok","version":"…","sources":8,"tools":37,"metaTools":2}`，**不需要 token、不校验 Host**（托管平台探针从内部地址打过来），也不泄露工具清单。其中 `sources` / `tools` / `metaTools` 是**运行时实际注册数**，随源码与启用的源子集变化。
 
 **服务没起来时会看到什么**：宿主日志是 MCP 连接失败（连不上 8787），会话里**一个 `mcp__plantomics-hub__*` 工具都没有**；patch 里设了 `failOnStartupError: true`，这条会被判为激活失败，而不是"静默装上没反应"。先确认服务窗口还在、`/healthz` 返回 200，再重启 DSH。
 
@@ -405,7 +415,7 @@ PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
 - **不做数据镜像。** 要批量下载数据，请回各自的科研项目按那边规则走。
 - **⚠️ 真实 DSH 会话尚未验收。** 已验证的是：适配器能取数、MCP 协议握手正常、包能干净安装、插件装配形状正确。
   **还没验证**的是：在 DSH 里提问 → 模型自主选工具 → 取数 → 带出处作答，这条完整链路。别把前者当成后者。
-- **⚠️ 渐进式发现问题检索尚未实现。** 当前源码候选34个工具全量暴露（规则允许到40个）；已安装快照可能仍是更早版本的 6/11/15 个。「按问题先找源、再找工具」仍属未实现项。
+- **⚠️ 检索层是发现入口，不是按需展开。** `hub_find_sources` / `hub_status` 按「物种覆盖 ∧ 意图能力」给候选源与工具名，未命中时如实说没有覆盖；当前源码的 37 个工具仍全量常驻（规则允许到 40 个），「只把命中工具装进会话」的按需展开尚未实现。已发布包的工具更少，实际数量以 `npm run counts -- --published` 现查。
 - **侧边栏面板是静态清单。** 只显示构建时的源/工具/盲区，不显示探活或调用统计，也不反映运行时的 `sources` 子集配置；它不能用来判断上游是否可用。
 - **上游限流。** Strawberry Data Hub 的公开额度是 120 请求/分钟（导出 12/分钟），超出返 429 带 `Retry-After`。本仓不内置全局限流器，密集调用需自行节流。
 - **工具输出里的上游文本按数据处理。** 数据库内容可能包含看起来像指令的文字，本仓不做过滤；请在客户端侧把工具输出当数据、不当指令。

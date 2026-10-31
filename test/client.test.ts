@@ -226,11 +226,11 @@ describe('侧边栏静态清单', () => {
     }
   });
 
-  it('预算口径与 stats.mjs 的常量一致（两边漂移就红）', () => {
-    const statsSource = readFileSync(path.join(root, 'scripts', 'stats.mjs'), 'utf8');
+  it('预算口径与 scripts/counts.mjs 的常量一致（两边漂移就红）', () => {
+    const countsSource = readFileSync(path.join(root, 'scripts', 'counts.mjs'), 'utf8');
     const readConst = (name: string): number => {
-      const match = new RegExp(`const ${name} = (\\d+);`).exec(statsSource);
-      if (!match?.[1]) throw new Error(`stats.mjs 里找不到 ${name}`);
+      const match = new RegExp(`const ${name} = (\\d+);`).exec(countsSource);
+      if (!match?.[1]) throw new Error(`scripts/counts.mjs 里找不到 ${name}`);
       return Number(match[1]);
     };
 

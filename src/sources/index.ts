@@ -32,6 +32,8 @@ import { validateProbe as validateGrameneProbe } from './gramene/probe.js';
 import { manifest as scodManifest } from './scod/manifest.js';
 import { tools as scodTools } from './scod/tools.js';
 import { validateProbe as validateScodProbe } from './scod/probe.js';
+import { manifest as ensemblPlantsManifest } from './ensemblplants/manifest.js';
+import { tools as ensemblPlantsTools } from './ensemblplants/tools.js';
 import { createHubTools } from '../retrieval/index.js';
 
 const bundles: SourceBundle[] = [
@@ -42,6 +44,10 @@ const bundles: SourceBundle[] = [
   { manifest: ic4rManifest, tools: ic4rTools, validateProbe: validateIc4rProbe },
   { manifest: grameneManifest, tools: grameneTools, validateProbe: validateGrameneProbe },
   { manifest: scodManifest, tools: scodTools, validateProbe: validateScodProbe },
+  // Ensembl Plants：本批只接 3 个（lookup / sequence / xrefs）。
+  // 批量 `POST /lookup/id` 未接——公共层目前只发 GET，需要先开非 GET 的口子，
+  // 详见 manifest.caveats 与「已知缺口」。
+  { manifest: ensemblPlantsManifest, tools: ensemblPlantsTools },
 ];
 
 export interface RegistryOptions {

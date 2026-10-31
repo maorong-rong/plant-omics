@@ -280,15 +280,30 @@ describe('目录注入文本按数据对待', () => {
   });
 });
 
-describe('候选上限与截断', () => {
-  it('候选源 ≤ 5，且只有 ≥3 时才可能给到 5', async () => {
-    const result = await run('小麦水稻玉米草莓拟南芥蒲公英的基因序列表达变异同源注释');
-    expect(candidateIds(result.text).length).toBeLessThanOrEqual(5);
+describe('候选口径（v2.2：全部命中源，不设固定候选数区间）', () => {
+  it('多源多意图问题给出全部命中源：装不下时明说省略了几个，不静默丢弃', async () => {
+    // v2.2 §10.2 ①：命中 = 物种覆盖 ∧ 意图能力双命中；不设「3–5 个」区间，
+    // 也不许为了凑数量把只满足单一条件的源降级计入。
+    // 正文放不下时按 ①-c 明说「另有 N 个命中源未展示」（raw 保留完整命中集），
+    // 而不是像旧实现那样 `slice(0, 5)` 静默砍掉。
+    const result = await run('小麦水稻玉米草莓拟南芥甘蔗籼稻的基因序列 表达 变异 同源 注释 转录因子 共线 组装');
+    expect(result.text).toContain('全部命中源');
+    expect(result.text).not.toContain('不足 3 个');
+    // 两条出路必须二选一，且都可判定（不用 if 让断言空转）：
+    //   要么正文把命中源全列了出来（≥6 条候选行），
+    //   要么明说「另有 N 个命中源未展示」。
+    // 旧实现 `slice(0, 5)` 两者都不是——它砍到 5 条还不吭声。
+    const listed = (result.text.match(/^[①②③④⑤⑥⑦⑧⑨⑩] /gm) ?? []).length;
+    const saysOmitted = /另有 \d+ 个命中源未展示/.test(result.text);
+    expect(listed >= 6 || saysOmitted, `列出 ${listed} 个命中源、且未说明省略了几个`).toBe(true);
   });
 
-  it('候选 <3 时注明"不足 3 个，如实给出"', async () => {
+  it('命中不足时如实给出，不标注"不足 3 个"这种旧口径', async () => {
     const result = await run('小麦里调控春化的已知基因');
-    expect(result.text).toContain('不足 3 个，如实给出');
+    expect(result.text).toContain('全部命中源');
+    expect(result.text).not.toContain('不足 3 个');
+    // 该题确有命中（wheatomics 的已知基因检索），不是空集
+    expect(candidateIds(result.text).length).toBeGreaterThanOrEqual(1);
   });
 });
 

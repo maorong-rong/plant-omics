@@ -14,6 +14,7 @@
  */
 
 import { UpstreamError } from './errors.js';
+import { utf8Bytes } from './format.js';
 import type { Fetcher, HttpOptions, HttpResult } from './types.js';
 
 /** 唯一 UA。带上工具名，出问题时对方站点日志里能看出是我们。 */
@@ -94,13 +95,15 @@ export function retryDelayMs(retryIndex: number, status?: number, retryAfter?: s
 }
 
 /**
- * 502/503/504 一律是**对面后端**的问题，不是本工具的配置问题。
- * 这条区分是实测逼出来的：2026-10-27 WheatOmics 的静态首页 200、
- * 而 `/api/*` 全部 503（Apache 返的），此时报「HTTP 503」用户会去查自己的网。
+ * 502/503/504 与 4xx 的语义分开报：这类状态说明**上游或代理层面返回了 5xx**，不是"记录不存在"。
+ * 依据是 2026-10-27 实测：WheatOmics 静态首页 200、而 `/api/*` 全部 503（Apache 返回）。
+ *
+ * **但原因不许替上游断言**：重启、过载、链路、本机出口都可能，观测不到就不能写。
+ * 文案只写「状态 + 已重试仍失败 + 原因未验证 + 可稍后重试」（AGENTS §十一）。
  */
 function httpMessage(status: number): string {
   if (status === 502 || status === 503 || status === 504) {
-    return `上游后端暂时不可用（HTTP ${status}，反向代理层面返回）——通常是对面接口服务在重启或过载，不是本工具配置问题，稍后重试`;
+    return `上游后端暂时不可用（HTTP ${status}，来自上游或反向代理层面）；已按退避重试仍失败，上游与本机链路的原因均未验证，可稍后重试`;
   }
   if (status === 429) return '上游限流（HTTP 429），本工具会按 Retry-After 退避重试，仍失败请降低调用频率';
   if (status === 404) return '上游 404：端点或记录不存在（源改版时也会这样）';
@@ -112,6 +115,30 @@ function httpMessage(status: number): string {
 function snippet(text: string, max = 300): string {
   const flat = text.replace(/\s+/g, ' ').trim();
   return flat.length <= max ? flat : `${flat.slice(0, max)}…`;
+}
+
+/**
+ * 上游响应原体的保留上限（**UTF-8 字节**，与输出预算同一把尺子）。
+ *
+ * 为什么不能只用 `snippet()`：它会把空白压平成一行，上游若在 JSON 字符串里塞了
+ * 非法换行，压平后反而变成合法 JSON，进而被错判成「查无」（审查 ENSP-02 反例）。
+ * 源层要做严格结构判定，就必须拿到**未经处理**的正文，所以原体原样保留。
+ *
+ * 为什么还要设上限：上游正文实测可达 1.9 MB（Ensembl Plants `feature=variation`
+ * 50 kb 区间），整段留在错误对象里既占内存、又给"顺手打印一下"留下口子。超出即截断，
+ * 并置 `rawBodyTruncated`。**截断即不可判定**：源层见到该标记必须放弃结构判定、
+ * 按未知抛错，不许靠"截断后恰好解析失败"侥幸兜住。
+ */
+export const RAW_BODY_LIMIT_BYTES = 4096;
+
+/** 原样保留正文（不压平、不裁剪空白）；超上限才截断，且按字符边界截，不乱码。 */
+function captureRawBody(text: string): { rawBody: string; rawBodyTruncated?: boolean } {
+  if (utf8Bytes(text) <= RAW_BODY_LIMIT_BYTES) return { rawBody: text };
+  // 先按字符数粗裁（UTF-8 最长 4 字节/字符），再回退进字节上限：
+  // 直接对 1 MB 级正文逐字符试探会白烧 CPU。
+  let cut = Math.min(text.length, RAW_BODY_LIMIT_BYTES);
+  while (cut > 0 && utf8Bytes(text.slice(0, cut)) > RAW_BODY_LIMIT_BYTES) cut -= 1;
+  return { rawBody: text.slice(0, cut), rawBodyTruncated: true };
 }
 
 export interface FetchJsonConfig {
@@ -161,6 +188,9 @@ export function createFetcher(
               attempts: attempt - 1,
               bodySnippet: lastError.meta.bodySnippet,
               retryAfter: lastError.meta.retryAfter,
+              // 原体随最后一次尝试一起交出去：源层的结构判定不该因为"再试了一次"而拿不到原体。
+              rawBody: lastError.meta.rawBody,
+              rawBodyTruncated: lastError.meta.rawBodyTruncated,
             },
           );
         }
@@ -214,6 +244,10 @@ export function createFetcher(
             status: response.status,
             attempts: attempt,
             bodySnippet: snippet(body),
+            // 原体给源层做严格结构判定用（合法查无 vs 参数错误 vs 畸形响应）。
+            // 它**不进模型可见文本**：唯一出口 describeError() 只拼 message 与元数据，
+            // 不拼 rawBody（test/http.test.ts 的哨兵组就是钉这条的）。
+            ...captureRawBody(body),
             retryAfter: response.headers.get('retry-after'),
             contentType,
           });
@@ -233,6 +267,7 @@ export function createFetcher(
             status: response.status,
             attempts: attempt,
             bodySnippet: snippet(body),
+            ...captureRawBody(body),
             contentType,
           });
         }

@@ -1,0 +1,24 @@
+{
+  "capture": {
+    "date": "2026-10-30",
+    "request": "GET https://rest.ensembl.org/lookup/symbol/arabidopsis_thaliana/NO_SUCH_GENE_ZZZ?content-type=application/json",
+    "status": 400,
+    "contentType": "application/json",
+    "sourceBytes": 61,
+    "sourceSha256": "76E1EEBE1546FFA802C84E4D2B68BB7A07D8B48CAD0F9E594C65DF5379DCB060",
+    "simulated": false,
+    "cropping": "verbatim; no fields removed (all lookup fields described by upstream are job-relevant)",
+    "client": "curl 8.x (schannel) via PowerShell, --connect-timeout 40",
+    "duplicatedBy": "已撤回：sequence 两次抓取长度相同但 seq 内容不同（见 记录/20261030-更正-Ensembl序列两次抓取内容不一致.md）；本件仅代表单次抓取",
+    "firstCommittedAt": "2026-10-30T16:22:44+08:00",
+    "firstCommittedNote": "git log --diff-filter=A 实测首次入库时间，仅作入库留痕，不替代抓取时刻",
+    "captureTimeStatus": "未知",
+    "captureTimeImpact": "不影响 payload 字节/结构/字段与解析回归；不足以证明\"对应某一次具体上游请求\"",
+    "captureTimeNote": "抓取时刻不可确证：原始抓取目录无任何日志/curl 输出可回溯；原记录只有本地时间且未记时区。按负责人口径，mtime 不能证明抓取时刻，故不填任何抓取时间值。",
+    "fileWriteTimeMtime": "2026-10-30T12:35:04+08:00",
+    "fileWriteTimeNote": "仅为文件写入磁盘的时间（mtime），不代表抓取上游响应的时刻；拷贝/检出/同步都会改写它"
+  },
+  "payload": {
+    "error": "No valid lookup found for symbol NO_SUCH_GENE_ZZZ"
+  }
+}
