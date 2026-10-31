@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>侧边栏面板线框 · PlantOmics Hub（设计稿，非成品）</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg:#f6f8f5; --panel:#fff; --ink:#16211a; --ink-2:#55635b; --ink-3:#7f8c84;
+    --line:#dde4db; --accent:#2a7a4c; --accent-ink:#1c5a37; --accent-soft:#e8f1ea;
+    --warn:#9a6516; --warn-soft:#f8efdd; --bad:#a2372f; --bad-soft:#f9eae8;
+    --mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+    --sans:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1512; --panel:#16201b; --ink:#e8f0ea; --ink-2:#a7b5ac; --ink-3:#82918a;
+      --line:#25322b; --accent:#6fc48f; --accent-ink:#9ad9b2; --accent-soft:#1a2a21;
+      --warn:#e0ab5e; --warn-soft:#2a2217; --bad:#e58a80; --bad-soft:#2c1c1a; }
+  }
+  /* 强制主题（只给截图核对与嵌入用） */
+  html[data-theme="light"] { --bg:#f6f8f5; --panel:#fff; --ink:#16211a; --ink-2:#55635b; --ink-3:#7f8c84;
+    --line:#dde4db; --accent:#2a7a4c; --accent-ink:#1c5a37; --accent-soft:#e8f1ea;
+    --warn:#9a6516; --warn-soft:#f8efdd; --bad:#a2372f; --bad-soft:#f9eae8; }
+  html[data-theme="dark"] { --bg:#0e1512; --panel:#16201b; --ink:#e8f0ea; --ink-2:#a7b5ac; --ink-3:#82918a;
+    --line:#25322b; --accent:#6fc48f; --accent-ink:#9ad9b2; --accent-soft:#1a2a21;
+    --warn:#e0ab5e; --warn-soft:#2a2217; --bad:#e58a80; --bad-soft:#2c1c1a; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 var(--sans);padding:22px}
+  .banner{background:#231f14;color:#f6e7bd;font-size:12.5px;padding:8px 14px;border-radius:10px;margin-bottom:16px}
+  .banner b{color:#ffd978}
+  .stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+  .panel{width:360px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px -24px rgba(0,0,0,.5);overflow:hidden}
+  .head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .head .ttl{font-weight:680;font-size:13.5px}
+  .head .sub{font-size:11.5px;color:var(--ink-3);margin-left:auto;font-family:var(--mono)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);display:inline-block}
+  .dot.ok{background:var(--accent)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+  .bar{padding:8px 14px;font-size:12.5px;line-height:1.55;border-bottom:1px solid var(--line)}
+  .bar.warn{background:var(--warn-soft)} .bar.bad{background:var(--bad-soft)} .bar.ok{background:var(--accent-soft)}
+  .bar b{font-weight:660}
+  .body{max-height:520px;overflow:auto;padding:6px 8px 10px}
+  .row{display:flex;align-items:center;gap:9px;padding:8px 8px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+  .row:hover{background:var(--accent-soft);border-color:var(--line)}
+  .row .ico{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
+    background:color-mix(in srgb,var(--src,var(--ink-3)) 12%,transparent);border:1px solid color-mix(in srgb,var(--src,var(--line)) 26%,transparent);color:var(--src,var(--ink-3))}
+  .row .ico svg{width:17px;height:17px}
+  .row .txt{min-width:0;flex:1}
+  .row .nm{font-size:13.3px;font-weight:620;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .meta{font-size:11.5px;color:var(--ink-3)}
+  .tier{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--accent-soft);color:var(--accent-ink)}
+  .tier.T2{background:var(--warn-soft);color:var(--warn)}
+  .pin{font-size:10px;color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 32%,transparent);border-radius:99px;padding:0 6px}
+  .detail{padding:12px 14px}
+  .back{font-size:12.5px;color:var(--accent-ink);cursor:pointer;margin-bottom:8px}
+  .detail h3{margin:0 0 6px;font-size:14px;font-family:var(--mono);overflow-wrap:anywhere}
+  .detail p{margin:0 0 10px;color:var(--ink-2);font-size:12.8px}
+  .kv{font-size:12.5px;color:var(--ink-3);margin:0 0 6px}
+  .kv b{color:var(--ink-2);font-weight:620}
+  .btnrow{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+  button{font:inherit;font-size:12.8px;padding:6px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:620}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .sk{background:var(--line);border-radius:6px;height:11px;margin:9px 8px}
+  .states{display:flex;flex-direction:column;gap:6px;max-width:300px}
+  .states button{text-align:left}
+  .states button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:620}
+  .note{font-size:12px;color:var(--ink-3);max-width:300px;line-height:1.65}
+  .empty{padding:20px 14px;text-align:center;color:var(--ink-3);font-size:12.8px}
+  /* 离线态：整卡降饱和 + 变淡；跳转按钮同时 disabled（两种都要，只做一种会让人以为还能点） */
+  .body.offline .row{opacity:.5;filter:saturate(.35)}
+  .body.offline .row:hover{background:transparent;border-color:transparent;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <b>这是线框，不是成品</b> —— 用于评审面板的信息层级与三态；数据取构建期快照 <code>web/data/catalog.js</code>，不发网络请求。
+</div>
+
+<div class="stage">
+  <div class="panel" id="panel"></div>
+
+  <div>
+    <div class="states" id="states">
+      <button data-state="loading" aria-pressed="false">载入态</button>
+      <button data-state="empty" aria-pressed="false">空态：清单未注入</button>
+      <button data-state="normal" aria-pressed="true">正常：构建期清单</button>
+      <button data-state="offline" aria-pressed="false">服务未连接（v2）</button>
+      <button data-state="e401" aria-pressed="false">错误：401（v2）</button>
+      <button data-state="e403" aria-pressed="false">错误：403（v2）</button>
+      <button data-state="subset" aria-pressed="false">子集未生效（v2）</button>
+    </div>
+    <p class="note">
+      点左边切换状态。「子集未生效」是 picker 那个坑在面板里的落法：发过 <code>x-plantomics-sources</code> 却返回全集时，必须出黄条并说明，
+      <b>不能显示「已按你的选择过滤」</b>。
+    </p>
+    <p class="note" id="data-note">正在读取数据…</p>
+  </div>
+</div>
+
+<script src="data/catalog.js"></script>
+<script src="assets/source-icons.js"></script>
+<script>
+(function () {
+  var theme = new URLSearchParams(location.search).get('theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
+
+  var catalog = window.__PLANTOMICS_CATALOG__ || null;
+  var icons = window.__PMH_SOURCE_ICONS__ || {};
+  var state = 'normal';
+  var detailId = null;
+
+  function el(t, c, txt) { var n = document.createElement(t); if (c) n.className = c; if (txt != null) n.textContent = txt; return n; }
+  function panel() { return document.getElementById('panel'); }
+
+  function head(text, sub, dotClass) {
+    var h = el('div', 'head');
+    h.appendChild(el('span', 'dot ' + (dotClass || '')));
+    h.appendChild(el('span', 'ttl', text));
+    if (sub) h.appendChild(el('span', 'sub', sub));
+    return h;
+  }
+
+  function bar(kind, html) {
+    var b = el('div', 'bar ' + kind);
+    b.innerHTML = html;
+    return b;
+  }
+
+  function render() {
+    var p = panel();
+    p.innerHTML = '';
+
+    if (state === 'loading') {
+      p.appendChild(head('PlantOmics Hub', '读取中…', ''));
+      var body = el('div', 'body');
+      for (var i = 0; i < 3; i++) body.appendChild(el('div', 'sk'));
+      p.appendChild(body);
+      p.appendChild(el('div', 'empty', '状态行：正在读取构建期清单…（不显示任何数字）'));
+      return;
+    }
+
+    if (state === 'empty') {
+      p.appendChild(head('PlantOmics Hub', '—', ''));
+      p.appendChild(bar('warn', '<b>清单未注入</b>：构建脚本没有产出 client catalog，面板暂无可显示的内容。'));
+      p.appendChild(el('div', 'empty', '列表区完全空着：不给假数据，也不给任何计数。'));
+      return;
+    }
+
+    if (!catalog) {
+      p.appendChild(head('PlantOmics Hub', '—', 'bad'));
+      p.appendChild(bar('bad', '缺构建期数据：先跑 <code>node site/scripts/build-data.mjs</code>。'));
+      return;
+    }
+
+    var b = catalog.budget || {};
+    var meta = '构建期清单 · ' + (catalog.sources ? catalog.sources.length : '?') + ' 源 / ' + (b.tools != null ? b.tools : '?') + ' 工具';
+
+    if (state === 'normal') {
+      p.appendChild(head('PlantOmics Hub', '快照 ' + String(catalog.gitCommit || '—'), 'ok'));
+      p.appendChild(bar('ok', meta + '（title：数字来自构建期注册表，不代表上游此刻可用）'));
+    } else if (state === 'offline') {
+      p.appendChild(head('PlantOmics Hub', '未连接', 'warn'));
+      p.appendChild(bar('warn', '<b>服务未连接</b>：仍显示构建期清单；连接服务后才能跳转试调。'));
+    } else if (state === 'e401') {
+      p.appendChild(head('PlantOmics Hub', '401', 'bad'));
+      p.appendChild(bar('bad', '<b>token 被拒</b>：插件配置里的 PLANTOMICS_HUB_TOKEN 与服务端不一致。'));
+    } else if (state === 'e403') {
+      p.appendChild(head('PlantOmics Hub', '403', 'bad'));
+      p.appendChild(bar('bad', '<b>服务端拒绝来源</b>：把 DSH 所在域名加入 PLANTOMICS_HUB_ALLOWED_HOSTS（只写主机名，不带协议与端口）。服务端不下发 CORS 头，跨源配置也治不通。'));
+    } else if (state === 'subset') {
+      p.appendChild(head('PlantOmics Hub', '子集未生效', 'warn'));
+      p.appendChild(bar('warn', '<b>服务端未按子集返回（返回 37 个，非所选的 15 个）</b>：37 是真实全集数；<b>15 是示例勾选值</b>，实际以你选的源为准。可能是旧版本服务端不认 <code>x-plantomics-sources</code>；面板按实际返回显示，<b>不冒充已过滤</b>。'));
+    }
+
+    if (detailId) { p.appendChild(detailView(detailId)); return; }
+
+    // 离线态：卡片真的标灰（不是只把跳转按钮禁掉），让人一眼看出「现在只能看，不能调」
+    var body = el('div', 'body' + (state === 'offline' ? ' offline' : ''));
+    (catalog.sources || []).forEach(function (s) {
+      var row = el('div', 'row');
+      var meta2 = icons[s.id] || {};
+      var ico = el('span', 'ico');
+      if (meta2.color) ico.style.setProperty('--src', meta2.color);
+      if (meta2.svg) ico.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + meta2.svg + '</svg>';
+      else ico.textContent = '?';
+      var txt = el('div', 'txt');
+      txt.appendChild(el('div', 'nm', s.label.zh.name));
+      var m = el('div', 'meta', s.toolCount + ' 个工具 · 盲区 ' + (s.caveats || []).length + ' 条');
+      txt.appendChild(m);
+      row.appendChild(ico); row.appendChild(txt);
+      row.appendChild(el('span', 'tier ' + s.tier, s.tier));
+      if (s.pinned) row.appendChild(el('span', 'pin', '置顶'));
+      row.addEventListener('click', function () { detailId = s.id; render(); });
+      body.appendChild(row);
+    });
+    p.appendChild(body);
+
+    var btns = el('div', 'btnrow');
+    var open = el('button', 'primary', '在试调页打开');
+    open.disabled = state === 'offline' || state === 'e401' || state === 'e403';
+    open.title = open.disabled ? '服务不可用，跳转已禁用' : '跳到 web/ 试调页';
+    btns.appendChild(open);
+    p.appendChild(btns);
+  }
+
+  function detailView(id) {
+    var s = (catalog.sources || []).filter(function (x) { return x.id === id; })[0];
+    var tools = (s.tools || []);
+    var box = el('div', 'detail');
+    var back = el('div', 'back', '← 返回列表');
+    back.addEventListener('click', function () { detailId = null; render(); });
+    box.appendChild(back);
+    box.appendChild(el('h3', null, s.label.zh.name));
+    box.appendChild(el('p', null, s.label.zh.blurb));
+    box.appendChild(el('div', 'kv', '等级 ' + s.tier + ' · 工具 ' + s.toolCount + ' 个 · 物种 ' + (s.species || []).join('、')));
+    box.appendChild(el('div', 'kv', '盲区 ' + (s.caveats || []).length + ' 条（详情页展开原文）'));
+    var list = el('div');
+    tools.slice(0, 6).forEach(function (t) {
+      var row = el('div', 'kv');
+      row.innerHTML = '<b>' + t.name + '</b>';
+      list.appendChild(row);
+    });
+    if (tools.length > 6) list.appendChild(el('div', 'kv', '…… 其余 ' + (tools.length - 6) + ' 个'));
+    box.appendChild(list);
+    return box;
+  }
+
+  document.querySelectorAll('#states button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state = btn.getAttribute('data-state');
+      detailId = null;
+      document.querySelectorAll('#states button').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      render();
+    });
+  });
+
+  document.getElementById('data-note').textContent = catalog
+    ? '快照：' + (catalog.sources ? catalog.sources.length : '?') + ' 源 / ' + ((catalog.budget || {}).tools || '?') + ' 工具 · commit ' + (catalog.gitCommit || '—')
+    : '没读到 web/data/catalog.js';
+  render();
+})();
+</script>
+</body>
+</html>

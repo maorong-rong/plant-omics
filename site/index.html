@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlantOmics Hub · 植物组学枢纽 — 让 AI 直接查植物组学公开数据</title>
+<meta name="description" content="把植物组学数据库的公开接口整理成一套模型能真正调用的工具，一次维护、两个出口：远程 MCP 服务与 DeepSeek Harness 插件。输出带可复现出处，单次不超过 4 KB。">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main"><span lang="zh">跳到正文</span><span lang="en">Skip to content</span></a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#top" aria-label="PlantOmics Hub">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 27V13"/>
+          <path d="M16 17c-5 0-8-3-8-8 5 0 8 3 8 8Z"/>
+          <path d="M16 21c5 0 8-3 8-8-5 0-8 3-8 8Z"/>
+          <path d="M6 27h20"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>PlantOmics Hub</strong>
+        <small><span lang="zh">植物组学枢纽</span><span lang="en">plant-omics for LLMs</span></small>
+      </span>
+    </a>
+
+    <nav class="site-nav" aria-label="主导航">
+      <a href="#what"><span lang="zh">这是什么</span><span lang="en">Overview</span></a>
+      <a href="#sources"><span lang="zh">能查什么</span><span lang="en">Coverage</span></a>
+      <a href="#install"><span lang="zh">怎么装</span><span lang="en">Install</span></a>
+      <a href="#limits"><span lang="zh">边界</span><span lang="en">Limits</span></a>
+    </nav>
+
+    <div class="header-actions">
+      <button id="lang-toggle" class="btn btn-quiet" type="button" aria-label="切换语言 / Switch language">
+        <span aria-hidden="true" class="lang-toggle-label">EN</span>
+      </button>
+      <a class="btn btn-quiet" href="https://github.com/maorong-rong/plant-omics" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div class="hero-copy">
+      <p class="eyebrow">
+        <span class="dot" aria-hidden="true"></span>
+        <span lang="zh">MCP 服务 · DeepSeek Harness 插件</span>
+        <span lang="en">MCP service · DeepSeek Harness plugin</span>
+      </p>
+
+      <h1>
+        <span lang="zh">让 AI 直接查<br>植物组学的公开数据</span>
+        <span lang="en">Let an AI query<br>public plant-omics data</span>
+      </h1>
+
+      <p class="lead">
+        <span lang="zh">把植物组学数据库的公开接口整理成 <b>模型真能调用的工具</b>：一次维护，两个出口——远程 MCP 服务与 DSH 插件。每条结果都带可复现的出处，单次输出有界。</span>
+        <span lang="en">Public plant-omics database APIs, wrapped as <b>tools a model can actually call</b>. Built once, exposed twice: a remote MCP service and a DeepSeek Harness plugin. Every result carries reproducible provenance, and every output is bounded.</span>
+      </p>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#install">
+          <span lang="zh">快速开始</span><span lang="en">Get started</span>
+        </a>
+        <a class="btn" href="#sources">
+          <span lang="zh">看能查哪些源</span><span lang="en">See coverage</span>
+        </a>
+      </div>
+        </div>
+
+        <!-- 首屏主视觉：手写 SVG，无外链、无位图，颜色全部走 CSS 变量，暗色下自动换一套。 -->
+        <figure class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 440 380" role="presentation" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="leafGrad" x1="0.15" y1="0" x2="0.9" y2="1">
+                <stop offset="0" stop-color="var(--accent)" stop-opacity=".26"/>
+                <stop offset="1" stop-color="var(--accent)" stop-opacity=".04"/>
+              </linearGradient>
+              <linearGradient id="beamGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="var(--accent)" stop-opacity=".12"/>
+                <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            <circle cx="316" cy="96" r="86" fill="url(#beamGrad)"/>
+            <circle cx="128" cy="286" r="64" fill="url(#beamGrad)"/>
+            <circle cx="322" cy="250" r="118" fill="none" stroke="var(--accent)" stroke-opacity=".16" stroke-dasharray="3 7"/>
+
+            <!-- 叶片：主脉 + 侧脉，侧脉末端接数据节点（植物 → 数据） -->
+            <path d="M212 348 C150 300 118 232 128 150 C136 84 176 34 232 20 C258 84 268 166 246 246 C238 284 226 320 212 348 Z"
+                  fill="url(#leafGrad)" stroke="var(--accent)" stroke-opacity=".6" stroke-width="1.6"/>
+            <path d="M214 344 C210 262 212 176 230 34" fill="none" stroke="var(--accent)" stroke-opacity=".75" stroke-width="2"/>
+            <g stroke="var(--accent)" stroke-opacity=".42" stroke-width="1.3" fill="none">
+              <path d="M216 300 C186 276 160 254 138 226"/>
+              <path d="M218 254 C190 236 166 216 148 190"/>
+              <path d="M222 206 C200 192 182 176 170 156"/>
+              <path d="M228 158 C212 148 200 136 192 120"/>
+              <path d="M216 296 C236 274 250 250 258 222"/>
+              <path d="M220 246 C238 228 250 208 256 186"/>
+              <path d="M224 196 C236 182 246 166 250 148"/>
+            </g>
+            <g fill="var(--accent)">
+              <circle cx="138" cy="226" r="4.5"/>
+              <circle cx="148" cy="190" r="4.5"/>
+              <circle cx="170" cy="156" r="4.5"/>
+              <circle cx="192" cy="120" r="4.5"/>
+              <circle cx="258" cy="222" r="4.5"/>
+              <circle cx="256" cy="186" r="4.5"/>
+              <circle cx="250" cy="148" r="4.5"/>
+            </g>
+            <g stroke="var(--accent)" stroke-opacity=".3" stroke-width="1.2" stroke-dasharray="2 4">
+              <path d="M258 222 L332 198"/>
+              <path d="M256 186 L338 168"/>
+              <path d="M250 148 L330 132"/>
+            </g>
+
+            <!-- 右侧：三条「结果行」，比喻有界、带出处的输出 -->
+            <g>
+              <rect x="292" y="196" width="104" height="12" rx="6" fill="var(--accent)" fill-opacity=".22"/>
+              <rect x="292" y="166" width="86" height="12" rx="6" fill="var(--accent)" fill-opacity=".16"/>
+              <rect x="292" y="136" width="118" height="12" rx="6" fill="var(--accent)" fill-opacity=".12"/>
+            </g>
+            <rect x="292" y="222" width="118" height="34" rx="8" fill="none" stroke="var(--accent)" stroke-opacity=".3" stroke-dasharray="4 5"/>
+            <text x="302" y="244" font-family="var(--mono)" font-size="10.5" fill="var(--accent-ink)" fill-opacity=".85">provenance</text>
+
+            <!-- 底部：根系/数据点 -->
+            <g stroke="var(--accent)" stroke-opacity=".3" stroke-width="1.2" fill="none">
+              <path d="M212 348 C204 362 190 370 172 374"/>
+              <path d="M212 348 C222 364 238 372 256 375"/>
+              <path d="M212 348 C212 364 210 372 208 380"/>
+            </g>
+            <g fill="var(--accent)" fill-opacity=".5">
+              <circle cx="172" cy="374" r="2.6"/>
+              <circle cx="256" cy="375" r="2.6"/>
+              <circle cx="208" cy="379" r="2.6"/>
+            </g>
+          </svg>
+        </figure>
+      </div>
+
+      <dl class="stat-strip" aria-label="当前源码口径的预算占用">
+        <div class="stat">
+          <dt><span lang="zh">已接入源</span><span lang="en">Sources</span></dt>
+          <dd><span data-stat="sources">—</span><span class="stat-of">/ <span data-stat="maxSources">—</span></span></dd>
+        </div>
+        <div class="stat">
+          <dt><span lang="zh">可调用工具</span><span lang="en">MCP tools</span></dt>
+          <dd><span data-stat="tools">—</span><span class="stat-of">/ <span data-stat="maxTools">—</span></span></dd>
+        </div>
+        <div class="stat">
+          <dt><span lang="zh">源等级</span><span lang="en">Source tiers</span></dt>
+          <dd class="stat-tier">
+            <span class="tier tier-t1">T1 <span data-stat="t1">—</span></span>
+            <span class="tier tier-t2">T2 <span data-stat="t2">—</span></span>
+          </dd>
+        </div>
+        <div class="stat">
+          <dt><span lang="zh">单次输出上限</span><span lang="en">Output cap</span></dt>
+          <dd>4 <span class="stat-of">KB</span></dd>
+        </div>
+      </dl>
+
+      <p class="strip-note">
+        <span lang="zh">统计自当前源码构建，<b>非已发布包</b>；斜杠后是<b>预算上限</b>（源 ≤ 20、工具 ≤ 40），不是比例</span>
+        <span lang="en">Counted from the current source build, <b>not the published package</b>; the number after the slash is the <b>budget cap</b> (≤ 20 sources, ≤ 40 tools), not a ratio</span>
+      </p>
+
+      <p class="snapshot" id="snapshot-note">
+        <span lang="zh"><b>当前源码口径</b>（取自工作区注册表与 <code>npm run stats</code>，取数时间见下方）：这是源码里此刻能调的源与工具，<b>不是已发布 npm 包的能力清单，也不表示上游此刻可用</b>。</span>
+        <span lang="en"><b>Current source-tree figures</b> (from the working-tree registry and <code>npm run stats</code>; timestamp below): what the source can call right now — <b>not</b> the published package's tool list, and <b>not</b> a statement that any upstream is reachable.</span>
+        <span class="snapshot-meta" id="snapshot-meta"></span>
+      </p>
+
+      <div class="notice" id="data-missing" hidden>
+        <span lang="zh">数据文件未加载（<code>data/catalog.js</code>）。页面数字与源清单需要它；请在仓库根运行 <code>node site/scripts/build-data.mjs</code> 重新生成。</span>
+        <span lang="en">Data file not loaded (<code>data/catalog.js</code>). Numbers and the source list need it; regenerate with <code>node site/scripts/build-data.mjs</code> in the repo root.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── What it is ───────────────────────────────────────────────────── -->
+  <section class="section" id="what">
+    <div class="wrap">
+      <header class="section-head">
+        <h2><span lang="zh">这是什么</span><span lang="en">What this is</span></h2>
+        <p>
+          <span lang="zh">一套工具，不是又一个数据库门户。它只做一件事：把公开接口翻译成模型不会用错的意图级工具。</span>
+          <span lang="en">A tool layer, not another database portal. It does one thing: turn public APIs into intent-level tools a model will not misuse.</span>
+        </p>
+      </header>
+
+      <div class="feature-grid">
+        <article class="feature">
+          <h3><span lang="zh">一套工具，两个出口</span><span lang="en">One tool set, two exits</span></h3>
+          <p>
+            <span lang="zh">同一份源注册表同时产出 Streamable HTTP 的 MCP 服务与 DSH 原生插件。Claude Code、Codex 这类 stdio 客户端也走同一个 MCP 出口。</span>
+            <span lang="en">One registry feeds both a Streamable HTTP MCP service and a native DSH plugin; stdio clients such as Claude Code and Codex ride the same MCP exit.</span>
+          </p>
+        </article>
+
+        <article class="feature">
+          <h3><span lang="zh">出处可复现</span><span lang="en">Reproducible provenance</span></h3>
+          <p>
+            <span lang="zh">每次返回末尾都带「源 / 完整请求（含参数）/ HTTP 状态 / 耗时 / 查询时刻」，数据版本另起一行，未知就写未知，不按 ID 外观猜。</span>
+            <span lang="en">Every result ends with source, the full request including parameters, HTTP status, elapsed time and query time; data versions go on their own line, and unknown stays unknown.</span>
+          </p>
+        </article>
+
+        <article class="feature">
+          <h3><span lang="zh">只读，不镜像，不越权</span><span lang="en">Read-only, no mirrors, no bypass</span></h3>
+          <p>
+            <span lang="zh">只调用公开接口，不落任何数据集，不过盾、不模拟登录。需要访问控制的源只登记、不实现。</span>
+            <span lang="en">Only public endpoints are called: no datasets are stored, no challenge or login is bypassed. Sources behind access control are registered but not implemented.</span>
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Sources ──────────────────────────────────────────────────────── -->
+  <section class="section" id="sources">
+    <div class="wrap">
+      <header class="section-head">
+        <h2><span lang="zh">能查什么</span><span lang="en">What you can query</span></h2>
+        <p>
+          <span lang="zh">每个源都按「实测能力」写覆盖与盲区：T1 有文档化 JSON 接口，T2 无文档但参数化 URL 稳定。下面每个源都附工具清单与盲区原文。</span>
+          <span lang="en">Coverage and blind spots follow what was actually tested: T1 has a documented JSON API, T2 has no docs but stable parameterised URLs. Every card lists its tools and its blind spots verbatim.</span>
+        </p>
+      </header>
+
+      <div class="tier-legend">
+        <span><span class="tier tier-t1">T1</span> <span lang="zh">有文档化 JSON 接口</span><span lang="en">documented JSON API</span></span>
+        <span><span class="tier tier-t2">T2</span> <span lang="zh">无文档，URL 稳定</span><span lang="en">undocumented, stable URLs</span></span>
+      </div>
+
+      <div class="source-grid" id="source-grid">
+        <p class="loading"><span lang="zh">正在读取构建期数据…</span><span lang="en">Loading build-time data…</span></p>
+      </div>
+
+      <div class="meta-block">
+        <h3>
+          <span lang="zh">两个元工具：先问「谁能答」</span>
+          <span lang="en">Two meta tools: ask who can answer first</span>
+        </h3>
+        <div class="meta-grid" id="meta-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Install ──────────────────────────────────────────────────────── -->
+  <section class="section" id="install">
+    <div class="wrap">
+      <header class="section-head">
+        <h2><span lang="zh">怎么装</span><span lang="en">How to install</span></h2>
+        <p>
+          <span lang="zh">需要 Node.js ≥ 20。没有 API key；只要求能访问 npm 与各数据库站点。三步：装包 → 起服务 → 接客户端。</span>
+          <span lang="en">Requires Node.js ≥ 20. No API keys; you only need to reach npm and the database sites. Three steps: install, start the service, connect a client.</span>
+        </p>
+      </header>
+
+      <ol class="steps">
+        <li class="step">
+          <div class="step-head">
+            <span class="step-num" aria-hidden="true">1</span>
+            <div>
+              <h3><span lang="zh">安装</span><span lang="en">Install the package</span></h3>
+              <p>
+                <span lang="zh">包已发布在 npm：<code>plantomics-hub@<span data-version>0.1.0</span></code>（<code>latest</code>）。只想临时跑一次时用下面注释里那行。<b>装的是这个已发布版本</b>，它实际包含的源与工具以该版本自己的清单为准，与上面「当前源码口径」的数字不一定相同。</span>
+                <span lang="en">Published on npm as <code>plantomics-hub@<span data-version>0.1.0</span></code> (<code>latest</code>). To try it without installing, use the commented line. <b>You install that published version</b>; the sources and tools it actually carries are its own list, which need not equal the source-tree figures above.</span>
+              </p>
+              <p class="pub-note" id="published-note">
+                <span lang="zh">已发布的 <code><span data-pub="spec">—</span></code> 实际包含 <b><span data-pub="sources">—</span> 个源、<span data-pub="tools">—</span> 个工具</b>；尚未随该版本发布的源：<span data-pub="missing" data-pub-lang="zh">—</span>。</span>
+                <span lang="en">The published <code><span data-pub="spec">—</span></code> actually carries <b><span data-pub="sources">—</span> sources and <span data-pub="tools">—</span> tools</b>; not yet in that release: <span data-pub="missing" data-pub-lang="en">—</span>.</span>
+              </p>
+            </div>
+          </div>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>npm install plantomics-hub@<span data-version>0.1.0</span>
+
+# run once without installing
+npx -p plantomics-hub@<span data-version>0.1.0</span> plantomics-hub-mcp</code></pre>
+          </div>
+        </li>
+
+        <li class="step">
+          <div class="step-head">
+            <span class="step-num" aria-hidden="true">2</span>
+            <div>
+              <h3><span lang="zh">起服务</span><span lang="en">Start the MCP service</span></h3>
+              <p>
+                <span lang="zh">默认只监听回环地址、不鉴权，适合本机用。起完先看 <code>/healthz</code>：它不需要 token，也不泄露工具清单。</span>
+                <span lang="en">Listens on loopback only, without auth, which suits local use. Check <code>/healthz</code> after starting: it needs no token and does not leak the tool list.</span>
+              </p>
+            </div>
+          </div>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>npx plantomics-hub-mcp            # Streamable HTTP, default 127.0.0.1:8787
+curl http://127.0.0.1:8787/healthz</code></pre>
+          </div>
+          <p class="hint">
+            <span lang="zh">健康检查的真实响应（本机实测，数字随注册表变化）：</span>
+            <span lang="en">Actual health response (measured locally; figures follow the registry):</span>
+          </p>
+          <div class="code code-out">
+            <pre><code id="healthz-sample">—</code></pre>
+          </div>
+          <p class="hint small">
+            <span lang="zh"><code>version</code> 可能带构建后缀（如 <code>0.1.0+svc.6</code>），不影响用法；该端点不校验 token，也不返回工具清单。上面的 <code>sources</code>/<code>tools</code> 是<b>当前源码口径</b>的本机实测值，你装已发布版本时可能不同。</span>
+            <span lang="en"><code>version</code> may carry a build suffix (e.g. <code>0.1.0+svc.6</code>); it does not change how you use it, and this endpoint requires no token and returns no tool list. The <code>sources</code>/<code>tools</code> numbers above are this working tree's, measured locally; a published install may report different ones.</span>
+          </p>
+        </li>
+
+        <li class="step">
+          <div class="step-head">
+            <span class="step-num" aria-hidden="true">3</span>
+            <div>
+              <h3><span lang="zh">接客户端</span><span lang="en">Connect a client</span></h3>
+              <p>
+                <span lang="zh">三种接法，按你的客户端选一个。DSH 桌面端要把<b>服务先起起来</b>再装插件，否则插件装上、工具一个都不会出现。</span>
+                <span lang="en">Pick the one that matches your client. On DSH desktop the <b>service must be running first</b>, otherwise the plugin installs and no tool ever appears.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="client-grid">
+            <article class="client">
+              <h4>DeepSeek Harness<span lang="zh">（插件）</span><span lang="en"> (plugin)</span></h4>
+              <p>
+                <span lang="zh">服务地址不是默认值时，先设环境变量再启动 DSH：</span>
+                <span lang="en">If the service is not on the default URL, set these before starting DSH:</span>
+              </p>
+              <div class="code" data-code>
+                <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+                <pre><code>PLANTOMICS_HUB_URL=http://127.0.0.1:8787/mcp
+PLANTOMICS_HUB_TOKEN=&lt;token&gt;</code></pre>
+              </div>
+              <p class="small">
+                <span lang="zh">插件包从本地 tgz 装（插件管理器只接受压缩包或路径，不接受包名）。工具名带命名空间前缀，形如 <code>mcp__plantomics-hub__wheatomics_search_known_genes</code>。</span>
+                <span lang="en">Install the plugin from a local tgz; the plugin manager takes an archive or a path, not a package name. Tool names carry a namespace prefix, e.g. <code>mcp__plantomics-hub__wheatomics_search_known_genes</code>.</span>
+              </p>
+            </article>
+
+            <article class="client">
+              <h4>Claude Code<span lang="zh">（stdio）</span><span lang="en"> (stdio)</span></h4>
+              <p>
+                <span lang="zh">不需要起服务，直接接 stdio 出口：</span>
+                <span lang="en">No service needed; connect the stdio exit directly:</span>
+              </p>
+              <div class="code" data-code>
+                <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+                <pre><code>claude mcp add plant-omics -- node "&lt;仓库路径&gt;/dist/mcp/cli.js"</code></pre>
+              </div>
+            </article>
+
+            <article class="client">
+              <h4><span lang="zh">通用 JSON 配置</span><span lang="en">Generic JSON config</span></h4>
+              <p>
+                <span lang="zh">Codex / Reasonix 等客户端通用；路径按你的实际安装位置改。</span>
+                <span lang="en">Works for Codex, Reasonix and similar; adjust the path to your install.</span>
+              </p>
+              <div class="code" data-code>
+                <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+                <pre><code>{
+  "mcpServers": {
+    "plant-omics": {
+      "command": "node",
+      "args": ["&lt;仓库路径&gt;/dist/mcp/cli.js"]
+    }
+  }
+}</code></pre>
+              </div>
+            </article>
+          </div>
+
+          <div class="callout">
+            <p>
+              <span lang="zh"><b>只挂一部分源：</b>同一份安装，用 <code>PLANTOMICS_SOURCES=wheatomics</code> 控制加载哪些源；源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。</span>
+              <span lang="en"><b>Load a subset:</b> one install, choose sources with <code>PLANTOMICS_SOURCES=wheatomics</code>. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools.</span>
+            </p>
+            <p>
+              <span lang="zh"><b>对外提供服务：</b>必须同时设 <code>PLANTOMICS_HUB_HOST=0.0.0.0</code>、至少 16 字符的 <code>PLANTOMICS_HUB_TOKEN</code>；放到反向代理后面还要用 <code>PLANTOMICS_HUB_ALLOWED_HOSTS</code> 放行代理域名，否则 403。</span>
+              <span lang="en"><b>Expose it:</b> set <code>PLANTOMICS_HUB_HOST=0.0.0.0</code> together with a <code>PLANTOMICS_HUB_TOKEN</code> of at least 16 characters; behind a reverse proxy also allow the proxy host via <code>PLANTOMICS_HUB_ALLOWED_HOSTS</code>, or requests get 403.</span>
+            </p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── Limits ───────────────────────────────────────────────────────── -->
+  <section class="section" id="limits">
+    <div class="wrap">
+      <header class="section-head">
+        <h2><span lang="zh">边界与已知限制</span><span lang="en">Boundaries and known limits</span></h2>
+        <p>
+          <span lang="zh">下面每一条都不是免责声明，而是会实际影响结果怎么读的事。源级盲区见上方的源卡片，这里写全局的。</span>
+          <span lang="en">Each item below changes how a result should be read. Source-level blind spots are on the cards above; these are the global ones.</span>
+        </p>
+      </header>
+
+      <ul class="limit-list">
+        <li>
+          <b><span lang="zh">只读。</span><span lang="en">Read-only.</span></b>
+          <span lang="zh">不提供任何提交、上传、写库能力。</span>
+          <span lang="en">No write, upload or database modification is offered.</span>
+        </li>
+        <li>
+          <b><span lang="zh">不镜像数据。</span><span lang="en">No data mirroring.</span></b>
+          <span lang="zh">要批量下载数据，请回各自的科研项目按那边规则走。</span>
+          <span lang="en">For bulk downloads, go back to the research project that owns the data.</span>
+        </li>
+        <li>
+          <b><span lang="zh">上游会间歇性挂。</span><span lang="en">Upstreams fail intermittently.</span></b>
+          <span lang="zh">工具会按 <code>Retry-After</code> 退避重试（单次调用总时长上限 45 s），但不保证每次都成功；失败会明确区分「对面挂了」和「参数写错了」。</span>
+          <span lang="en">Tools back off and retry per <code>Retry-After</code> (45 s cap per call) but cannot guarantee success, and errors distinguish "upstream is down" from "your parameters are wrong".</span>
+        </li>
+        <li>
+          <b><span lang="zh">输出有界。</span><span lang="en">Output is bounded.</span></b>
+          <span lang="zh">单次输出按 UTF-8 字节计不超过 4 KB；超长时截断正文，但出处尾注一定完整保留。</span>
+          <span lang="en">Each output stays under 4 KB of UTF-8 bytes; long bodies are truncated, while the provenance footer is always kept intact.</span>
+        </li>
+        <li>
+          <b><span lang="zh">查无 ≠ 不存在。</span><span lang="en">Empty is not "absent".</span></b>
+          <span lang="zh">不少源用 HTTP 200 + 空结构表示查无，个别用 400；工具只在锚定清楚时才判「本次未找到」，否则报错而不归零。</span>
+          <span lang="en">Several sources signal "not found" with HTTP 200 and an empty structure, one with 400. Tools only report "not found this time" when the evidence is anchored, otherwise they error rather than return zero.</span>
+        </li>
+        <li>
+          <b><span lang="zh">侧边栏面板是静态快照。</span><span lang="en">The sidebar panel is a static snapshot.</span></b>
+          <span lang="zh">它显示构建时的源、工具与盲区，不显示探活与调用统计，也不反映运行时的源子集配置；判断上游是否可用只能靠实测。</span>
+          <span lang="en">It shows sources, tools and blind spots as of build time — not liveness, not call stats, not the runtime source subset. Only a probe answers whether an upstream is up.</span>
+        </li>
+        <li>
+          <b><span lang="zh">完整宿主链路的验证范围。</span><span lang="en">How far the host path is verified.</span></b>
+          <span lang="zh">已验证：适配器取数、MCP 握手、包安装、插件装配形状。未验证：真实宿主要求下「模型自主选工具→取数→带出处作答」的完整链路，别把前者当后者。</span>
+          <span lang="en">Verified: adapters fetch data, the MCP handshake, package install, and plugin wiring. Not verified: a real host session where the model picks tools, fetches and answers with provenance — do not read the former as the latter.</span>
+        </li>
+        <li>
+          <b><span lang="zh">把上游文本当数据。</span><span lang="en">Treat upstream text as data.</span></b>
+          <span lang="zh">数据库内容里可能有看起来像指令的文字，本仓不过滤；请在客户端侧把它当数据、不当指令。</span>
+          <span lang="en">Database records may contain text that looks like instructions; nothing filters it, so treat it as data on the client side.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-col">
+      <strong>PlantOmics Hub</strong>
+      <p class="small">
+        <span lang="zh">由源注册表驱动的工具层，MIT 许可。</span>
+        <span lang="en">A tool layer driven by a source registry. MIT licensed.</span>
+      </p>
+      <p class="small" id="footer-snapshot"></p>
+    </div>
+    <div class="footer-col">
+      <strong><span lang="zh">文档</span><span lang="en">Docs</span></strong>
+      <ul class="plain">
+        <li><a href="https://github.com/maorong-rong/plant-omics#readme" target="_blank" rel="noopener">README</a></li>
+        <li><a href="https://github.com/maorong-rong/plant-omics/blob/main/docs/%E6%BA%90%E7%99%BB%E8%AE%B0%E8%A1%A8.md" target="_blank" rel="noopener"><span lang="zh">源登记表（等级与实测）</span><span lang="en">Source registry (tiers and probes)</span></a></li>
+        <li><a href="https://github.com/maorong-rong/plant-omics/blob/main/docs/%E6%9E%B6%E6%9E%84.md" target="_blank" rel="noopener"><span lang="zh">架构与设计取舍</span><span lang="en">Architecture and trade-offs</span></a></li>
+        <li><a href="https://github.com/maorong-rong/plant-omics/blob/main/docs/%E5%AE%89%E8%A3%85%E9%AA%8C%E8%AF%81.md" target="_blank" rel="noopener"><span lang="zh">安装验证说明</span><span lang="en">Install verification</span></a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <strong><span lang="zh">引用与许可</span><span lang="en">Citation &amp; license</span></strong>
+      <ul class="plain">
+        <li><a href="https://github.com/maorong-rong/plant-omics" target="_blank" rel="noopener"><span lang="zh">GitHub 仓库</span><span lang="en">GitHub repository</span></a></li>
+        <li><a href="https://www.npmjs.com/package/plantomics-hub" target="_blank" rel="noopener">npm · plantomics-hub</a></li>
+        <li><a href="https://github.com/maorong-rong/plant-omics/blob/main/CITATION.cff" target="_blank" rel="noopener">CITATION.cff</a></li>
+        <li><span class="small">MIT © 2026 maorong-rong</span></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<noscript>
+  <div class="wrap"><p class="notice"><span lang="zh">本页的源清单与数字由构建期数据生成，需要启用 JavaScript。</span><span lang="en">The source list and figures are generated from build-time data and need JavaScript enabled.</span></p></div>
+</noscript>
+
+<script src="data/catalog.js"></script>
+<script src="assets/source-icons.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

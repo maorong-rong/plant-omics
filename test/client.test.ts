@@ -203,7 +203,13 @@ describe('侧边栏静态清单', () => {
     const registry = createRegistry();
     const catalog = buildCatalog(registry);
 
-    expect(catalog.sources.map((s) => s.id)).toEqual(registry.listSources().map((b) => b.manifest.id));
+    // 源顺序 = 置顶清单在前 + 其余注册表原序（顺序唯一来源是 src/core/pinned-sources.json）
+    const pinned = catalog.pinned;
+    const expectedSources = [
+      ...pinned,
+      ...registry.listSources().map((b) => b.manifest.id).filter((id) => !pinned.includes(id)),
+    ];
+    expect(catalog.sources.map((s) => s.id)).toEqual(expectedSources);
     expect(catalog.tools.map((t) => t.name)).toEqual(registry.listTools().map((t) => t.name));
 
     for (const source of catalog.sources) {
@@ -475,59 +481,152 @@ describe('面板模型', () => {
     throw new Error(`unexpected require: ${name}`);
   };
 
-  it('顶部声明是静态快照，且带构建时刻与包版本', () => {
+  it('顶部状态行是「构建期清单 · N 源 / M 工具」，口径标在 title 上', () => {
     const moduleExports = loadBundle({ boot }).loaded[0]?.factory(fakeRequire) as Record<string, unknown>;
     const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => {
-      note: string;
-      sections: Array<{ id: string }>;
-    })(catalog, { builtAt: boot.builtAt, packageVersion: boot.packageVersion });
+      header: { status: string; statusTitle: string; snapshot: string };
+      sources: Array<{ id: string; pinned: boolean }>;
+    })(catalog, { sourceRev: 'deadbee' }, {});
 
-    expect(model.note).toContain('静态快照');
-    expect(model.note).toContain('不表示上游当前可用');
-    expect(model.note).toContain(boot.builtAt);
-    expect(model.note).toContain(pkg.version);
-    expect(model.sections.map((s) => s.id)).toEqual(['budget', 'sources', 'tools', 'mcp', 'policy']);
+    expect(model.header.status).toBe(`构建期清单 · ${catalog.sources.length} 源 / ${catalog.tools.length} 工具`);
+    expect(model.header.statusTitle).toContain('不代表上游此刻可用');
+    expect(model.header.snapshot).toBe('deadbee');
   });
 
-  it('明确「不代表当前会话已启用」，不再写「模型实际看到」', () => {
+  it('明确「不代表当前会话已启用」，不写「模型实际看到」', () => {
     const moduleExports = loadBundle({ boot }).loaded[0]?.factory(fakeRequire) as Record<string, unknown>;
-    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => unknown)(catalog, {
-      builtAt: boot.builtAt,
-      packageVersion: boot.packageVersion,
+    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => { header: { status: string; statusTitle: string } })(catalog, {
+      sourceRev: 'deadbee',
     });
     const serialized = JSON.stringify(model);
 
-    expect(serialized).toContain('不代表当前会话已启用');
-    expect(serialized).toContain('工具（本包包含）');
+    expect(serialized).toContain('不代表上游此刻可用');
     expect(serialized).not.toContain('模型实际看到');
   });
 
-  it('源、工具、必填参数、MCP 说明都出现在模型里', () => {
+  it('源、工具、必填参数都出现在模型里（工具按源分组）', () => {
     const moduleExports = loadBundle({ boot }).loaded[0]?.factory(fakeRequire) as Record<string, unknown>;
-    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => unknown)(catalog, {
-      builtAt: boot.builtAt,
-      packageVersion: boot.packageVersion,
-    });
-    const serialized = JSON.stringify(model);
+    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => {
+      sources: Array<{ id: string; name: string; toolNames: string[] }>;
+      toolsBySource: Record<string, Array<{ name: string; whenToUse: string; required: string[] }>>;
+    })(catalog, { sourceRev: 'deadbee' });
 
     for (const source of catalog.sources) {
-      expect(serialized).toContain(source.displayName);
-      expect(serialized).toContain(source.id);
+      const entry = model.sources.find((item) => item.id === source.id);
+      expect(entry?.name).toBe(source.displayName);
     }
     for (const tool of catalog.tools) {
-      expect(serialized).toContain(tool.name);
+      const bucket = model.toolsBySource[tool.sourceId];
+      expect(bucket?.some((item) => item.name === tool.name)).toBe(true);
+      if (tool.required.length > 0) {
+        const found = bucket?.find((item) => item.name === tool.name);
+        expect(found?.required).toEqual(tool.required);
+      }
     }
-    for (const tool of catalog.tools.filter((t) => t.required.length > 0)) {
-      expect(serialized).toContain(tool.required.join(', '));
-    }
-    expect(serialized).toContain('mcpServers');
-    expect(serialized).toContain('dist/mcp/cli.js');
-    expect(serialized).toContain('npm run probe');
+    expect(JSON.stringify(model)).toContain('wheatomics_search_known_genes');
   });
 
   it('缺构建信息时如实写未知，不编造', () => {
     const moduleExports = loadBundle().loaded[0]?.factory(fakeRequire) as Record<string, unknown>;
-    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => { note: string })(catalog, {});
-    expect(model.note).toContain('未知');
+    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => { header: { snapshot: string } })(catalog, {});
+    expect(model.header.snapshot).toBe('未知');
+  });
+});
+
+/**
+ * 面板按 `web/PANEL-DESIGN.md` 接线后的验收点（v1 部分）。
+ *
+ * 这里只锁"模型里写了什么"这类离线可证的事；真实 DSH 面板的渲染要装机后另验，
+ * 不能拿这些断言冒充。
+ */
+describe('面板设计稿接线（v1）', () => {
+  type PanelModel = {
+    state: string;
+    header: { status: string; statusTitle: string; snapshot: string };
+    sources: Array<{ id: string; name: string; pinned: boolean; toolCount: number; toolNames: string[]; icon: unknown }>;
+    toolsBySource: Record<string, Array<{ name: string; whenToUse: string; required: string[] }>>;
+    empty: { title: string; text: string };
+    jump: { label: string; url: string | null; disabled: boolean; title: string };
+  };
+  type BuildModel = (c: unknown, m: unknown, icons?: unknown) => PanelModel;
+
+  const localCatalog = buildCatalog(createRegistry());
+  const modelFor = (bootOverride: Record<string, unknown> = {}, icons: unknown = {}) => {
+    const loaded: Array<{ factory: (req: (name: string) => unknown) => Record<string, unknown> }> = [];
+    const host = {
+      __ModuleLoader__: {
+        load: (entry: { factory: (req: (name: string) => unknown) => Record<string, unknown> }) => loaded.push(entry),
+      },
+      __PLANT_OMICS_CLIENT__: { moduleId: pkg.name, ...bootOverride },
+    };
+    vm.runInNewContext(bundleSource, { window: host, globalThis: host });
+    const fakeRequireLocal = (name: string): unknown => {
+      if (name === 'react') {
+        return {
+          createElement: () => null,
+          Fragment: 'Fragment',
+          useState: () => [null, () => {}],
+          useEffect: () => {},
+          useRef: () => ({ current: null }),
+        };
+      }
+      if (name === 'react-dom') return { createPortal: (node: unknown) => node };
+      throw new Error(`unexpected require: ${name}`);
+    };
+    const moduleExports = loaded[0]?.factory(fakeRequireLocal) as Record<string, unknown>;
+    return (moduleExports.buildPanelModel as BuildModel)(localCatalog, {
+      sourceRev: 'deadbee',
+      webUrl: bootOverride.webUrl,
+    }, icons);
+  };
+
+  it('源顺序与置顶跟清单一致：草莓第一，且标 pinned', () => {
+    const model = modelFor();
+    expect(model.sources[0]?.id).toBe('strawberry');
+    expect(model.sources[0]?.pinned).toBe(true);
+    expect(model.sources.filter((source) => source.pinned)).toHaveLength(1);
+  });
+
+  it('无快照时进空态：不出现任何计数', () => {
+    const loaded: Array<{ factory: (req: (name: string) => unknown) => Record<string, unknown> }> = [];
+    const host = {
+      __ModuleLoader__: {
+        load: (entry: { factory: (req: (name: string) => unknown) => Record<string, unknown> }) => loaded.push(entry),
+      },
+    };
+    vm.runInNewContext(bundleSource, { window: host, globalThis: host });
+    const moduleExports = loaded[0]?.factory((name: string) => {
+      if (name === 'react') return { createElement: () => null, Fragment: 'Fragment', useState: () => [null, () => {}], useEffect: () => {}, useRef: () => ({ current: null }) };
+      if (name === 'react-dom') return { createPortal: (node: unknown) => node };
+      throw new Error(`unexpected require: ${name}`);
+    }) as Record<string, unknown>;
+    const model = (moduleExports.buildPanelModel as (c: unknown, m: unknown) => PanelModel)(undefined, {});
+    expect(model.state).toBe('empty');
+    expect(model.header.status).toBe('清单未注入');
+    expect(model.sources).toEqual([]);
+    expect(JSON.stringify(model)).not.toMatch(/\d+ 源/);
+    expect(JSON.stringify(model)).not.toMatch(/\d+ 工具/);
+    expect(model.empty.text).toContain('构建脚本没有产出 client catalog');
+  });
+
+  it('缺图标时给 null（面板显示 ? 占位），不静默消失', () => {
+    const model = modelFor({}, {});
+    expect(model.sources.every((source) => source.icon === null)).toBe(true);
+  });
+
+  it('未配置试调页地址时跳转按钮禁用并说明原因', () => {
+    const disabled = modelFor();
+    expect(disabled.jump.disabled).toBe(true);
+    expect(disabled.jump.title).toContain('未配置');
+    const enabled = modelFor({ webUrl: 'https://datamcp.moilab.net/' });
+    expect(enabled.jump.disabled).toBe(false);
+    expect(enabled.jump.url).toBe('https://datamcp.moilab.net/');
+  });
+
+  it('源码里不出现 token 片段或 Bearer 字面量', () => {
+    const source = readFileSync(path.join(root, 'src', 'client', 'bundle.js'), 'utf8');
+    expect(source).not.toMatch(/Bearer\s+[A-Za-z0-9]/);
+    expect(source).not.toMatch(/PLANTOMICS_HUB_TOKEN\s*[:=]\s*['"][^'"]+['"]/);
+    expect(JSON.stringify(modelFor())).not.toMatch(/Bearer/);
   });
 });

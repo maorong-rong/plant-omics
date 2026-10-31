@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="PlantOmics Hub">
+  <title>PlantOmics Hub</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e3524"/>
+      <stop offset="0.55" stop-color="#155437"/>
+      <stop offset="1" stop-color="#1f7a4d"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#e2f9b0"/>
+      <stop offset="1" stop-color="#63d296"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- hub: six spokes from the centre to the surrounding nodes -->
+  <g stroke="#a9edc6" stroke-width="12" stroke-linecap="round" opacity="0.4">
+    <line x1="256" y1="256" x2="256" y2="128"/>
+    <line x1="256" y1="256" x2="367" y2="192"/>
+    <line x1="256" y1="256" x2="367" y2="320"/>
+    <line x1="256" y1="256" x2="256" y2="384"/>
+    <line x1="256" y1="256" x2="145" y2="320"/>
+    <line x1="256" y1="256" x2="145" y2="192"/>
+  </g>
+
+  <!-- Leaf at the centre: the plant-omics part. Verified at 48px, where it has to stay a solid
+       silhouette, so it is wide and carries one vein with a single pair rather than a fine network. -->
+  <path d="M256 172 C310 210 318 276 256 340 C194 276 202 210 256 172 Z" fill="url(#leaf)"/>
+  <g stroke="#0e3524" stroke-width="10" stroke-linecap="round" opacity="0.4">
+    <line x1="256" y1="196" x2="256" y2="316"/>
+    <line x1="256" y1="240" x2="228" y2="222"/>
+    <line x1="256" y1="240" x2="284" y2="222"/>
+  </g>
+
+  <!-- the six databases it answers from -->
+  <g fill="#c8f2da">
+    <circle cx="256" cy="128" r="19"/>
+    <circle cx="367" cy="192" r="19"/>
+    <circle cx="367" cy="320" r="19"/>
+    <circle cx="256" cy="384" r="19"/>
+    <circle cx="145" cy="320" r="19"/>
+    <circle cx="145" cy="192" r="19"/>
+  </g>
+</svg>

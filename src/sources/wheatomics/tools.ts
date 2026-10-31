@@ -1034,6 +1034,37 @@ function regionArg(raw: unknown): Region {
   return { text: raw, chrom, start, end };
 }
 
+/**
+ * 400 分流（WHT-06）：区间非法 vs 数据集不支持，是**两种不同的用户动作**。
+ *
+ * 上游错误走另一套信封：成功是 `{success,message,timestamp,data}`，错误是 `{"detail":"…"}`。
+ * 此前 400 一路冒到 `unwrap()`，最后只剩一句"上游返回 HTTP 400"，用户不知道该改区间还是改 dataset。
+ *
+ * 只做**固定模式匹配**，把上游文本翻成本仓自己的话术；**不把上游正文透出**给模型
+ * （`payload.message` 不进可见文本的口径见 `src/core/http.ts` 的 2026-10-30 止血）。
+ * 匹配不上就如实说"原因未识别"，不猜。
+ */
+function classifyVariant400(error: unknown, url: string): unknown {
+  if (!(error instanceof UpstreamError) || error.meta.status !== 400) return error;
+  const snippet = error.meta.bodySnippet ?? '';
+  let detail = '';
+  try {
+    const parsed = JSON.parse(snippet) as Record<string, unknown>;
+    if (typeof parsed.detail === 'string') detail = parsed.detail;
+  } catch {
+    // 截断/非 JSON：detail 保持空 → 走"原因未识别"，不猜
+  }
+  const message = /Region length must be > 0 and <= \d+ bp/.test(detail)
+    ? '上游以 400 拒绝：区间长度非法（要求 0 < 长度 ≤ 5,000,000 bp）——**这不是"该区间没有变异"**；请缩小或调整 region 后重试'
+    : /^Unsupported dataset:/.test(detail)
+      ? '上游以 400 拒绝：数据集 key 不受支持——**这不是"没有变异"**；请先用 wheatomics_variant_datasets 核对 dataset key'
+      : '上游以 400 拒绝本次请求，但原因未识别（不按上游原文透出）；请核对 region 与 dataset 后重试——**不要把 400 当成"没有变异"**';
+  return new UpstreamError(message, {
+    url, status: 400, attempts: error.meta.attempts, contentType: error.meta.contentType,
+    bodySnippet: snippet,
+  });
+}
+
 const variantQuery: ToolDefinition = {
   name: 'wheatomics_variant_query',
   description:
@@ -1075,7 +1106,14 @@ const variantQuery: ToolDefinition = {
 
     // 区间按用户输入原样发送；等端点已在解析阶段本地拒绝，不会走到这里
     const url = endpoint('/VariantHub/query', { dataset, region: region.text, limit });
-    const { res, result } = await query(ctx, url, { limit });
+    let fetched: Awaited<ReturnType<typeof query>>;
+    try {
+      fetched = await query(ctx, url, { limit });
+    } catch (error) {
+      // 400 分流：区间非法 / 数据集不支持，是两种不同的用户动作，不能都给一句"HTTP 400"
+      throw classifyVariant400(error, url);
+    }
+    const { res, result } = fetched;
     const data = unwrap<Record<string, unknown>>(res.data, url);
 
     const records = strictObjects(requireArrayField(data, 'records', url, '变异区间查询'), url, '变异区间查询 records');
@@ -1139,8 +1177,19 @@ const variantQuery: ToolDefinition = {
       );
     }
 
+    /**
+     * 参考基因组名（WHT-06）：`data.reference` 实测存在（如 `Chinese_Spring1.0`），
+     * 但此前没读、正文与 raw 都没有——**ID 与坐标的可比性取决于它**，用户看不到就无从判断
+     * "这个区间是哪个组装上的"。按 §三 的顺序接：可选字段先接住、缺了就降级显示，不抛错。
+     */
+    const echoedReference = typeof data.reference === 'string' && data.reference.trim()
+      ? data.reference.trim()
+      : undefined;
+
     const summaryHead = (shownCount: number): string => (
-      `dataset=${dataset}｜区间 ${region.text}｜`
+      `dataset=${dataset}｜`
+      + (echoedReference ? `reference=${echoedReference}｜` : 'reference=(上游未给)｜')
+      + `区间 ${region.text}｜`
       + (nSamples !== undefined ? `n_samples=${nSamples}｜` : '')
       // 三个计数必须分开：命中（上游判定）/ 本次取回（本页）/ 正文展示（真正进了正文的行）
       + `命中 ${total} 条；本次取回 ${records.length} 条；正文展示 ${shownCount} 条`
@@ -1166,7 +1215,7 @@ const variantQuery: ToolDefinition = {
         + '请先用 wheatomics_variant_datasets 确认数据集一致性，或换一个 genome_concordant=true 的数据集再查。',
         res,
         // 空结果也走白名单（审查 WHT3-03）：绝不把整包 data（含 samples/genotypes/info_raw）带进 raw。
-        { dataset, region: region.text, n_samples: nSamples, total, total_shown: totalShown, has_more: hasMore, records: [] },
+        { dataset, reference: echoedReference, region: region.text, n_samples: nSamples, total, total_shown: totalShown, has_more: hasMore, records: [] },
         'total=0',
       );
     }
@@ -1378,6 +1427,7 @@ const variantQuery: ToolDefinition = {
 
     return result(body, res, {
       dataset,
+      reference: echoedReference,
       region: region.text,
       n_samples: nSamples,
       total,

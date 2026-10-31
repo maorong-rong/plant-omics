@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>试调 · PlantOmics Hub</title>
+<meta name="description" content="浏览器里浏览 PlantOmics Hub 的源与工具，并对任意工具发起一次真实 MCP 调用。">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app">
+  <div class="app-inner">
+    <a class="brand" href="#/sources" style="text-decoration:none;color:inherit">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 28V14"/><path d="M16 18c-5.4 0-8.6-3.2-8.6-8.6 5.4 0 8.6 3.2 8.6 8.6Z"/>
+        <path d="M16 22c5.4 0 8.6-3.2 8.6-8.6-5.4 0-8.6 3.2-8.6 8.6Z"/><path d="M6 28h20"/>
+      </svg>
+      <span>PlantOmics Hub<small>试调 / Try it</small></span>
+    </a>
+
+    <span class="status" id="svc-status" data-state="idle">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="svc-text">正在检测服务…</span>
+    </span>
+
+    <span class="spacer"></span>
+
+    <a class="btn-link" href="picker.html" style="margin-right:8px">选源 →</a>
+
+    <div class="token-box">
+      <label for="token">访问 token</label>
+      <input id="token" type="password" autocomplete="off" spellcheck="false"
+             placeholder="只存本标签页" title="存于 sessionStorage：同一标签页刷新仍保留；关闭标签页通常会清除，但浏览器恢复会话时可能保留。要立刻结束，请点「清除 token」。"
+             style="width:180px">
+      <button id="connect" type="button">连接</button>
+      <button id="clear-token" type="button" title="清掉本标签页里的 token">清除 token</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="视图">
+  <a href="#/sources" id="nav-sources">① 浏览源</a>
+  <a href="#/tools" id="nav-tools">② 工具详情</a>
+  <a href="#/try" id="nav-try">③ 试调</a>
+</nav>
+
+<div class="banner" id="banner" hidden><div><span class="kind"></span><span class="msg"></span></div></div>
+
+<main>
+  <div class="wrap" id="view">
+    <p class="empty">正在读取构建期快照…</p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>数字来源：构建期快照 <code id="foot-snap">—</code></span>
+    <span>服务状态与工具清单以服务端为准；两者不一致时页面会明说。</span>
+    <a href="https://github.com/maorong-rong/plant-omics" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</footer>
+
+<script src="data/catalog.js"></script>
+<script src="assets/source-icons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

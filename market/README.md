@@ -77,17 +77,26 @@ install spec = {"spec":"plantomics-hub@0.1.0"}
 node market/scripts/build-copy.mjs      # 联网：解包 index.json 指向的 npm tarball，算出发布口径文案
 node market/scripts/build-icon.mjs      # 图标没改可跳过
 node market/scripts/apply-copy.mjs      # 原地写进 index.json（描述 2 段 + icon 1 行）
-node market/scripts/check-index.mjs     # 离线：官方校验器 + 文案对账 + 版本对账 + 图标对账，必须退出 0
-node scripts/counts.mjs --published     # 联网：再核一次「copy.json 是否还等于当前发布包」
+npm run check:market                    # 单一入口：两道闸都跑，任一道红则非零退出
 ```
 
 发布新版本后：先发 npm，再跑上面这一串 —— 卡片描述会自动变成新版本的真实数字与覆盖物种，不需要人改文案。
 
-`check-index.mjs` 需要官方校验器，本仓不把它写进依赖（依赖由代码改动者管）：
+**`npm run check:market` 是两道闸，不是一条**（`scripts/check-market.mjs`，两条依次 spawn、**两条都跑完**再判定）：
+
+| 闸 | 核什么 | 红了看哪 |
+|---|---|---|
+| ① 数字闸（联网） | 索引描述里的数量短语 vs npm 最新 tarball 真实数量 | 数字过期 → 重跑 `build-copy.mjs` + `apply-copy.mjs` |
+| ② 措辞闸（离线） | 索引文案 vs `copy.json` **逐字**、官方校验器（format 1）、版本、图标同步 | 措辞被改过 → 重跑生成，别手改索引 |
+
+为什么要两道：①只锁数字，**锁不住措辞**（实测把「薄插件」改成「插件」，①仍 exit 0）；②锁得住措辞，但它不联网、不知道发布包有没有变。两道一起过才算数。
+
+这道入口**刻意不进离线 `npm run check`**：没网的时候它不该变成红灯。
+
+`check-index.mjs` 用的官方校验器现在是 `devDependency`（`@deepseek-ai/dsh-plugin-market-index`，**精确锁版本**——它是校验标准，版本飘了红绿的含义就变了），按包名解析，不需要手工装。要拿它验证别的版本时才用环境变量覆盖：
 
 ```
-npm i --prefix C:/Temp/pmh-market @deepseek-ai/dsh-plugin-market-index@0.2.1-rc.2
-$env:PLANTOMICS_MARKET_VALIDATOR = "C:/Temp/pmh-market/node_modules/@deepseek-ai/dsh-plugin-market-index/lib/index.js"
+$env:PLANTOMICS_MARKET_VALIDATOR = "<路径>/@deepseek-ai/dsh-plugin-market-index/lib/index.js"
 ```
 
 它挡住四件事，且每条都做过**负控**（故意改坏必须非零退出，否则等于没查）：
@@ -108,4 +117,5 @@ $env:PLANTOMICS_MARKET_VALIDATOR = "C:/Temp/pmh-market/node_modules/@deepseek-ai
 
 - 发新版本 → 在 `versions` 里**追加**一条，不要替换旧条目；`publishTimestamp` 从 registry 的 `time` 字段取，不要手算日期。
 - 改 `engines.dsh` → 同时改 `package.json`，两边不一致时以索引为准，用户会装不上。
-- 改完必须重跑第二节的校验，再托管。
+- 改 `index.json` 或改卡片文案后，**跑 `npm run check:market`**（两道闸都过才算数，输出会分别标 [1/2] 数字闸、[2/2] 措辞闸），再托管。
+- 托管后另核四条硬要求：绝对 URL、可直达、不可重定向、无 query/fragment（见第三节）。

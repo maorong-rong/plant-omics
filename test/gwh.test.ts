@@ -128,6 +128,27 @@ describe('GWH 两工具契约（离线回放，不联网）', () => {
     expect(result.text).toContain('HTTP 200');
     expect(result.text).not.toContain('错误');
     expect(result.raw).toEqual({ id: null, organism: null });
+    // 空输出必须带条件限定（2026-10-31 纪律）：说清"在什么形态下未命中"，且不做无条件断言
+    expect(result.text).toContain('未命中');
+    expect(result.text).toContain('这不等于');
+    expect(result.text).not.toContain('没有记录');
+  });
+
+  it('四个查无文案都带条件限定（genome/assembly/project/sample 一处不漏）', async () => {
+    // 这条盯的是"别只改一处"：四处文案各自由不同的空形态触发、分属两个工具，必须逐一核。
+    const cases: Array<[string, Record<string, unknown>, string, string]> = [
+      ['genome-missing', { entity: 'genome', id: '999999999' }, 'genome_id', 'assembly_lookup'],
+      ['assembly-missing', { entity: 'assembly', id: 'GWHZZZ00000000' }, '组装', 'assembly_lookup'],
+      ['bioproject-missing', { entity: 'project', id: 'PRJCA999999999' }, '项目', 'project_sample_lookup'],
+      ['biosample-missing', { entity: 'sample', id: 'SAMC999999999' }, '样本', 'project_sample_lookup'],
+    ];
+    for (const [fixture, args, label, toolName] of cases) {
+      const run = replay(fixture);
+      const result = await invokeTool(def(toolName), args, { http: run.ctx.http });
+      expect(result.text, `${label}（${fixture}）`).toContain('未命中');
+      expect(result.text, `${label}（${fixture}）`).toContain('这不等于');
+      expect(result.text, `${label}（${fixture}）`).not.toContain('没有记录');
+    }
   });
 
   it('genome 缺身份键 → 结构漂移，不折成查无', async () => {

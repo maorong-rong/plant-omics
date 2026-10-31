@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "pinned": ["strawberry"],
+  "note": "置顶顺序的唯一来源：src/client 构建与 site/ 都读它（构建后为 dist/core/pinned-sources.json）。改顺序只改这里，别在别处再写一份；数组顺序即展示顺序，未列出的源保持注册表原序。"
+}

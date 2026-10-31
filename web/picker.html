@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>选源 · PlantOmics Hub</title>
+<meta name="description" content="按需挑选植物组学数据源，实时看到会装进上下文的工具数与 token 估算。">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="picker.css">
+</head>
+<body>
+
+<header class="app">
+  <div class="app-inner">
+    <a class="brand" href="index.html" style="text-decoration:none;color:inherit">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 28V14"/><path d="M16 18c-5.4 0-8.6-3.2-8.6-8.6 5.4 0 8.6 3.2 8.6 8.6Z"/>
+        <path d="M16 22c5.4 0 8.6-3.2 8.6-8.6-5.4 0-8.6 3.2-8.6 8.6Z"/><path d="M6 28h20"/>
+      </svg>
+      <span>PlantOmics Hub<small>选源 / Pick sources</small></span>
+    </a>
+    <span class="spacer"></span>
+    <a class="btn-link" href="index.html">去试调 →</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="intro">
+      <h1>按需选源</h1>
+      <p class="lede">
+        同一份服务、同一套工具，你把哪些源勾上，模型就只看到哪些工具。
+        下面的工具数与 token 都是<b>实时算的</b>，不是写死的——挑多了会直接说「装不下」。
+      </p>
+    </section>
+
+    <section class="picked" aria-label="选择摘要">
+      <div class="picked-nums">
+        <div class="pn"><span class="pn-v" id="n-sources">—</span><span class="pn-k">已选源</span></div>
+        <div class="pn"><span class="pn-v" id="n-tools">—</span><span class="pn-k">工具（含 2 个元工具）</span></div>
+        <div class="pn"><span class="pn-v" id="n-tokens">—</span><span class="pn-k">预估上下文 token</span></div>
+        <div class="pn"><span class="pn-v" id="n-cap">—</span><span class="pn-k">工具上限</span></div>
+      </div>
+      <div class="budget" aria-hidden="true"><span id="budget-bar"></span></div>
+      <p class="picked-note" id="picked-note">每工具按 280 token 估（实测口径）；工具总数按服务端预算计，含 <code>hub_*</code> 两个元工具。</p>
+    </section>
+
+    <div id="warn" class="banner bad" hidden><div><span class="kind">装不下</span><span class="msg" id="warn-msg"></span></div></div>
+
+    <section class="filters" aria-label="按作物筛选">
+      <span class="filters-label">作物</span>
+      <div id="crops" class="chips"></div>
+      <span class="spacer"></span>
+      <button id="all" type="button">全选</button>
+      <button id="none" type="button">全不选</button>
+    </section>
+    <p class="footnote" style="margin:0 0 14px">
+      作物标签取自各源 <code>manifest.species</code> 原文，<b>不等于该源的收录范围</b>——例如 GWH 按精确 ID 取、不限物种，却因 manifest 登记了橡胶蒲公英而被打上该标签。要看准收录口径，以卡片对应的盲区原文为准。
+    </p>
+
+    <div id="grid" class="src-grid" role="group" aria-label="源列表">
+      <p class="empty">正在读取站点数据…</p>
+    </div>
+
+    <section class="actions">
+      <button id="copy" class="primary" type="button">复制选择（PLANTOMICS_SOURCES=…）</button>
+      <span class="hint" id="copy-hint">用它启动服务，只暴露你选的源；不指定时是默认全集。</span>
+    </section>
+
+    <section class="live">
+      <h2>接到真实服务上核对</h2>
+      <p class="hint">
+        把勾选发成请求头 <code>x-plantomics-sources</code>，然后<b>回读这一次的 <code>tools/list</code></b>。
+        服务端若不认这个头，返回的会是全集——页面对这种情况会直接说「未按子集返回」，不会假装过滤成功。
+      </p>
+      <div class="live-row">
+        <label>服务地址<input id="endpoint" type="text" value="/mcp" spellcheck="false"></label>
+        <label>token<input id="live-token" type="password" autocomplete="off" placeholder="只存本标签页"></label>
+        <button id="live-connect" type="button">连接并核对</button>
+      </div>
+      <div id="live-verdict" class="verdict" aria-live="polite" hidden></div>
+      <details id="live-tools" hidden>
+        <summary>服务端这次实际返回的工具</summary>
+        <div class="toolbox" id="live-tool-list"></div>
+      </details>
+    </section>
+
+    <p class="footnote">
+      数据来自构建期快照 <code id="snap">—</code>。勾选与预算计算全在本地；<b>只有点「连接并核对」时才会向服务发一次 <code>tools/list</code></b>，用来验证服务端是否真的按子集返回。
+    </p>
+  </div>
+</main>
+
+<script src="data/catalog.js"></script>
+<script src="assets/source-icons.js"></script>
+<script src="picker.js"></script>
+</body>
+</html>

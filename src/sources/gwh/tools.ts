@@ -1,4 +1,4 @@
-﻿import { InvalidArgumentError, UpstreamError, UpstreamShapeError } from '../../core/errors.js';
+import { InvalidArgumentError, UpstreamError, UpstreamShapeError } from '../../core/errors.js';
 import { renderFields, renderTable, utf8Bytes } from '../../core/format.js';
 import { validateArgs } from '../../core/invoke.js';
 import { fetchPrepared, finishResult, MAX_BODY_BYTES, prepareRequest, withRequestEvidence } from '../../core/request.js';
@@ -235,7 +235,7 @@ const assemblyLookup = checked({
       const organismValue = data.organism;
       if (idValue === null && organismValue === null) {
         return notFound(
-          `genome_id=${id} 没有记录`,
+          `genome_id=${id} 未命中：上游对该 ID 返回空记录（id 与 organism 均为 null）；这不等于该基因组从未存在`,
           'genome_id 是纯数字；若要查组装，请从物种记录里的 representativeAssemblyAccession 取 GWH 组装号。',
           res,
           { id: null, organism: null },
@@ -297,7 +297,7 @@ const assemblyLookup = checked({
     const organismValue = data.organism;
     if (accessionValue === null && organismValue === null) {
       return notFound(
-        `组装 ${id} 没有记录`,
+        `组装 ${id} 未命中：上游对该组装号返回空记录（assemblyAccession 与 organism 均为 null）；这不等于该组装从未存在`,
         'GWH 只收本库 GWH 组装号；NCBI 的 GCA_/GCF_ 不在范围。',
         res,
         { assemblyAccession: null, organism: null },
@@ -410,7 +410,7 @@ const projectSampleLookup = checked({
           integrity(`查无响应回显 prjAccession=${safeEcho(data.prjAccession)} 与请求 project=${id} 不一致`, prepared);
         }
         return notFound(
-          `项目 ${id} 没有记录`,
+          `项目 ${id} 未命中：上游返回 message=Nonentity 且 title 为空；这不等于该项目从未存在`,
           'PRJCA 是 GWH 的项目号；项目与样本是平行入口，上游不提供“从项目列样本”。',
           res,
           { message: 'Nonentity', prjAccession: safeEcho(data.prjAccession), title: null },
@@ -526,7 +526,7 @@ const projectSampleLookup = checked({
         throw new UpstreamShapeError('message=Nonentity 但 accession 非空，矛盾信封', { url: prepared.url, request: prepared.request });
       }
       return notFound(
-        `样本 ${id} 没有记录`,
+        `样本 ${id} 未命中：上游返回 message=Nonentity 且 accession 为 null；这不等于该样本从未存在`,
         'SAMC 是 GWH 的样本号；样本与项目是平行入口，上游不返回样本所属项目。',
         res,
         { message: 'Nonentity', accession: null },

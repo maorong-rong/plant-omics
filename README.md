@@ -142,6 +142,34 @@ npm run serve
 
 服务启动后会打印监听地址、源/工具数与工具名预算；预算不达标（源 >20、工具 >40、工具名超长）时**拒绝启动**，不会带病接客。
 
+**按请求只装你要的源（源市场第一步）**：约定用请求头 `x-plantomics-sources`，值是逗号/分号/空白分隔的源 id。
+不带的请求行为与以前**完全一致**（全集），所以既有插件配置不用改。
+
+```bash
+# 这条请求只看得到 icg 与 scod 的工具（外加 hub_* 元工具）
+curl -s -X POST http://127.0.0.1:8787/mcp \
+  -H 'content-type: application/json' \
+  -H 'x-plantomics-sources: icg,scod' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+约定三条：
+
+| 情况 | 行为 |
+|---|---|
+| 不带该头 / 头为空 | 与服务端注册表一致（默认全集，行为不变） |
+| 头里有**注册表没有**的 id | `400 invalid source subset`，`detail` 点名拼错的 id 并列出已登记源；**不许静默返回零工具** |
+| 头里有**有但本服务未启用**的 id | `400`，说明本服务启用了哪些（`PLANTOMICS_SOURCES` 是服务端上限，请求头只能选、不能扩张） |
+
+**两条必须知道的性质**：
+
+1. **这是上下文预算手段，不是权限隔离。** 服务无状态、每条请求各自判断：同一客户端下一条请求不带这个头，
+   照样拿到服务端全集的全部工具。别把它当成"用户访问不到别的源"——要控访问权得另做鉴权设计。
+2. **`initialize` 的 `instructions` 随子集变化，这是有意的。** 其中写明本次请求启用的源数与工具数，
+   并提示"本请求只启用了部分源"。客户端若缓存握手结果，注意它只对那次请求成立。
+
+为什么用请求头而不是 URL 路径/query：`/mcp` 保持唯一入口、既有配置零改动；与鉴权同层，语义就是"这次要装哪些源"；错误能直接回 400 说清原因，路径版还要处理逗号编码。子集注册表里同样带 `hub_find_sources` / `hub_status`；**`/healthz` 始终报服务端全集**，不受该头影响。
+
 **一键启动（不用每次敲命令）**
 
 ```powershell
@@ -327,10 +355,26 @@ npm run typecheck   # 类型
 npm test            # 单元 + MCP 协议测试（全离线，不联网）
 npm run probe       # 可达性实测（联网；任一源失败则非零退出）
 npm run stats       # 预算自检（源 ≤20 / 工具 ≤40，超了非零退出）
+npm run counts      # 数量事实（源/工具/逐源/构建信息；--json 出机器产物）
 npm run doctor      # 装机快照自检（已装插件 vs 仓库构建，有实质漂移则非零退出）
 npm run install:dsh # 一键安装：验包 + 归档 + 预检（最后一步仍需在插件页点）
-npm run check       # typecheck + test + build + stats，提交前最低门槛
+npm run check       # typecheck + test + build + check:counts + check:wording + stats，提交前最低门槛
+npm run check:wording # web/ 措辞闸（离线）：把 token 生命周期写成确定清除就非零退出
+npm run check:market # 市场双闸（联网）：数量闸 + 措辞闸，任一道红都指出该改哪边
 ```
+
+**数量与市场两道闸的分工**（都靠机器核，不靠人记得改）：
+
+| 命令 | 联网 | 锁什么 | 什么时候跑 |
+|---|---|---|---|
+| `npm run check:counts` | 否 | README 标记块、逐源表格、`/healthz` 示例、「全量常驻」句、三处预算常量 vs 本地 `dist` | 每次 `npm run check`（已内置） |
+| `npm run check:wording` | 否 | `web/` 里会误导安全判断的措辞：把「关闭标签页」写成确定清除即失败；README 与输入框提示必须同时有「通常会清除 + 恢复会话可能保留 + 点按钮」 | 每次 `npm run check`（已内置） |
+| `npm run counts:published` | 是 | 市场描述的数量短语 vs **npm 上最新 tarball 的真实数量**（重下载、核 sha512） | 发布前后单独跑 |
+| `npm run check:market` | 是 | 单一入口，两道都跑：**数字闸**（描述数量短语 vs npm 最新 tarball，含 sha512）＋**措辞闸**（`market/scripts/check-index.mjs`：文案逐字等于 `copy.json`、官方校验器、版本、图标）。任一道红都分别点名并给方向 | 发布前、改市场描述后；**刻意不进 `npm run check`** |
+
+为什么市场要两道而不是一道：`counts:published` 只比数量短语，句中其他措辞不在它的判定范围（把「薄插件」改成「插件」它照样绿）；措辞由 `check-index.mjs` 与 `copy.json` 逐字比对来锁。**两道同绿才算市场描述被锁住**，命名单一入口就是为了不再靠人记两条命令。离线 `check` 里不放联网闸，否则没网就等于红灯。
+
+`check:wording` 拦的不是文风，是**会误导安全判断的断言**：读者会按「关闭标签页即清除」判断风险，所以它必须在提交门槛上，而不是靠谁记得手动跑。这个闸第一次运行就拦下了作者自己文档里引用旧措辞的段落——能拦住作者，才说明它在工作。
 
 `npm run build` 除了 `tsc`，还会跑 `scripts/build-client.mjs` 产出 **客户端半边** `dist/client/panel.js`：
 它把包名（= 客户端模块 id）与构建期工具清单注入 `src/client/bundle.js`，并在构建期断言

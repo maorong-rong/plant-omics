@@ -879,6 +879,58 @@ describe('wheatomics_variant_query', () => {
     expect(ok.text).toContain('0 条不等于该区间没有变异');
   });
 
+  it('透出 data.reference（正文与 raw 都要有）；上游没给时降级显示、不抛错', async () => {
+    // WHT-06：ID/坐标的可比性取决于 reference，此前完全没读
+    const { ctx } = replay('variant-query.json');
+    const out = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' }, ctx,
+    );
+    expect(out.text).toContain('reference=Chinese_Spring1.0');
+    expect((out.raw as { reference?: string }).reference).toBe('Chinese_Spring1.0');
+
+    // 缺字段按 §三 顺序接：可选字段先接住、降级显示，不抛错
+    const missing = replay('variant-query.json', {
+      mutate: (payload) => { delete (payload.data as Record<string, unknown>).reference; },
+    });
+    const degraded = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' }, missing.ctx,
+    );
+    expect(degraded.text).toContain('reference=(上游未给)');
+  });
+
+  it('400 分流：区间非法 / 数据集不支持 / 未识别 → 三种话说清，且不透出上游原文', async () => {
+    const badRequest = (detail: string) => ({
+      http: async (url: string) => {
+        throw new UpstreamError('上游返回 HTTP 400', {
+          url, status: 400, attempts: 1, bodySnippet: JSON.stringify({ detail }),
+        });
+      },
+    }) as unknown as ToolContext;
+
+    await expect(
+      tool('wheatomics_variant_query').run({ dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' },
+        { http: badRequest('Region length must be > 0 and <= 5000000 bp').http }),
+    ).rejects.toThrow(/区间长度非法/);
+
+    await expect(
+      tool('wheatomics_variant_query').run({ dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' },
+        { http: badRequest('Unsupported dataset: nope').http }),
+    ).rejects.toThrow(/数据集 key 不受支持/);
+
+    await expect(
+      tool('wheatomics_variant_query').run({ dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' },
+        { http: badRequest('something else').http }),
+    ).rejects.toThrow(/原因未识别/);
+
+    // 上游 detail 原文不得进可见错误文本
+    for (const detail of ['Region length must be > 0 and <= 5000000 bp', 'Unsupported dataset: nope']) {
+      const err = await tool('wheatomics_variant_query')
+        .run({ dataset: 'whealbi_minocc10', region: 'chr1A:1-200000' }, { http: badRequest(detail).http })
+        .catch((e: Error) => e);
+      expect((err as Error).message).not.toContain(detail);
+    }
+  });
+
   it('描述写清 region 是单个字符串参数，且「本仓不暴露」按变异 ID 查询（归因到本仓，不说成上游缺陷）', () => {
     const def = tool('wheatomics_variant_query');
     expect(def.description).toContain('单个字符串参数');

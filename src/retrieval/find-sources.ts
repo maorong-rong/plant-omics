@@ -42,6 +42,36 @@ function bodyBudgetFor(tail: string): number {
 }
 const SEMANTICS_RANK: Record<Semantics, number> = { 承诺: 0, 实测: 1, 示例非承诺: 2 };
 
+/**
+ * 把一组源按语义拆成「覆盖源」与「示例源」。
+ *
+ * `示例非承诺`（当前的 `icg`）是"只实测过玉米一例、不作承诺覆盖"，
+ * 它**不能**和 `承诺`/`实测` 的源并列写进「有源覆盖（…）」——那会被读成"这个源承诺覆盖该物种"，
+ * 而源的盲区原文就是「实为物种目录（约 540 物种），仅实测玉米；不提供按名称搜索」。
+ * 这条口径（2026-10-31 已批）由 R1b 草稿仪器的 A2/F1 自检先抓出来，改的是实现不是量具。
+ */
+function splitBySemantics(ids: readonly string[]): { coverage: string[]; example: string[] } {
+  const coverage: string[] = [];
+  const example: string[] = [];
+  for (const id of ids) {
+    if (SOURCE_SEMANTICS[id]?.semantics === '示例非承诺') example.push(id);
+    else coverage.push(id);
+  }
+  return { coverage, example };
+}
+
+/**
+ * 「有源覆盖（…）」这句话的渲染器：**只许放 `承诺`/`实测` 源**；
+ * `示例非承诺` 源单独成句、必须带「示例/仅实测」字样，不得并列进覆盖名单。
+ */
+function coverPhrase(ids: readonly string[]): string {
+  const { coverage, example } = splitBySemantics(ids);
+  const parts: string[] = [];
+  if (coverage.length > 0) parts.push(`有源覆盖（${coverage.join('、')}）`);
+  if (example.length > 0) parts.push(`示例源（${example.join('、')}，仅已验示例、非承诺覆盖）`);
+  return parts.join('；');
+}
+
 export function normalize(text: string): string {
   return text
     .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
@@ -300,19 +330,22 @@ export function selectCandidates(
   const capabilityGaps = new Map<string, { species: Set<string>; intents: Set<IntentId> }>();
 
   /**
-   * 未覆盖物种否决。
+   * 未覆盖物种否决——**只在识别物种全部没有源覆盖时整题不返回候选**。
    *
-   * 问题里出现**本服务没有任何源按物种覆盖**的物种（大豆/番茄/油菜/人类…）时，
-   * 整题不返回任何源工具。理由：拿小麦的工具答大豆，是"用错物种作答"，
-   * 比"答不出来"严重得多。即使问题同时还提到被覆盖的物种
-   * （「用草莓的共线数据看番茄基因」），也**不做例外**——只答一半，
-   * 会让人以为两半都有覆盖。
+   * 2026-10-31 负责人口径：识别到的每个物种都必须有一条判定（有双命中候选就给源与工具，
+   * 没有就明说"不在已接源覆盖范围"或"有源覆盖但缺这类能力"），**只有全部物种都无覆盖时
+   * 才整题拒答**。不能因为其中一个物种没覆盖就把整题拒掉——那不是严谨，是把另一个物种
+   * 的真实缺口藏起来（「小麦、玉米的表达与变异都要」之前就是这样丢掉玉米的）。
+   *
+   * 因此"混合"情形（部分覆盖、部分没有）不再否决，改由 `accountSpecies` 逐物种交代：
+   * 覆盖到的给候选，没覆盖到的单独一行说明。拿小麦的工具答大豆这类错误仍被挡住——
+   * 大豆单独出现时走下面全部否决的分支。
    *
    * 判据用 `speciesKnownInCatalog`（只算按物种查询的 scope，不算"按精确 ID"），
    * 因为"不限物种（按精确 ID）"不构成"覆盖了这个物种"的证据。
    */
   const uncoveredSpecies = species.filter((sp) => !speciesKnownInCatalog(sp));
-  const vetoed = uncoveredSpecies.length > 0;
+  const vetoed = uncoveredSpecies.length > 0 && uncoveredSpecies.length === species.length;
 
   // 按注册顺序遍历，天然实现 k3 平局键
   for (const tool of TOOL_CAPABILITIES) {
@@ -384,6 +417,19 @@ export function selectCandidates(
           ? []
           : species.filter((sp) => query.some((sc) => sc !== '不限物种（按精确 ID）' && speciesSatisfies(sp, sc)));
         if (hitSpecies.length > 0) {
+          /**
+           * 只在**该源整体上**没有这类能力时才记"没有这类工具"。
+           *
+           * 反例（R1b 的 E2，2026-10-31 实跑）：「小麦同源基因对应玉米」——
+           * wheatomics 的 `search_known_genes` 没有 homolog 意图，于是记下
+           * "wheatomics 覆盖 小麦，但没有「同源」类工具"，而它**明明有**
+           * `wheatomics_cross_species_homologs`（那个工具是被目标端门挡下的）。
+           * 两句话同屏出现就是自相矛盾：一句说方向不匹配、一句说没有这个能力。
+           */
+          const sourceHasIntent = TOOL_CAPABILITIES.some((capability) => capability.sourceId === tool.sourceId
+            && capability.intents.some((id) => wanted.has(id))
+            && (!enabled || enabled.has(capability.tool)));
+          if (sourceHasIntent) continue;
           const entry = capabilityGaps.get(tool.sourceId)
             ?? { species: new Set<string>(), intents: new Set<IntentId>() };
           for (const sp of hitSpecies) entry.species.add(sp);
@@ -454,7 +500,11 @@ export function selectCandidates(
       }
       // any-by-id：恒过物种门；但意图未识别时不进候选——"按精确 ID、不限物种"
       // 不构成"覆盖了这个物种"的证据，列进来就是凑数。
-      if (semantics.policy === 'any-by-id' && intents.length === 0) continue;
+      //
+      // 混有目录外物种时同样不放行（2026-10-31）：既然整题不再否决，这里必须自己挡——
+      // 否则「大豆和草莓的组装」会把 gwh 的按 ID 工具当成"答了其中一个物种"，而它
+      // 两个物种都不覆盖，只是不挑物种。
+      if (semantics.policy === 'any-by-id' && (intents.length === 0 || uncoveredSpecies.length > 0)) continue;
     }
 
     /**
@@ -537,10 +587,14 @@ export function selectCandidates(
   for (const [sourceId, entry] of capabilityGaps) {
     const speciesList = [...entry.species].join('、');
     const labels = [...entry.intents].map((id) => INTENT_BY_ID.get(id)?.label ?? id).join('、');
+    // 示例非承诺的源不许写成"覆盖 X"：它只实测过少数例子，说"覆盖"会被读成承诺覆盖。
+    const exampleOnly = SOURCE_SEMANTICS[sourceId]?.semantics === '示例非承诺';
     clues.push({
       sourceId,
       kind: 'no-capability',
-      reason: `覆盖 ${speciesList}，但没有「${labels}」类工具`,
+      reason: exampleOnly
+        ? `示例源仅已验示例（非承诺覆盖 ${speciesList}），没有「${labels}」类工具`
+        : `覆盖 ${speciesList}，但没有「${labels}」类工具`,
     });
   }
 
@@ -633,6 +687,93 @@ export function speciesKnownInCatalog(species: string): boolean {
 }
 
 /**
+ * 逐物种交代的状态（2026-10-31 负责人口径）。
+ *
+ * 判据是**集合比较**：识别到的物种集合 ⊆ 已交代物种集合，差一个就算失败。
+ * 这不是新规则，是 v2.2 ② 与 ①-c「不许静默丢源」的合并推论——
+ * 静默丢的可能是源，也可能是物种：「小麦、玉米的表达与变异都要」旧版只给
+ * wheatomics 四个小麦工具，玉米既不在候选里、正文也没有任何一句交代它。
+ */
+export type SpeciesVerdictStatus =
+  /** 有双命中候选：直接给源与工具 */
+  | 'candidate'
+  /** 有源覆盖该物种，但没有这一类工具 */
+  | 'capability-gap'
+  /** 有源覆盖该物种，但问题没识别出意图，给不出工具名 */
+  | 'intent-unknown'
+  /** 没有任何源按物种覆盖该物种 */
+  | 'no-source'
+  /** 问题点名了源，而该源不覆盖这个物种 */
+  | 'named-miss'
+  /** 题级不是查询（分析/计算），未作覆盖判定 */
+  | 'out-of-scope';
+
+export interface SpeciesVerdict {
+  readonly species: string;
+  readonly status: SpeciesVerdictStatus;
+  /** 候选态：给出工具的源；缺口态：按物种覆盖该物种的源 */
+  readonly sources: string[];
+}
+
+/**
+ * 逐物种交代：识别到的**每个**物种都要有一条判定，不许凭空消失。
+ *
+ * 只在本地目录上算，不发上游请求；结果进 `raw.speciesVerdicts`，
+ * 自测脚本按它做物种集合比较（不靠解析正文猜）。
+ */
+export function accountSpecies(
+  found: Recognized,
+  picked: readonly Scored[],
+  enabledTools?: readonly string[],
+): SpeciesVerdict[] {
+  if (found.species.length === 0) return [];
+  const enabled = enabledTools ? new Set(enabledTools) : undefined;
+  /** 按物种覆盖该物种的源（不含"不限物种（按精确 ID）"——那不是覆盖证据）。 */
+  const coveringSources = (species: string): string[] => {
+    const ids = new Set<string>();
+    for (const capability of TOOL_CAPABILITIES) {
+      if (enabled && !enabled.has(capability.tool)) continue;
+      const scope = capability.speciesScope.query ?? [];
+      if (scope.some((sc) => sc !== '不限物种（按精确 ID）' && speciesSatisfies(species, sc))) ids.add(capability.sourceId);
+    }
+    return [...ids];
+  };
+
+  return found.species.map((species): SpeciesVerdict => {
+    const covering = coveringSources(species);
+    if (found.intents.length > 0) {
+      const hits = picked.filter((hit) => {
+        // 「不限物种（按精确 ID）」的工具不挑物种，但它确实按 ID 回答了这个物种；
+        // 混有目录外物种时这类候选已在 selectCandidates 被挡下，放行不会造成凑数。
+        if (SOURCE_SEMANTICS[hit.sourceId]?.policy === 'any-by-id') return true;
+        const scope = hit.tool.speciesScope.query ?? [];
+        if (scope.some((sc) => speciesSatisfies(species, sc))) return true;
+        /**
+         * 目标端也算"回答了这个物种"：「小麦和水稻之间的同源基因」里水稻是**目标**，
+         * wheatomics 的跨物种同源工具把水稻列为 target——此时说"水稻没有同源类工具"
+         * 是假话（它就在这个工具的物种范围里）。方向门 G4 已经保证目标端真的可达。
+         */
+        const target = hit.tool.speciesScope.target ?? [];
+        return target.some((sc) => speciesSatisfies(species, sc));
+      });
+      if (hits.length > 0) {
+        return { species, status: 'candidate', sources: [...new Set(hits.map((hit) => hit.sourceId))] };
+      }
+    }
+    // 点名了源：只交代被点名的那几个源，不拿别的源替它作答（与 G3 点名源分支同口径）。
+    if (found.sources.length > 0) {
+      const namedCovering = covering.filter((id) => found.sources.includes(id));
+      return namedCovering.length > 0
+        ? { species, status: found.intents.length === 0 ? 'intent-unknown' : 'capability-gap', sources: namedCovering }
+        : { species, status: 'named-miss', sources: [] };
+    }
+    if (found.intents.length === 0 && covering.length > 0) return { species, status: 'intent-unknown', sources: covering };
+    if (covering.length > 0) return { species, status: 'capability-gap', sources: covering };
+    return { species, status: 'no-source', sources: [] };
+  });
+}
+
+/**
  * 「已接物种」清单：**从能力目录现算，不手写**。
  *
  * 手写名单会漏源——2026-10-30 那版写死了「小麦、水稻、玉米〔仅 ICG〕、草莓、GWH」，
@@ -661,6 +802,11 @@ export interface FindSourcesOutput {
     readonly gaps: Gap[];
     readonly clues: Clue[];
     readonly state: 'A' | 'B' | 'ok';
+    /**
+     * 逐物种交代（2026-10-31 负责人口径）：识别到的每个物种一条判定。
+     * 自测按它做物种集合比较——判据读结构化字段，不去解析正文猜。
+     */
+    readonly speciesVerdicts: SpeciesVerdict[];
   };
 }
 
@@ -708,6 +854,8 @@ export function findSources(input: FindSourcesInput, context: {
 
   const { picked, gaps, clues } = selectCandidates(found, context.enabledTools);
   const grouped = groupBySource(picked);
+  /** 逐物种交代：识别到的每个物种都必须有一条判定，结果同时进正文与 raw。 */
+  const verdicts = accountSpecies(found, picked, context.enabledTools);
   const now = context.now ?? new Date();
   const tail = [
     '——',
@@ -740,7 +888,16 @@ export function findSources(input: FindSourcesInput, context: {
       '- 说明：这是「本服务不支持该任务」，不是没有覆盖，也不是数据不存在',
       '- 可以先调查询工具拿到原始数据，再放到自己的分析流程里做这一步',
     ];
-    return finish(lines.join('\n'), tail, { recognized: found, candidates: [], gaps: [], clues: [], state: 'B' });
+    return finish(lines.join('\n'), tail, {
+      recognized: found,
+      candidates: [],
+      gaps: [],
+      clues: [],
+      state: 'B',
+      // 题级就判成"不是查询"，没走到覆盖判定——如实记 out-of-scope，
+      // 不假称"该物种没有覆盖"（那是另一个事实）。
+      speciesVerdicts: verdicts.map((verdict) => ({ ...verdict, status: 'out-of-scope' as const, sources: [] })),
+    });
   }
 
   /**
@@ -763,7 +920,9 @@ export function findSources(input: FindSourcesInput, context: {
       '- 请补充物种（species_hint），或换更具体的问法（例：「小麦 春化 已知基因」）',
       '- 说明：这是「检索无法判定覆盖」，既不是「本服务未覆盖该物种」，也不是数据不存在',
     ];
-    return finish(lines.join('\n'), tail, { recognized: found, candidates: [], gaps: [], clues: [], state: 'B' });
+    return finish(lines.join('\n'), tail, {
+      recognized: found, candidates: [], gaps: [], clues: [], state: 'B', speciesVerdicts: verdicts,
+    });
   }
 
   // 状态 A：物种与意图都没识别出
@@ -773,7 +932,7 @@ export function findSources(input: FindSourcesInput, context: {
       '- 请补充：物种（species_hint）或意图（intent_hint），或换更具体的问法（例：「小麦 春化 已知基因」）',
       '- 说明：这是「检索无法识别输入」，既不是没有覆盖，也不是数据不存在。',
     ].join('\n');
-    return finish(body, tail, { recognized: found, candidates: [], gaps, clues, state: 'A' });
+    return finish(body, tail, { recognized: found, candidates: [], gaps, clues, state: 'A', speciesVerdicts: verdicts });
   }
 
   // 状态 B：有识别但没有可执行候选
@@ -787,6 +946,23 @@ export function findSources(input: FindSourcesInput, context: {
     /** 「有源覆盖该物种、但没有这类工具」的线索，与"不覆盖物种"分开渲染 */
     const capabilityClues = clues.filter((clue) => clue.kind === 'no-capability');
     const otherClues = clues.filter((clue) => clue.kind !== 'no-capability');
+
+    /**
+     * 方向类缺口：这些**不是"缺能力"**，而是"该能力的方向/目标端与问题不一致"。
+     *
+     * 反例（R1b 的 E2）：旧文案写「……这一问——是**能力或方向**缺口」，
+     * 两件事并列等于什么都没说：读者没法判断是"这个源没这个能力"还是"能力有、方向不对"，
+     * 而两者动作完全不同（前者换源/接源，后者换目标物种或换工具）。
+     *
+     * 这里**不改写**缺口原文：`方向相反：…查询主体是 X`、`目标物种不覆盖：…目标端只有 A/B，不含 C`
+     * 这两句是既有审查认可的措辞，且各自带齐了方向与目标端物种；
+     * 判定行只负责去掉那个含糊并列，把读者指到缺口行，不另造一套说法（另造必然与原文打架）。
+     */
+    const DIRECTION_GAP = /目标物种不覆盖|方向相反|方向未定/;
+    const hasDirectionGap = gaps.some((gap) => DIRECTION_GAP.test(gap.reason));
+    const directionSuffix = hasDirectionGap
+      ? '——方向/目标端不匹配（见下方缺口行：该能力只覆盖部分物种或方向相反），不是能力缺失'
+      : '——这是能力缺口';
 
     /**
      * 判定行：一次说清"为什么没有候选"，并且**区分两种完全不同的事实**。
@@ -804,9 +980,18 @@ export function findSources(input: FindSourcesInput, context: {
     } else if (unknownSpecies.length > 0) {
       lines.push(`- 判定：${unknownSpecies.join('、')} 没有任何源覆盖（不在本服务目录）`);
     } else if (knownSpecies.length > 0 && capabilityClues.length > 0) {
-      const covering = [...new Set(capabilityClues.map((clue) => clue.sourceId))].join('、');
+      const coveringIds = [...new Set(capabilityClues.map((clue) => clue.sourceId))];
+      // 只把"承诺/实测"源写进「有源覆盖」；示例非承诺源单独成句（见 coverPhrase）。
+      const covering = coverPhrase(coveringIds);
       const labels = found.intents.map((id) => INTENT_BY_ID.get(id)?.label ?? id).join('、') || '该';
-      lines.push(`- 判定：${knownSpecies.join('、')} 有源覆盖（${covering}），但没有覆盖 ${knownSpecies.join('、')} 的「${labels}」类工具——这是能力缺口，不是物种没人接`);
+      /**
+       * 多物种时不能说"没有覆盖 小麦、玉米 的同源类工具"——同源能力在 wheatomics 里是有的，
+       * 只是它的 target 不含玉米（「小麦同源基因对应玉米」）。单物种那句话逐字保留，
+       * 多物种改成"没有源能同时满足这些物种与该意图"，这是唯一对所有物种都成立的说法。
+       */
+      lines.push(knownSpecies.length > 1
+        ? `- 判定：${knownSpecies.join('、')} 各${covering}，但没有源能同时答「${labels}」这一问${directionSuffix}，也不是物种没人接`
+        : `- 判定：${knownSpecies.join('、')} ${covering}，但没有覆盖 ${knownSpecies.join('、')} 的「${labels}」类工具${directionSuffix}，不是物种没人接`);
     }
     if (unknownSpecies.length > 0) {
       lines.push(`- 没有源：${unknownSpecies.join('、')}不在本服务目录（已接：${catalogSpeciesText()}）`);
@@ -842,7 +1027,18 @@ export function findSources(input: FindSourcesInput, context: {
           const wantedLabels = found.intents.map((i) => INTENT_BY_ID.get(i)?.label ?? i).join('、');
           const available = [...new Set(caps.flatMap((capability) => [...capability.intents]))]
             .map((i) => INTENT_BY_ID.get(i)?.label ?? i).join('、');
-          lines.push(`- 点名来源 ${id} 没有「${wantedLabels}」类工具（它有：${available}）`);
+          /**
+           * 必须把**物种**写进这一行（2026-10-31）。
+           *
+           * 只写"点名来源 gramene 没有「变异」类工具"时，读者得不到"那 gramene 到底覆盖不覆盖水稻"，
+           * 逐物种交代的判据也无从核对（该行既不点名物种、也就没法证明水稻被交代过）。
+           * 只列**该源真的按物种覆盖**的那几个，不能把源不覆盖的物种也塞进来。
+           */
+          const coveredHere = found.species.filter((sp) => caps.some((capability) =>
+            (capability.speciesScope.query ?? []).some((sc) => sc !== '不限物种（按精确 ID）' && speciesSatisfies(sp, sc))));
+          lines.push(coveredHere.length > 0
+            ? `- 点名来源 ${id} 覆盖 ${coveredHere.join('、')}，但没有「${wantedLabels}」类工具（它有：${available}）`
+            : `- 点名来源 ${id} 没有「${wantedLabels}」类工具（它有：${available}）`);
           namedIntentGap = true;
         }
         lines.push('- 若不限来源：去掉问题里的来源名再问一次，本服务其他源可能有这类工具');
@@ -872,18 +1068,26 @@ export function findSources(input: FindSourcesInput, context: {
       for (const gap of others) lines.push(`- 缺口：${gap.sourceId}：${gap.reason}`);
       for (const clue of otherClues) lines.push(`- 线索（未验证）：${clue.sourceId}：${clue.reason}`);
       // 「有源覆盖但没有这类工具」单独一类：它和"不覆盖物种"不是一回事
+      // 「有覆盖但没能力」只适用于承诺/实测源；example-only 源要说"示例源无此能力"，
+      // 否则同一句里后半段写"非承诺覆盖"、前缀却断言"有覆盖"，名与内容打架（2026-10-31 负责人定的）。
       for (const clue of capabilityClues) {
-        lines.push(`- 有覆盖但没能力：${clue.sourceId}：${clue.reason}`);
+        const prefix = SOURCE_SEMANTICS[clue.sourceId]?.semantics === '示例非承诺' ? '示例源无此能力' : '有覆盖但没能力';
+        lines.push(`- ${prefix}：${clue.sourceId}：${clue.reason}`);
       }
     }
-    lines.push(namedIntentGap
-      // 此时"需要覆盖请走源接入流程"是错的动作：物种是覆盖的，只是这个源没有这类工具
-      ? '下一步：先去掉问题里的来源名再问一次；确认所有源都没有覆盖时再走源接入流程（docs/新增一个源.md）。不要用其他物种或别的意图的工具代替作答。'
-      : capabilityClues.length > 0 && found.sources.length === 0 && unknownSpecies.length === 0
-        // 物种接得住、只是缺这类能力：走源接入流程才是对的下一步
-        ? '下一步：同一物种的其它能力可以直接问；需要这类能力请走源接入流程（docs/新增一个源.md）。不要用别的物种或别的意图的工具代替作答。'
-        : '下一步：需要覆盖请走源接入流程（docs/新增一个源.md）；不要用其他物种或别的意图的工具代替作答。');
-    return finish(lines.join('\n'), tail, { recognized: found, candidates: [], gaps, clues, state: 'B' });
+    lines.push(hasDirectionGap
+      // 方向不匹配时，"走源接入流程"是错的下一步：能力是接进来的，只是方向/目标端不符。
+      ? '下一步：按下方缺口行换目标物种或换工具再问（能力是接进来的，不是缺源）。不要用别的物种或别的意图的工具代替作答。'
+      : namedIntentGap
+        // 此时"需要覆盖请走源接入流程"是错的动作：物种是覆盖的，只是这个源没有这类工具
+        ? '下一步：先去掉问题里的来源名再问一次；确认所有源都没有覆盖时再走源接入流程（docs/新增一个源.md）。不要用其他物种或别的意图的工具代替作答。'
+        : capabilityClues.length > 0 && found.sources.length === 0 && unknownSpecies.length === 0
+          // 物种接得住、只是缺这类能力：走源接入流程才是对的下一步
+          ? '下一步：同一物种的其它能力可以直接问；需要这类能力请走源接入流程（docs/新增一个源.md）。不要用别的物种或别的意图的工具代替作答。'
+          : '下一步：需要覆盖请走源接入流程（docs/新增一个源.md）；不要用其他物种或别的意图的工具代替作答。');
+    return finish(lines.join('\n'), tail, {
+      recognized: found, candidates: [], gaps, clues, state: 'B', speciesVerdicts: verdicts,
+    });
   }
 
   /**
@@ -900,11 +1104,12 @@ export function findSources(input: FindSourcesInput, context: {
   if (found.intents.length === 0) {
     const covering = grouped;
     const coveringIds = covering.map((group) => group.sourceId);
+    const coveringPhrase = coverPhrase(coveringIds);
     const buildBody = (keep: number): string[] => {
       const shownGroups = covering.slice(0, keep);
       const lines = [
         `没有覆盖：${summarize(question)}`,
-        `- 判定：${found.species.join('、')} 有源覆盖（${coveringIds.join('、')}），但没有识别出你要查的能力——这是能力缺口，不是物种没人接`,
+        `- 判定：${found.species.join('、')} ${coveringPhrase}，但没有识别出你要查的能力——这是能力缺口，不是物种没人接`,
         '- 为什么不算命中：命中要求「物种覆盖 ∧ 意图能力」同时成立（AGENTS §10.2①）；只命中物种时给工具名，等于让你去猜该调哪个',
       ];
       if (keep < covering.length) {
@@ -912,7 +1117,12 @@ export function findSources(input: FindSourcesInput, context: {
       }
       lines.push('接近但不覆盖（非可执行候选，不附默认动作）：');
       for (const group of shownGroups) {
-        lines.push(`- 有覆盖但缺能力：${group.sourceId}｜${group.semantics}：覆盖 ${group.speciesLabels.join('、') || '不限'}，它能做的是 ${group.allIntents.join('、') || '（目录未标注）'}`);
+        // 同一条口径：example-only 源不许用「覆盖 X」的说法，只能说"已验示例为 X"。
+        const exampleOnly = group.semantics === '示例非承诺';
+        const scopeText = exampleOnly
+          ? `已验示例为 ${group.speciesLabels.join('、') || '未标注'}（非承诺覆盖）`
+          : `覆盖 ${group.speciesLabels.join('、') || '不限'}`;
+        lines.push(`- ${exampleOnly ? '示例源无此能力' : '有覆盖但缺能力'}：${group.sourceId}｜${group.semantics}：${scopeText}，它能做的是 ${group.allIntents.join('、') || '（目录未标注）'}`);
       }
       lines.push('- 说明：这是「本服务未覆盖」，不是「该数据不存在」；上游数据库可能存在，只是未接入');
       lines.push('下一步：请明确意图（如 表达/变异/同源/序列/注释）后我再给出精确工具；也可用 species_hint/intent_hint 显式指定。');
@@ -925,7 +1135,9 @@ export function findSources(input: FindSourcesInput, context: {
       speciesKeep -= 1;
       speciesLines = buildBody(speciesKeep);
     }
-    return finish(speciesLines.join('\n'), tail, { recognized: found, candidates: [], gaps, clues, state: 'B' });
+    return finish(speciesLines.join('\n'), tail, {
+      recognized: found, candidates: [], gaps, clues, state: 'B', speciesVerdicts: verdicts,
+    });
   }
 
   const header = `命中 ${grouped.length} 源 / ${picked.length} 工具（全部命中源；排序：命中维度 > 语义等级 > 注册顺序）`;
@@ -939,7 +1151,10 @@ export function findSources(input: FindSourcesInput, context: {
    */
   const pickedIntents = new Set(picked.flatMap((hit) => hit.tool.intents));
   const uncoveredIntentLines: string[] = [];
-  for (const id of found.intents.filter((want) => !pickedIntents.has(want)).slice(0, 2)) {
+  const uncoveredIntents = found.intents.filter((want) => !pickedIntents.has(want));
+  // 最多逐条展开 2 个；**剩下几个必须明说**，不做静默截断。
+  // 这条与 `slice(0, 5)`、`slice(0, 3)` 是同一类毛病：少列可以，但少列却装作列全了不行。
+  for (const id of uncoveredIntents.slice(0, 2)) {
     const caps = TOOL_CAPABILITIES.filter((capability) => capability.intents.includes(id));
     if (caps.length === 0) continue;
     const scopes = [...new Set(caps.flatMap((capability) => capability.speciesScope.query ?? []))];
@@ -948,6 +1163,38 @@ export function findSources(input: FindSourcesInput, context: {
     const asked = found.species.length > 0 ? `，不覆盖 ${found.species.join('、')}` : '';
     uncoveredIntentLines.push(`- 未覆盖意图：${label} —— 目录里只有 ${[...new Set(caps.map((c) => c.sourceId))].join('、')}（物种范围：${scopeText}）${asked}；上面给的是同物种的其它能力，不是本问题的答案`);
   }
+  if (uncoveredIntents.length > 2) {
+    uncoveredIntentLines.push(`- 另有 ${uncoveredIntents.length - 2} 个意图未覆盖（未逐条展开）`);
+  }
+
+  /**
+   * 逐物种交代（2026-10-31 负责人口径）。
+   *
+   * 只在**确有物种没有被候选回答**时才渲染：单物种、候选覆盖得住时，
+   * 「识别：物种=小麦」与候选块的「命中：物种=小麦族」已经是交代，再列一遍是噪音 + 白烧预算。
+   *
+   * 候选源按源合并成一行，缺口物种每个一行：多物种题（L1 有 7 个物种）如果逐个一行，
+   * 光这一段就会挤掉候选、逼 `finish()` 从中间截断——那又把「另有 N 个命中源未展示」切没了。
+   */
+  const verdictLines = (): string[] => {
+    const covered = verdicts.filter((verdict) => verdict.status === 'candidate');
+    const gaps = verdicts.filter((verdict) => verdict.status !== 'candidate');
+    if (gaps.length === 0) return [];
+    const lines = ['逐物种交代（「有源覆盖但没有…」是能力缺口，不是物种没人接）：'];
+    if (covered.length > 0) {
+      lines.push(`- 命中：${covered.map((verdict) => `${verdict.species}→${verdict.sources.join('/')}`).join('、')}`);
+    }
+    for (const verdict of gaps) {
+      if (verdict.status === 'no-source') {
+        lines.push(`- ${verdict.species}：不在已接源覆盖范围（没有任何源按物种覆盖）`);
+      } else if (verdict.status === 'named-miss') {
+        lines.push(`- ${verdict.species}：点名源 ${found.sources.join('、')} 不覆盖该物种`);
+      } else {
+        lines.push(`- ${verdict.species}：${coverPhrase(verdict.sources)}，但没有「${intentText}」类工具`);
+      }
+    }
+    return lines;
+  };
 
   /**
    * 渲染前 `keep` 个源，其余按**字节预算**决定是否展示。
@@ -959,6 +1206,9 @@ export function findSources(input: FindSourcesInput, context: {
   const renderBody = (keep: number): string[] => {
     const shown = grouped.slice(0, keep);
     const lines: string[] = [`识别：物种=${speciesText}；意图=${intentText}`, header];
+    // 逐物种交代放在候选之前：它先回答"每个物种怎么样"，候选块才是明细。
+    // 顺序还有个硬理由——`finish()` 超预算从**尾部**截断，放在前面保证这段不会被切掉。
+    lines.push(...verdictLines());
     shown.forEach((group, index) => {
       lines.push(`${circled(index)} ${group.sourceId}｜${group.semantics}`);
       lines.push(`   命中：物种=${group.speciesLabels.join('、') || '不限'}；意图=${group.intentLabels.join('、')}`);
@@ -998,11 +1248,18 @@ export function findSources(input: FindSourcesInput, context: {
     gaps,
     clues,
     state: 'ok',
+    speciesVerdicts: verdicts,
   });
 }
 
+/**
+ * 候选源的圈号。①–⑳ 是同一套符号（U+2460 起连续 20 个），超过 20 个源才退化成 `(n)`。
+ *
+ * 只写到 ⑤ 时，第 6 个源会渲染成 `6. wheatomics｜…`，与前五个不是一套符号（2026-10-31 检索负责人指出）。
+ * 判据脚本按 `[①-⑳] ` 前缀数渲染了几个源，符号一乱就会把「渲染 1 源 / 命中 6 源」算错。
+ */
 function circled(index: number): string {
-  return ['①', '②', '③', '④', '⑤'][index] ?? `${index + 1}.`;
+  return index < 20 ? String.fromCharCode(0x2460 + index) : `(${index + 1})`;
 }
 
 function summarize(question: string): string {

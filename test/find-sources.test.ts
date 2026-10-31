@@ -209,10 +209,11 @@ describe('R1 负向评测暴露的缺陷（2026-10-30 修复，逐条钉住）',
     expect(result.text).not.toContain('gwh_assembly_lookup');
   });
 
-  it('混合物种也不做例外：用草莓共线看番茄 → 整题不给候选', async () => {
+  it('混合物种逐物种交代：草莓给候选，番茄明说不在覆盖范围', async () => {
     const result = await run('用草莓的共线数据看番茄基因');
-    expect(candidateIds(result.text)).toEqual([]);
-    expect(result.text).not.toContain('strawberry_synteny');
+    expect(candidateIds(result.text)).toEqual(['strawberry']);
+    expect(result.text).toContain('strawberry_synteny');
+    expect(result.text).toMatch(/- 番茄：不在已接源覆盖范围/);
   });
 
   it('计算类任务独立硬排除：命中关键词也不放行（ICG 内参引物 ≠ 设计引物）', async () => {

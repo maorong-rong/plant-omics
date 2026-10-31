@@ -1,0 +1,40 @@
+flowchart TB
+  subgraph L1["① 注册表层 src/core"]
+    direction LR
+    A1["契约 types<br/>纯 JSON Schema"]
+    A2["HTTP 客户端<br/>超时 / UA / 确定性退避"]
+    A3["注册表硬校验<br/>T3 不许挂工具"]
+    A4["输出排版<br/>UTF-8 字节预算 + 出处尾注"]
+  end
+
+  subgraph L2["② 适配层 src/sources/:id"]
+    direction LR
+    B1["manifest.ts<br/>等级 / apiBase / 版本口径"]
+    B2["tools.ts<br/>意图级工具 4–8 个"]
+    B3["fixtures/<br/>真实响应裁剪快照"]
+  end
+
+  subgraph L3["③ 出口层"]
+    direction LR
+    C1["src/mcp/<br/>stdio MCP server"]
+    C2["src/service/<br/>Streamable HTTP 服务"]
+    C3["src/dsh/<br/>宿主插件 + 侧边栏"]
+  end
+
+  subgraph L4["使用端"]
+    direction LR
+    D1["Claude Code / Codex / Reasonix"]
+    D2["DeepSeek Harness"]
+  end
+
+  L1 --> L2
+  L2 --> L3
+  C1 --> D1
+  C2 --> D1
+  C3 --> D2
+
+  R["检索层 hub_find_sources<br/>自然语言 → 3–5 候选源 + 工具名"]:::meta
+  L1 -.-> R
+  R -.-> D1
+
+  classDef meta fill:#eef6ff,stroke:#3b82f6,stroke-width:1px

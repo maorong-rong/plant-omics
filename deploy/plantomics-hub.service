@@ -1,0 +1,54 @@
+# PlantOmics Hub —— systemd 单元（部署物料，未在本机验证）
+#
+# 安装：见 deploy/README.md「三、安装服务」
+# 本服务**无状态**（每条请求独立 server + transport），可水平扩容，不需要会话亲和。
+# 默认只监听回环（127.0.0.1），对外由 Nginx 反代（deploy/nginx.conf）。
+#
+# 环境变量文件 /etc/plantomics-hub.env（权限 600，root 所有）：
+#   PLANTOMICS_HUB_HOST=127.0.0.1
+#   PLANTOMICS_HUB_PORT=8787
+#   PLANTOMICS_HUB_TOKEN=<至少 16 字符；对外暴露时必填>
+#   PLANTOMICS_HUB_SERVER_NAME=plantomics-hub
+#   PLANTOMICS_HUB_LOG=info
+#   PLANTOMICS_HUB_ALLOWED_HOSTS=<对外域名，逗号分隔；不填则只放行 localhost/127.0.0.1>
+#   PLANTOMICS_SOURCES=（可选，逗号分隔；只启用部分源）
+
+[Unit]
+Description=PlantOmics Hub MCP service (Streamable HTTP)
+Documentation=https://github.com/maorong-rong/plant-omics
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=plantomics
+Group=plantomics
+WorkingDirectory=/opt/plantomics-hub
+EnvironmentFile=/etc/plantomics-hub.env
+ExecStart=/usr/bin/node /opt/plantomics-hub/dist/service/cli.js
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+# 单次工具调用最长约 45 s（含重试），给一点余量
+TimeoutStartSec=30
+
+# ── 加固（不需要写任何文件，因此只读整个文件系统） ──
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target

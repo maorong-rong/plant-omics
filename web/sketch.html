@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>试调页线框 · PlantOmics Hub（设计稿，非成品）</title>
+<style>
+  :root {
+    --ink: #1a201d;
+    --ink-2: #5b675f;
+    --ink-3: #8a958d;
+    --line: #cfd7d0;
+    --line-2: #e3e8e0;
+    --paper: #f7f8f5;
+    --card: #ffffff;
+    --accent: #2a7a4c;
+    --accent-soft: #e8f2ec;
+    --warn: #9a6516;
+    --warn-soft: #f7efdf;
+    --bad: #a2372f;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.7 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .banner {
+    background: #231f14; color: #f6e7bd; font-size: 13px;
+    padding: 8px 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .banner b { color: #ffd978; }
+  .wire { max-width: 1180px; margin: 0 auto; padding: 20px; }
+  header.top {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 18px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  }
+  .brand { font-weight: 700; letter-spacing: -.01em; }
+  .brand small { display: block; font-weight: 500; color: var(--ink-3); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
+  .svc { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); background: var(--paper); border: 1px dashed var(--line); padding: 3px 8px; border-radius: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--ink-3); }
+  .dot.on { background: var(--accent); }
+  .dot.off { background: var(--bad); }
+  .spacer { flex: 1 1 40px; }
+  .token { display: flex; gap: 8px; align-items: center; }
+  .token label { font-size: 12.5px; color: var(--ink-3); }
+  input[type=password], input[type=text], input[type=number] {
+    font: inherit; font-size: 13.5px; padding: 6px 9px; border: 1px solid var(--line);
+    border-radius: 7px; background: #fff; color: var(--ink); min-width: 0;
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  nav.tabs { display: flex; gap: 6px; margin: 18px 0 0; flex-wrap: wrap; }
+  nav.tabs button[aria-selected=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 650; }
+  .note { font-size: 12.5px; color: var(--ink-3); margin: 10px 0 0; }
+  section.view { display: none; margin-top: 14px; }
+  section.view.active { display: block; }
+  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+  .layout.three { grid-template-columns: 260px 1fr 1.15fr; }
+  /* 网格子项默认 min-width:auto，会被长 JSON / 长出处顶宽，把右侧结果栏挤成一条线——统一放开 */
+  .layout > * { min-width: 0; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .panel h2 { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; font-weight: 650; }
+  .srclist { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow: auto; }
+  .src {
+    border: 1px solid var(--line-2); border-radius: 9px; padding: 9px 10px; cursor: pointer; background: #fff;
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; width: 100%; font: inherit;
+  }
+  .src:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .src[aria-current=true] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .src .nm { font-weight: 620; font-size: 13.5px; }
+  .src .meta { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; }
+  .tier { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+  .t1 { background: var(--accent-soft); color: var(--accent); }
+  .t2 { background: var(--warn-soft); color: var(--warn); }
+  .toolrow { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line-2); font-size: 13.5px; align-items: baseline; }
+  .toolrow:last-child { border-bottom: 0; }
+  .toolrow code { font-family: var(--mono); font-size: 12.5px; }
+  .toolrow .desc { color: var(--ink-2); font-size: 12.5px; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  table.params { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.params th, table.params td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+  table.params th { font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+  .ph { color: var(--ink-3); border: 1px dashed var(--line); border-radius: 8px; padding: 14px; text-align: center; font-size: 13px; }
+  pre.code {
+    margin: 0; padding: 12px 14px; border-radius: 9px; overflow: auto;
+    background: #121916; color: #dfe9e3; font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .states { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .states button { font-size: 12px; padding: 4px 9px; }
+  .states button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 620; }
+  .result { min-height: 220px; }
+  .status-line { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 620; margin-bottom: 8px; }
+  .status-line.ok { color: var(--accent); }
+  .status-line.err { color: var(--bad); }
+  .status-line.wait { color: var(--warn); }
+  .result-body { font-family: var(--mono); font-size: 12.5px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--paper); border: 1px solid var(--line-2); border-radius: 9px; padding: 12px; }
+  .prov { margin-top: 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 9px 12px; font-size: 12.5px; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .legend { margin-top: 18px; font-size: 12.5px; color: var(--ink-3); display: grid; gap: 4px; }
+  .legend code { font-family: var(--mono); }
+  @media (max-width: 900px) {
+    .layout, .layout.three { grid-template-columns: 1fr; }
+    .srclist { max-height: none; }
+    .wire { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <b>这是线框草图，不是成品</b>
+  <span>只用于评审信息架构与状态设计；页面不发起任何真实网络请求；源与工具名取自构建期快照 <code>site/data/catalog.js</code>，缺失时显示提示。</span>
+</div>
+
+<div class="wire">
+  <header class="top">
+    <div class="brand">PlantOmics Hub<small>Web 试调页 · 线框</small></div>
+    <span class="svc" id="svc">https://datamcp.moilab.net/mcp</span>
+    <span><span class="dot" id="dot"></span> <span id="conn" style="font-size:13px;color:var(--ink-2)">未连接</span></span>
+    <div class="spacer"></div>
+    <div class="token">
+      <label for="token">访问 token</label>
+      <input id="token" type="password" placeholder="只存本标签页，可点按钮清除" title="同一标签页刷新仍保留；关掉标签页通常会清除，但浏览器恢复会话时可能保留；要立刻结束请点「清除 token」。" autocomplete="off" spellcheck="false" style="width:220px">
+      <button id="testconn">测试连接</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-sources" aria-selected="true" aria-controls="view-sources">① 浏览源</button>
+    <button role="tab" id="tab-tool" aria-selected="false" aria-controls="view-tool">② 工具详情</button>
+    <button role="tab" id="tab-try" aria-selected="false" aria-controls="view-try">③ 试调</button>
+  </nav>
+  <p class="note" id="datastate">正在读取构建期数据…</p>
+
+  <section class="view active" id="view-sources" role="tabpanel" aria-labelledby="tab-sources">
+    <div class="layout">
+      <div class="panel">
+        <h2>过滤</h2>
+        <input type="text" id="filter" placeholder="源名 / 物种 / 工具名" style="width:100%">
+        <p class="note">输入即过滤（本地匹配，不发请求）。</p>
+        <div class="srclist" id="src-list"></div>
+      </div>
+      <div class="panel">
+        <h2>源详情</h2>
+        <div id="src-detail"><p class="ph">选左边一个源</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-tool" role="tabpanel" aria-labelledby="tab-tool">
+    <div class="panel">
+      <h2 id="tool-head">工具详情</h2>
+      <p id="tool-desc" class="note">从「浏览源」里选工具。</p>
+      <table class="params" id="tool-params">
+        <thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+        <tbody><tr><td colspan="4" class="note">参数表由服务端 <code>tools/list</code> 的 <code>inputSchema</code> 生成（线框里用占位）。</td></tr></tbody>
+      </table>
+      <p style="margin-top:14px"><button class="primary" id="goto-try">去试调 →</button></p>
+    </div>
+  </section>
+
+  <section class="view" id="view-try" role="tabpanel" aria-labelledby="tab-try">
+    <div class="layout three">
+      <div class="panel">
+        <h2>参数</h2>
+        <div id="try-form"><p class="ph">先在上一步选工具</p></div>
+        <p style="margin-top:12px"><button class="primary" id="call">发起调用</button></p>
+        <p class="note">线框不真调用；实现版把表单值塞进 <code>tools/call</code>。</p>
+      </div>
+      <div class="panel">
+        <h2>请求预览</h2>
+        <pre class="code" id="req-preview"></pre>
+        <p style="margin-top:10px"><button id="copy-curl">复制 curl（token 用占位）</button></p>
+      </div>
+      <div class="panel">
+        <h2>结果 · 状态切换（评审用）</h2>
+        <div class="states" id="states">
+          <button data-state="idle" aria-pressed="true">未填 token</button>
+          <button data-state="e401">401</button>
+          <button data-state="e403">403</button>
+          <button data-state="net">网络失败</button>
+          <button data-state="wait">调用中</button>
+          <button data-state="ok">成功</button>
+          <button data-state="iserr">工具报错</button>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="status-line" id="status">—</div>
+          <div class="result-body" id="result-body">每一种失败都要说清「是谁拒绝的、下一步做什么」，不能只写「出错了」。</div>
+          <div class="prov" id="prov" hidden></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="legend">
+    <div>· 强边框 / 强调色 = 需要用户操作；虚线框 = 占位，不是真实内容。</div>
+    <div>· token 只走 <code>sessionStorage</code>，不进 localStorage、不进 URL、不进构建产物；关掉标签页通常会清除，但浏览器恢复会话时可能保留，要立刻结束请点顶栏「清除 token」。</div>
+    <div>· 结果正文原样呈现服务端文本，不重排、不翻译；出处尾注单独高亮。</div>
+    <div>· 数字与工具名来自构建期快照；与服务端实时不一致时以服务端为准，并在页面显式提示。</div>
+  </div>
+</div>
+
+<script src="../site/data/catalog.js"></script>
+<script>
+(function () {
+  var catalog = window.__PLANTOMICS_CATALOG__ || null;
+  var state = { sourceId: null, tool: null, view: 'sources' };
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  function tierOf(t) { return t === 'T1' ? 't1' : 't2'; }
+
+  function boot() {
+    if (!catalog) {
+      document.getElementById('datastate').textContent =
+        '缺构建期数据：先跑 node site/scripts/build-data.mjs 生成 site/data/catalog.js，本页会自动读到。';
+      document.getElementById('src-list').innerHTML = '<p class="ph">（无数据）</p>';
+      return;
+    }
+    var b = catalog.budget || {};
+    document.getElementById('datastate').textContent =
+      '构建期快照：' + (catalog.sources ? catalog.sources.length : '?') + ' 个源 / ' +
+      (b.tools != null ? b.tools : '?') + ' 个工具 · commit ' + (catalog.gitCommit || '—') +
+      ' · 快照 ' + String(catalog.generatedAt || '').slice(0, 16).replace('T', ' ') + 'Z' +
+      '（不表示上游此刻可用；实时规模以 /healthz 为准）';
+    renderSources('');
+    var first = catalog.sources && catalog.sources[0];
+    if (first) selectSource(first.id);
+  }
+
+  function renderSources(filter) {
+    var list = document.getElementById('src-list');
+    list.innerHTML = '';
+    var q = filter.trim().toLowerCase();
+    var shown = (catalog.sources || []).filter(function (s) {
+      if (!q) return true;
+      var hay = [s.label.zh.name, s.label.en.name, (s.species || []).join(' '),
+        (s.tools || []).map(function (t) { return t.name; }).join(' ')].join(' ').toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    if (shown.length === 0) {
+      list.appendChild(el('p', 'ph', '没有匹配的源——清空过滤词试试'));
+      return;
+    }
+    shown.forEach(function (s) {
+      var btn = document.createElement('button');
+      btn.className = 'src';
+      btn.type = 'button';
+      btn.setAttribute('aria-current', String(s.id === state.sourceId));
+      var line = el('span');
+      line.style.gridColumn = '1 / -1';
+      line.style.display = 'flex';
+      line.style.gap = '8px';
+      line.style.alignItems = 'center';
+      line.appendChild(el('span', 'nm', s.label.zh.name));
+      line.appendChild(el('span', 'tier ' + tierOf(s.tier), s.tier));
+      btn.appendChild(line);
+      btn.appendChild(el('span', 'meta', (s.toolCount || (s.tools || []).length) + ' 个工具 · 盲区 ' + ((s.caveats || []).length) + ' 条'));
+      btn.addEventListener('click', function () { selectSource(s.id); });
+      list.appendChild(btn);
+    });
+  }
+
+  function selectSource(id) {
+    var s = (catalog.sources || []).filter(function (x) { return x.id === id; })[0];
+    if (!s) return;
+    state.sourceId = id;
+    renderSources(document.getElementById('filter').value);
+
+    var box = document.getElementById('src-detail');
+    box.innerHTML = '';
+    var h = el('h3', null, s.label.zh.name);
+    h.style.margin = '0 0 4px';
+    h.style.fontSize = '17px';
+    box.appendChild(h);
+    box.appendChild(el('p', 'note', s.tier + ' · ' + (s.toolCount || (s.tools || []).length) + ' 个工具 · ' + (s.species || []).join(' · ')));
+
+    (s.tools || []).forEach(function (t) {
+      var row = el('div', 'toolrow');
+      var left = el('div');
+      left.style.flex = '1';
+      left.appendChild(el('code', null, t.name));
+      left.appendChild(el('div', 'desc', t.summary || ''));
+      row.appendChild(left);
+      var go = el('button', null, '详情 →');
+      go.addEventListener('click', function () { showTool(s, t); });
+      row.appendChild(go);
+      box.appendChild(row);
+    });
+
+    var blind = el('p', 'note', '盲区（原文，未翻译）：' + ((s.caveats || [])[0] || '（未登记）'));
+    blind.style.marginTop = '12px';
+    box.appendChild(blind);
+  }
+
+  function showTool(source, tool) {
+    state.tool = { source: source, tool: tool };
+    document.getElementById('tool-head').textContent = '工具详情 · ' + tool.name;
+    document.getElementById('tool-desc').textContent = tool.summary || '（描述来自服务端 tools/list）';
+    setView('tool');
+    refreshTry();
+  }
+
+  function refreshTry() {
+    var form = document.getElementById('try-form');
+    var preview = document.getElementById('req-preview');
+    if (!state.tool) {
+      preview.textContent = 'POST /mcp\nAuthorization: Bearer <token>\n\n' +
+        '{ "jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": { "name": "<tool>", "arguments": {} } }';
+      return;
+    }
+    var name = state.tool.tool.name;
+    form.innerHTML = '';
+    var demo = [
+      { key: 'query', type: 'text', hint: '必填 · 基因 ID / 名字 / 性状 / DOI' },
+      { key: 'limit', type: 'number', hint: '可选 · 1–50' }
+    ];
+    demo.forEach(function (f) {
+      var wrap = el('div');
+      wrap.style.margin = '0 0 10px';
+      var label = el('label', null, f.key);
+      label.setAttribute('for', 'f-' + f.key);
+      label.style.display = 'block';
+      label.style.fontSize = '12.5px';
+      label.style.color = 'var(--ink-3)';
+      var input = document.createElement('input');
+      input.id = 'f-' + f.key;
+      input.type = f.type;
+      input.style.width = '100%';
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      wrap.appendChild(el('div', 'note', f.hint));
+      form.appendChild(wrap);
+    });
+    form.appendChild(el('p', 'note', '（线框：真实表单按 inputSchema 逐字段生成，数组/对象先用原始 JSON 文本框兜底。）'));
+    preview.textContent = 'POST /mcp\ncontent-type: application/json\nAuthorization: Bearer <token>\n\n' +
+      JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: name, arguments: { query: 'VRN1', limit: 10 } }
+      }, null, 2);
+    document.getElementById('tool-params').querySelector('tbody').innerHTML =
+      '<tr><td><code>query</code></td><td>string</td><td>必填</td><td>按 ID / 名字 / 性状 / DOI 模糊匹配</td></tr>' +
+      '<tr><td><code>limit</code></td><td>number</td><td>可选</td><td>1–50，默认 10</td></tr>';
+  }
+
+  function setView(view) {
+    state.view = view;
+    ['sources', 'tool', 'try'].forEach(function (v) {
+      document.getElementById('view-' + v).classList.toggle('active', v === view);
+      document.getElementById('tab-' + v).setAttribute('aria-selected', String(v === view));
+    });
+  }
+
+  var STATES = {
+    idle: { cls: '', text: '未填 token · 不发请求',
+      body: '顶栏填写访问 token 后才能调用；token 只存在本标签页，关闭标签页通常会清除，但浏览器恢复会话时可能保留，要立刻结束请点「清除 token」。', prov: null },
+    e401: { cls: 'err', text: '401 · token 被拒',
+      body: '{"error":"unauthorized"}\n\n下一步：确认 token 与服务端 PLANTOMICS_HUB_TOKEN 一致。页面不回显 token 前后缀。', prov: null },
+    e403: { cls: 'err', text: '403 · 服务端拒绝来源',
+      body: '{"error":"forbidden origin"}\n\n下一步：部署侧把本站域名加进 PLANTOMICS_HUB_ALLOWED_HOSTS，再重启服务。', prov: null },
+    net: { cls: 'err', text: '连不上服务',
+      body: 'fetch 失败：TypeError: Failed to fetch\n尝试地址：https://datamcp.moilab.net/mcp\n\n下一步：确认服务在跑（/healthz 返回 200）、域名解析正常。', prov: null },
+    wait: { cls: 'wait', text: '调用中… 3.1s',
+      body: '（等待上游响应；超过 20 s 显示「仍在等待」，按钮保持禁用，避免重复打上游。）', prov: null },
+    ok: { cls: 'ok', text: '200 · 1.24 s',
+      body: '命中 3 条（示例文本；真实调用时原样呈现服务端 result.content[0].text）\n\n1. TaVRN1 · 小麦春化关键基因 · PMID 12345678\n2. TaVRN1-B1 · …\n3. …',
+      prov: '出处：源 wheatomics · 完整请求 https://wheatomics.sdau.edu.cn/…?searchid=A · HTTP 200 · 1 148 ms · 查询时刻 2026-10-31T11:02:17+08:00' },
+    iserr: { cls: 'err', text: '工具报了错（isError）',
+      body: '（原样显示服务端给的错误文本，不翻译、不改写成「出错了」。）\n例：上游 502；本次请求 …；建议稍后重试或换等价工具。', prov: null }
+  };
+
+  function paintState(name) {
+    var s = STATES[name] || STATES.idle;
+    var status = document.getElementById('status');
+    status.className = 'status-line ' + s.cls;
+    status.textContent = s.text;
+    document.getElementById('result-body').textContent = s.body;
+    var prov = document.getElementById('prov');
+    if (s.prov) { prov.hidden = false; prov.textContent = s.prov; }
+    else { prov.hidden = true; prov.textContent = ''; }
+    document.querySelectorAll('#states button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-state') === name));
+    });
+  }
+
+  document.getElementById('filter').addEventListener('input', function (e) { renderSources(e.target.value); });
+  document.getElementById('tab-sources').addEventListener('click', function () { setView('sources'); });
+  document.getElementById('tab-tool').addEventListener('click', function () { setView('tool'); });
+  document.getElementById('tab-try').addEventListener('click', function () { setView('try'); refreshTry(); });
+  document.getElementById('goto-try').addEventListener('click', function () { setView('try'); refreshTry(); });
+  document.getElementById('call').addEventListener('click', function () {
+    paintState(document.getElementById('token').value ? 'ok' : 'idle');
+  });
+  document.getElementById('testconn').addEventListener('click', function () {
+    document.getElementById('dot').className = 'dot';
+    document.getElementById('conn').textContent = '线框：这里会请求 /healthz（实现版）';
+  });
+  document.getElementById('copy-curl').addEventListener('click', function () {
+    var btn = this;
+    var text = 'curl -sS ' + document.getElementById('svc').textContent + '\n' +
+      '  -H "content-type: application/json"\n' +
+      '  -H "authorization: Bearer <token>"\n' +
+      '  -d \'{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"<tool>","arguments":{}}}\'';
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+      btn.textContent = '已复制（token 是占位符）';
+      setTimeout(function () { btn.textContent = '复制 curl（token 用占位）'; }, 1600);
+    } else {
+      window.prompt('复制这段（token 是占位符）', text);
+    }
+  });
+  document.querySelectorAll('#states button').forEach(function (b) {
+    b.addEventListener('click', function () { paintState(b.getAttribute('data-state')); });
+  });
+
+  paintState('idle');
+  boot();
+})();
+</script>
+</body>
+</html>

@@ -61,7 +61,7 @@ export interface RegistryOptions {
 
 export function createRegistry(options: RegistryOptions = {}): ToolRegistry {
   const wanted = (options.enabled ?? []).map((id) => id.trim()).filter(Boolean);
-  const known = bundles.map((bundle) => bundle.manifest.id);
+  const known = knownSourceIds();
 
   if (wanted.length > 0) {
     const unknown = wanted.filter((id) => !known.includes(id));
@@ -85,12 +85,31 @@ export function createRegistry(options: RegistryOptions = {}): ToolRegistry {
   return registry;
 }
 
+/**
+ * 解析一串源 id（逗号 / 分号 / 空白分隔）。
+ *
+ * 环境变量 `PLANTOMICS_SOURCES` 与 HTTP 服务层的请求头 `x-plantomics-sources`
+ * **共用这一个解析**：同一件事只许有一种切法，否则 `a,b` 与 `a b` 会得出不同结果。
+ * 空串、只有分隔符、只有空白 → undefined（表示"没有指定"，不是"空集合"）。
+ */
+export function parseSourceList(raw: string | undefined): string[] | undefined {
+  const text = (raw ?? '').trim();
+  if (!text) return undefined;
+  const ids = text
+    .split(/[,;\s]+/)
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return ids.length > 0 ? ids : undefined;
+}
+
+/** 已登记的源 id（报错信息用；不构造注册表）。 */
+export function knownSourceIds(): string[] {
+  return bundles.map((bundle) => bundle.manifest.id);
+}
+
 /** 从环境变量读启用清单（逗号/分号/空白分隔）。MCP 与 dsh 两条出口都用它。 */
 export function enabledSourcesFromEnv(env: NodeJS.ProcessEnv = process.env): string[] | undefined {
-  const raw = env.PLANTOMICS_SOURCES?.trim();
-  if (!raw) return undefined;
-  const ids = raw.split(/[,;\s]+/).map((id) => id.trim()).filter(Boolean);
-  return ids.length > 0 ? ids : undefined;
+  return parseSourceList(env.PLANTOMICS_SOURCES);
 }
 
 export const registry = createRegistry({ enabled: enabledSourcesFromEnv() });

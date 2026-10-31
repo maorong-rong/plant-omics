@@ -216,7 +216,11 @@ async function modeJudge() {
     // 单源内部选哪些工具属工具设计层面（一源多意图时不必全上），拿工具全集去判会把
     // 正常裁剪误判成漏源（2026-10-30 自测 L1/L2 就踩过这个坑）。
     const unknownSpecies = recognized.species.filter((sp) => !known(sp));
-    const guardOk = recognized.sources.length === 0 && unknownSpecies.length === 0 && (recognized.clauses ?? []).length === 0;
+    // 多物种题也不判：方向门与目标端门没建模，「小麦同源基因对应玉米」这种题
+    // 按目录重算会把 wheatomics 算成"该给却没给"（缺源 wheatomics），而实现拒绝它是对的
+    // （该工具 target 只有水稻/拟南芥）。多物种的方向/target 由题集里两条单向断言覆盖。
+    const guardOk = recognized.sources.length === 0 && unknownSpecies.length === 0
+      && (recognized.clauses ?? []).length === 0 && recognized.species.length <= 1;
     const expectedSources = guardOk
       ? [...new Set(CAPS.filter((cap) => doubleHit(cap.tool, recognized).ok).map((cap) => cap.sourceId))]
       : null;
@@ -239,11 +243,88 @@ async function modeJudge() {
       || /有源覆盖|能力缺口|点名了/.test(text);
 
     // ①-c 预算截断时正文必须明说"另有 N 个命中源未展示"
-    const renderedCount = new Set([...text.matchAll(/^[①②③④⑤] ([a-z0-9]+)｜/gm)].map((m) => m[1])).size;
+    const renderedCount = new Set([...text.matchAll(/^([\u2460-\u2473]) ([a-z0-9]+)｜/gmu)].map((m) => m[2])).size;
     const omittedNote = /另有 (\d+) 个命中源未展示/.test(text);
     const omittedCount = Number((text.match(/另有 (\d+) 个命中源未展示/) ?? [])[1] ?? 0);
     const dropConsistent = renderedCount === candidates.length
       || (omittedNote && omittedCount === candidates.length - renderedCount);
+
+    /**
+     * 逐物种交代（2026-10-31 负责人口径）：**识别到的物种集合 ⊆ 已交代物种集合**，差一个即 FAIL。
+     *
+     * 交代 = `raw.speciesVerdicts` 里该物种有一条判定（结构化，不靠解析正文猜）；
+     * 缺口态还必须在正文有一行同时点名该物种、并说明缺口,否则就是"物种凭空消失"——
+     * 旧实现正是这样丢掉「小麦、玉米的表达与变异都要」里的玉米。
+     * `out-of-scope` 是题级拒答（分析/计算），不假装做过覆盖判定，因此不要求正文交代。
+     */
+    const verdicts = Array.isArray(raw.speciesVerdicts) ? raw.speciesVerdicts : null;
+    const verdictSpecies = new Set((verdicts ?? []).map((v) => v.species));
+    const unaccounted = recognized.species.filter((sp) => !verdictSpecies.has(sp));
+    const gapVerdicts = (verdicts ?? []).filter((v) => v.status !== 'candidate' && v.status !== 'out-of-scope');
+    const textLines = text.split('\n');
+    /**
+     * 判 M-1 时只看**正文**：首行「识别：物种=…」本来就会把所有物种列一遍（旧实现正是靠它
+     * 看起来"交代过"），尾注还会原样回显 question——两者都不算交代，必须排除。
+     */
+    const bodyLines = textLines.filter((line) => !/^识别：/.test(line) && !/^源：/.test(line) && !/^目录快照：/.test(line));
+    const undocumented = gapVerdicts.filter((v) => !bodyLines.some(
+      (line) => line.includes(v.species) && /不在|没有|未覆盖|不覆盖|缺/.test(line)));
+    const speciesAccounting = recognized.species.length === 0
+      ? 'n/a'
+      : verdicts === null ? 'FAIL 缺 raw.speciesVerdicts'
+        : unaccounted.length > 0 ? `FAIL 缺交代 ${unaccounted.join('、')}`
+          : undocumented.length > 0 ? `FAIL 正文未交代 ${undocumented.map((v) => `${v.species}(${v.status})`).join('、')}`
+            : 'PASS';
+
+    /**
+     * M-2 / M-3（检索负责人 2026-10-31 定）——两个方向的防作弊。
+     *
+     * M-2 **不得自相矛盾/不得整题拒答假修复**：
+     *     (a) 有候选却判 state=B 是自相矛盾；
+     *     (b) 已有物种拿到双命中候选却把整题拒成 0 候选，等于没修。
+     * M-3 **不得凑数**：识别到的物种**按目录**全部没有源覆盖时，必须 state=B 且候选 0。
+     *
+     * M-3 的判据**不能读 `raw.speciesVerdicts`**——那是被测实现自己的说法。漏候选时它会把物种
+     * 标成 `candidate`（gwh「不限物种（按精确 ID）」一放行就会这样），于是"全部无覆盖"这个前提
+     * 自己就不成立了，判据永远绿。所以 M-3 直接用能力目录独立重算 `known()`（本轮负控实测：
+     * 抽掉 veto 后 N1「大豆的基因组组装」漏出 gwh，靠 verdicts 的旧写法判不出来，改目录判据后报红）。
+     *
+     * M-4（每个候选工具至少对一个识别物种双命中）与 ①-a 是同一条判据、同一个谓词
+     * （`doubleHit()` 里就是 `recognized.species.some(...)`），不再复制一份——
+     * 同一个事实只留一处判据，改口径时才不会两边不同步。
+     */
+    const candidateVerdicts = (verdicts ?? []).filter((v) => v.status === 'candidate');
+    const allUnknownToCatalog = recognized.species.length > 0 && recognized.species.every((sp) => !known(sp));
+    const m2 = (candidates.length > 0 && raw.state === 'B')
+      ? `FAIL state=B 却有 ${candidates.length} 个候选（自相矛盾）`
+      : (candidateVerdicts.length === 0
+        ? 'n/a'
+        : (raw.state === 'ok' && candidates.length > 0
+          ? 'PASS'
+          : `FAIL state=${raw.state ?? '(缺)'} 候选=${candidates.length}（有物种已命中却整题拒答）`));
+    const m3 = recognized.species.length === 0
+      ? 'n/a'
+      : (allUnknownToCatalog
+        ? (raw.state === 'B' && candidates.length === 0 ? 'PASS' : `FAIL state=${raw.state ?? '(缺)'} 候选=${candidates.length}（全部物种无覆盖却给了候选）`)
+        : 'n/a');
+
+    /**
+     * 题级期望（`expect`）：意图识别、必须给出/不得给出的工具。
+     *
+     * `intents` 钉的是"意图兜底不误伤"——`基因` 兜底只在整句零意图时触发，
+     * 「水稻的同源基因」必须恰好是 `['homolog']`，不能因为含"基因"多出 gene-search。
+     * `tools`/`notTools` 是**两条单向断言**：方向门/目标端门不建完整重算模型
+     * （2026-10-30 已知：完整重算在多物种题上会把正常裁剪判成漏源），
+     * 只钉"该给的一定给、不该给的一定不给"这一对反例。
+     */
+    const expect = c.expect ?? {};
+    const expectIntents = expect.intents ?? null;
+    const sameSet = (want, got) => want.length === got.length && want.every((x) => got.includes(x));
+    const intentMismatch = expectIntents === null
+      ? null
+      : (sameSet(expectIntents, recognized.intents) ? null : `期望 [${expectIntents.join(',')}] 实为 [${recognized.intents.join(',')}]`);
+    const missingTool = (expect.tools ?? []).filter((n) => !returnedTools.includes(n));
+    const forbiddenTool = (expect.notTools ?? []).filter((n) => returnedTools.includes(n));
 
     const checks = {
       '①-a 候选全部双命中': zero ? 'n/a' : (doubleHitMiss.length === 0 && eachSourceHasTool ? 'PASS' : 'FAIL'),
@@ -255,9 +336,17 @@ async function modeJudge() {
           : `FAIL state=${raw.state ?? '(缺)'} 候选=${candidates.length}`)
         : 'n/a',
       '①-b 全部命中源': expectedSources === null
-        ? '不判（含点名源/未覆盖物种/分句）'
+        ? '不判（含点名源/未覆盖物种/分句/多物种）'
         : (missing.length === 0 ? 'PASS' : `FAIL 缺源 ${missing.join(',')}`),
       '①-c 未展示源必须明说': zero ? 'n/a' : (dropConsistent ? 'PASS' : `FAIL 渲染 ${renderedCount} / 命中 ${candidates.length}`),
+      'M-1 逐物种交代（识别物种 ⊆ 交代物种）': speciesAccounting,
+      'M-2 有候选不得整题拒答': m2,
+      'M-3 全部无覆盖必须拒答且候选 0': m3,
+      '意图识别（与题集期望一致）': expectIntents === null ? 'n/a' : (intentMismatch === null ? 'PASS' : `FAIL ${intentMismatch}`),
+      '定向断言（必给/不得给工具）': (expect.tools ?? []).length === 0 && (expect.notTools ?? []).length === 0
+        ? 'n/a'
+        : missingTool.length > 0 ? `FAIL 缺工具 ${missingTool.join(',')}`
+          : forbiddenTool.length > 0 ? `FAIL 不该给 ${forbiddenTool.join(',')}` : 'PASS',
       '② 零候选如实说不覆盖': zero ? (saysNoCover ? 'PASS' : 'FAIL 没写没有覆盖') : 'n/a',
       '② 不把能力缺口写成物种没人接': coverageBothKinds ? 'PASS' : 'FAIL 只有物种不覆盖的解释',
       '② 点名源不得与"没能识别出可用意图"并存': contradiction ? 'FAIL' : 'PASS',
@@ -270,6 +359,7 @@ async function modeJudge() {
       id: c.id, question: c.q, state: raw.state,
       species: recognized.species, intents: recognized.intents, namedSources: recognized.sources,
       candidateCount: candidates.length, renderedCount, candidates, returnedTools,
+      speciesVerdicts: verdicts,
       doubleHitMiss, expectedSources, expectedTools: expectedToolsAll, missingSources: missing, toolsNotOffered,
       checks, textBytes: Buffer.byteLength(text, 'utf8'), text,
     });

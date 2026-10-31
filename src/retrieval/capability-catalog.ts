@@ -93,6 +93,14 @@ export const SPECIES_ALIASES: Readonly<Record<string, readonly string[]>> = {
   粳稻: ['粳稻', 'japonica'],
   籼稻: ['籼稻', 'indica'],
   小麦: ['小麦', '普通小麦', 'triticum aestivum', 'triticum', '中国春', 'chinese spring', 'wheat'],
+  /**
+   * 节节麦（Aegilops tauschii）：WheatOmics 的 `manifest.species` 里就写着它
+   * （该源盲区原文是「只覆盖小麦族（Triticum/Aegilops）」），但别名表此前没有这一项，
+   * 于是 `hub_status` 声称覆盖、`hub_find_sources` 认不出该物种——被
+   * `test/species-consistency.test.ts` 抓成口径漂移。补齐别名让两处一致，
+   * 同时不夸大：它只落在「小麦族」这一个 scope 里。
+   */
+  节节麦: ['节节麦', 'aegilops tauschii', 'aegilops'],
   玉米: ['玉米', '苞米', 'zea mays', 'zea', 'maize', 'corn'],
   拟南芥: ['拟南芥', 'arabidopsis thaliana', 'arabidopsis', 'thale cress'],
   草莓: ['草莓', 'fragaria', 'strawberry'],
@@ -146,6 +154,8 @@ const SPECIES_SATISFIES: Readonly<Record<string, readonly string[]>> = {
   // 「小麦」= 仅普通小麦 Triticum aestivum 单物种（Ensembl Plants 实测口径）。
   // 两者不能合并：把单物种源写成"小麦族"是夸大覆盖，把整族源写成"小麦"会漏召回。
   小麦: ['小麦族', '小麦'],
+  // 节节麦是小麦族的一员（WheatOmics 覆盖 Triticum/Aegilops），只承接「小麦族」这一种口径。
+  节节麦: ['小麦族'],
   玉米: ['玉米'],
   拟南芥: ['拟南芥'],
   草莓: ['草莓', '草莓及相关病原', '草莓属（Fragaria）', '草莓属'],

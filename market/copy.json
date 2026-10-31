@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "scope": "published",
+  "generatedAt": "2026-10-31T02:52:09.482Z",
+  "gitCommit": "5f2b06c",
+  "installed": {
+    "spec": "plantomics-hub@0.1.0",
+    "tarball": "https://registry.npmjs.org/plantomics-hub/-/plantomics-hub-0.1.0.tgz",
+    "integrity": "sha512-lURxn6Q75i31uc8ja7/45gK2PKhBu6Fkqqi7EYkCGJy9Ho72Vy0irR4Nco56LDd4Q8tMbyY7m8ZfNOSfpABVAA==",
+    "latest": "0.1.0",
+    "builtFrom": "1e3c3cf-dirty",
+    "builtAt": "2026-10-28T11:40:41+08:00"
+  },
+  "counts": {
+    "sources": 7,
+    "tools": 34,
+    "sourceTools": 32,
+    "metaTools": 2
+  },
+  "sourceIds": [
+    "wheatomics",
+    "strawberry",
+    "gwh",
+    "icg",
+    "ic4r",
+    "gramene",
+    "scod"
+  ],
+  "namedCrops": [
+    "小麦",
+    "水稻",
+    "玉米",
+    "草莓",
+    "甘蔗",
+    "橡胶蒲公英"
+  ],
+  "description": {
+    "en": "7 plant-omics databases behind 34 MCP tools, covering wheat, rice, maize, strawberry, sugarcane and more. Thin plugin plus a remote MCP service; every output carries full provenance.",
+    "zh": "7 个植物组学数据库、34 个 MCP 工具，覆盖小麦、水稻、玉米、草莓、甘蔗等。薄插件 + 远程 MCP 服务，输出带完整出处尾注。"
+  },
+  "note": "本文件由 market/scripts/build-copy.mjs 生成（发布口径，联网解包 npm tarball），勿手改。"
+}

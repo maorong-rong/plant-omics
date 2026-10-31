@@ -12,6 +12,7 @@
 
 import type { ToolRegistry } from '../core/registry.js';
 import type { SourceManifest } from '../core/types.js';
+import { applyPinnedOrder, loadPinnedSources, type PinnedSources } from '../core/pinned.js';
 import { createRegistry } from '../sources/index.js';
 
 /**
@@ -22,8 +23,8 @@ import { createRegistry } from '../sources/index.js';
 export const MAX_SOURCES = 20;
 export const MAX_TOOLS = 40;
 
-/** 清单结构版本。改变字段形状时 +1，面板据此决定怎么渲染。 */
-export const CLIENT_SCHEMA_VERSION = 1;
+/** 清单结构版本。改变字段形状时 +1，面板据此决定怎么渲染。v2：加 `pinned` / 置顶排序。 */
+export const CLIENT_SCHEMA_VERSION = 2;
 
 /** 单条描述在面板上的最大长度（字符）。上游描述可能很长，页面只要「何时用」。 */
 const MAX_DESCRIPTION_CHARS = 320;
@@ -39,6 +40,8 @@ export interface ClientCatalogSource {
   /** 版本口径；未知就照抄「未知」的说法，不按 ID 外观推测 */
   versionNote: string;
   toolCount: number;
+  /** 是否在置顶清单里（顺序由 `src/core/pinned-sources.json` 决定，不在各处再排一次） */
+  pinned: boolean;
 }
 
 export interface ClientCatalogTool {
@@ -53,6 +56,8 @@ export interface ClientCatalogTool {
 export interface ClientCatalog {
   schemaVersion: number;
   budget: { sources: number; maxSources: number; tools: number; maxTools: number };
+  /** 置顶清单原样带出，面板与站点据此加标记；顺序已在 sources 里体现 */
+  pinned: readonly string[];
   sources: ClientCatalogSource[];
   tools: ClientCatalogTool[];
 }
@@ -65,13 +70,14 @@ function clip(text: string, max = MAX_DESCRIPTION_CHARS): string {
 /**
  * 从注册表生成清单。
  *
- * 顺序即注册顺序（源与工具都如此），面板不重排——重排会让「和 README 工具表对照」变难。
+ * 顺序：`src/core/pinned-sources.json` 里的源按清单顺序靠前，其余保持注册表原序（工具顺序不动）。
+ * 置顶清单缺失/形状不对/出现注册表里没有的 id 时**抛错**，不回退成原序——置顶悄悄失效比报错更难查。
  */
-export function buildCatalog(registry: ToolRegistry = createRegistry()): ClientCatalog {
+export function buildCatalog(registry: ToolRegistry = createRegistry(), pinnedSources: PinnedSources = loadPinnedSources()): ClientCatalog {
   const bundles = registry.listSources();
   const tools: ClientCatalogTool[] = [];
 
-  const sources: ClientCatalogSource[] = bundles.map((bundle) => {
+  const built = bundles.map((bundle) => {
     const manifest = bundle.manifest;
     for (const tool of bundle.tools) {
       tools.push({
@@ -90,8 +96,20 @@ export function buildCatalog(registry: ToolRegistry = createRegistry()): ClientC
       blindSpots: [...(manifest.caveats ?? [])],
       versionNote: manifest.versionNote ?? '未知（上游未提供版本口径，本仓不推测）',
       toolCount: bundle.tools.length,
-    };
+      pinned: pinnedSources.pinned.includes(manifest.id),
+    } satisfies ClientCatalogSource;
   });
+
+  const known = new Set(built.map((source) => source.id));
+  const unknown = pinnedSources.pinned.filter((id) => !known.has(id));
+  if (unknown.length > 0) {
+    throw new Error(
+      `置顶清单里有注册表中不存在的源：${unknown.join(', ')}。已登记的源：${[...known].join(', ')}；`
+        + '改 src/core/pinned-sources.json 或补上该源，别留着让它静默失效。',
+    );
+  }
+
+  const sources = applyPinnedOrder(built, pinnedSources.pinned);
 
   // 元工具（检索层入口）不属于任何源：单独列出，sourceId 显示「元工具」
   for (const tool of registry.listMetaTools()) {
@@ -111,6 +129,7 @@ export function buildCatalog(registry: ToolRegistry = createRegistry()): ClientC
       tools: tools.length,
       maxTools: MAX_TOOLS,
     },
+    pinned: [...pinnedSources.pinned],
     sources,
     tools,
   };
