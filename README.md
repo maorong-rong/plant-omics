@@ -31,9 +31,9 @@
 > **当前源码口径：9 源、39 工具（含 2 个元工具）。** 本块由 `npm run counts -- --write` 从 `dist/` 实测生成，勿手改；已发布包能装到什么另见 `npm run counts -- --published`（两者可以不同，发布滞后不是索引写错）。
 <!-- counts:end -->
 
-> 形态已改为「薄插件 + 远程 MCP 服务」，安装前必须先起服务，见下方「0.1.0 的形态变了」。0.7.x 及更早的 `dsh-plugin-plant-omics` 是「插件内置工具」的旧形态，可与新包共存但不可同时启用。
+> 对外只提供两种接入方式（远端入口 / 本地 stdio），见下方「接入」。0.7.x 及更早的 `dsh-plugin-plant-omics` 是旧形态，与本包不可同时启用。
 >
-> 已验证：源码离线检查、候选包构建与包内内容一致性、六源最小 HTTP MCP 回放（回放覆盖 6 个源，不等于全部源都有回放）、服务层安全反例。**未验证**：真实宿主装载新包、动态刷新、公网部署。npm 已发布 `plantomics-hub@0.1.0`（`latest`）；**包内实际数量以 `npm run counts -- --published` 现查，本行不写死**。源等级与实测以[源登记表](docs/源登记表.md)为准。
+> 已验证：源码离线检查、候选包构建与包内内容一致性、六源最小 HTTP MCP 回放（回放覆盖 6 个源，不等于全部源都有回放）、服务层安全反例。**未验证**：真实宿主装载新包、动态刷新、公网链路的端到端呼叫。npm 已发布 `plantomics-hub@0.1.0`（`latest`）；**包内实际数量以 `npm run counts -- --published` 现查，本行不写死**。源等级与实测以[源登记表](docs/源登记表.md)为准。
 
 ---
 
@@ -92,264 +92,111 @@
 
 ---
 
-## 安装
+## 接入（两种方式，二选一）
 
-### 从 npm 安装（最快）
+> 对外只提供这两种接入方式。本项目自己托管的那份实例属于内部实现，不是用户选项。
+> 两种方式的工具名都带命名空间前缀（如 `mcp__plantomics-hub__wheatomics_search_known_genes`），输出末尾带出处尾注。
 
-```bash
-npm install plantomics-hub
-```
+### 方式一 · 零安装：连远端入口（推荐）
 
-装完后有两个入口：
-
-```bash
-npx plantomics-hub-mcp     # 启动 MCP 服务（Streamable HTTP，默认 127.0.0.1:8787）
-npx plant-omics-mcp        # 启动 stdio 版 MCP（给 Claude Code / Codex 等直接接）
-```
-
-只想临时跑一次、不装到项目里：
-
-```bash
-npx -p plantomics-hub plantomics-hub-mcp
-```
-
-> 本包同时是 DSH 插件。DSH 桌面端请按下一节装 tgz（插件管理器只接受压缩包或路径，不接受包名），并**先起服务**。
-
-### 0.1.0 的形态变了：先起服务，再装薄插件
-
-0.1.0（`plantomics-hub`）不再是「插件内置工具」的形态：
-
-```
-DSH ──(薄插件：只有面板 + 一条 MCP 客户端配置)──► 我们的 MCP 服务（Streamable HTTP）──► 各数据库
-```
-
-两条硬要求，装之前必须先满足：
-
-1. **服务必须先起来**，否则插件能装上、但一个工具都不会出现（`failOnStartupError: true` 会让它明确报错，而不是静默）。默认地址 `http://127.0.0.1:8787/mcp`。
-2. **工具名带命名空间前缀**：模型看到的是 `mcp__plantomics-hub__wheatomics_search_known_genes` 这样的名字，不再是裸名。旧的 0.7.x 及更早版本包（`dsh-plugin-plant-omics`）**可以共存但不能与新包同时启用**，否则两套工具会重复出现。
-
-起服务：
-
-```bash
-# 默认 127.0.0.1:8787，不鉴权（仅回环）
-npm run serve
-
-# 换个端口
-PLANTOMICS_HUB_PORT=0 npm run serve        # 0 = 让系统分配
-
-# 对外提供服务（必须带 token，否则启动即失败）
-PLANTOMICS_HUB_HOST=0.0.0.0 \
-PLANTOMICS_HUB_TOKEN='至少16字符的随机串' \
-npm run serve
-```
-
-服务启动后会打印监听地址、源/工具数与工具名预算；预算不达标（源 >20、工具 >40、工具名超长）时**拒绝启动**，不会带病接客。
-
-**按请求只装你要的源（源市场第一步）**：约定用请求头 `x-plantomics-sources`，值是逗号/分号/空白分隔的源 id。
-不带的请求行为与以前**完全一致**（全集），所以既有插件配置不用改。
-
-```bash
-# 这条请求只看得到 icg 与 scod 的工具（外加 hub_* 元工具）
-curl -s -X POST http://127.0.0.1:8787/mcp \
-  -H 'content-type: application/json' \
-  -H 'x-plantomics-sources: icg,scod' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-```
-
-约定三条：
-
-| 情况 | 行为 |
-|---|---|
-| 不带该头 / 头为空 | 与服务端注册表一致（默认全集，行为不变） |
-| 头里有**注册表没有**的 id | `400 invalid source subset`，`detail` 点名拼错的 id 并列出已登记源；**不许静默返回零工具** |
-| 头里有**有但本服务未启用**的 id | `400`，说明本服务启用了哪些（`PLANTOMICS_SOURCES` 是服务端上限，请求头只能选、不能扩张） |
-
-**两条必须知道的性质**：
-
-1. **这是上下文预算手段，不是权限隔离。** 服务无状态、每条请求各自判断：同一客户端下一条请求不带这个头，
-   照样拿到服务端全集的全部工具。别把它当成"用户访问不到别的源"——要控访问权得另做鉴权设计。
-2. **`initialize` 的 `instructions` 随子集变化，这是有意的。** 其中写明本次请求启用的源数与工具数，
-   并提示"本请求只启用了部分源"。客户端若缓存握手结果，注意它只对那次请求成立。
-
-为什么用请求头而不是 URL 路径/query：`/mcp` 保持唯一入口、既有配置零改动；与鉴权同层，语义就是"这次要装哪些源"；错误能直接回 400 说清原因，路径版还要处理逗号编码。子集注册表里同样带 `hub_find_sources` / `hub_status`；**`/healthz` 始终报服务端全集**，不受该头影响。
-
-**一键启动（不用每次敲命令）**
-
-```powershell
-powershell -ExecutionPolicy Bypass -File "<包目录>\scripts\start-service.ps1"
-```
-
-脚本先检查已安装的服务入口是否存在、端口是否被占用，再用人话说明怎么处理，而不是甩一段 Node 堆栈。 **仅 Windows**（PowerShell 脚本）；macOS/Linux 直接用上面 `npx plantomics-hub-mcp` 那两条命令。端口冲突时加 `-Port 8788`，但**换了端口要同步插件里的 `PLANTOMICS_HUB_URL`**，否则宿主连不上。
-
-**开机自启**：把上面那条命令做成快捷方式放进 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`，目标写 `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<脚本完整路径>"`。
-
-**健康检查**：`GET /healthz` 返回 `{"status":"ok","version":"…","sources":9,"tools":39,"metaTools":2}`，**不需要 token、不校验 Host**（托管平台探针从内部地址打过来），也不泄露工具清单。其中 `sources` / `tools` / `metaTools` 是**运行时实际注册数**，随源码与启用的源子集变化。
-
-**服务没起来时会看到什么**：宿主日志是 MCP 连接失败（连不上 8787），会话里**一个 `mcp__plantomics-hub__*` 工具都没有**；patch 里设了 `failOnStartupError: true`，这条会被判为激活失败，而不是"静默装上没反应"。先确认服务窗口还在、`/healthz` 返回 200，再重启 DSH。
-
-装插件：
-
-- 从 `npm pack` 得到 `plantomics-hub-0.1.0.tgz`，在 DSH 侧边栏「插件」页添加该 tgz 的绝对路径。
-- 服务地址不是默认值时，先设环境变量再启动 DSH：`PLANTOMICS_HUB_URL=http://127.0.0.1:8787/mcp`、`PLANTOMICS_HUB_TOKEN=<token>`（token 以 `Bearer` 形式随请求头发送）。
-
-**反代部署注意**：服务默认只接受回环 Host。放到 nginx 等反向代理之后，Host 会变成代理域名，必须显式放行，否则 403：
-
-```bash
-PLANTOMICS_HUB_ALLOWED_HOSTS=hub.example.org \
-PLANTOMICS_HUB_HOST=0.0.0.0 \
-PLANTOMICS_HUB_TOKEN=<至少16字符> \
-npm run serve
-```
-
-只写主机名，不带协议与路径；未配置时默认只允许回环，不会因为部署成代理就自动放开。
-
-### 前置环境与获取源码
-
-- Git、Node.js **≥20**、npm；本次验证环境为Windows、Node **24.14.0**、npm **11.9.0**，未实测其他系统/版本组合。环境代理支持另见下方代理说明。
-- MCP客户端需支持本地stdio进程；**不需要DSH**。DSH桌面插件契约按44.7.0核对，宿主升级兼容性须另验。
-- 安装依赖需要访问npm registry；实际查询需要访问各数据库。没有API key要求，但不保证各地区网络均可达。
-
-```bash
-git clone https://github.com/maorong-rong/plant-omics.git
-cd plant-omics
-npm ci
-npm run check
-```
-
-`check`包含构建及全离线测试；数据库可达性另运行 `npm run probe`。确认 `node -p "require('./package.json').version"` 为预期版本，并保存 `git rev-parse HEAD`；main会继续变化，复现时使用自己已验证的提交，不假定存在版本tag。
-
-### 1. 按用途选择
-
-- **只用MCP（stdio）**：完成上述构建后按第2节配置stdio，无需安装DSH或tgz。_stdio 出口仍是旧形态（插件内置工具），与 0.1.0 的薄插件/服务形态并存。_
-- **DSH桌面用户**：按上面「0.1.0 的形态变了」先起服务，再从插件页安装 `plantomics-hub` 的 tgz；第3节是 0.7.x 及更早版本的旧装法，**不要用于 0.1.0**。
-
-源码构建产物仅位于本地，不会自动更新已经安装的插件。验证范围详见[安装验证说明](docs/安装验证.md)。
-
-### 2. 作为 MCP server
+**入口** `https://datamcp.moilab.net/mcp`（Streamable HTTP），请求头带 `Authorization: Bearer <token>`。
+**token 向维护者申请**（当前没有自助发放渠道）；没带或不对会得到 `401 {"error":"unauthorized"}`。
+`GET /healthz` 免鉴权，返回 `{"status":"ok","version":"…","sources":9,"tools":39,"metaTools":2}`，可用来确认入口在线。
 
 **Claude Code**
 
 ```bash
-claude mcp add plant-omics -- node "<仓库路径>/dist/mcp/cli.js"
+claude mcp add --transport http plantomics-hub https://datamcp.moilab.net/mcp --header "Authorization: Bearer <token>"
 ```
 
-**通用 JSON 配置**（Codex / Reasonix / 其它客户端）
+**Codex**（`~/.codex/config.toml`）
+
+```toml
+[mcp_servers.plantomics-hub]
+url = "https://datamcp.moilab.net/mcp"
+bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"
+```
+
+token 放环境变量 `PLANTOMICS_HUB_TOKEN`，不写进配置文件；Codex 会自己加 `Authorization: Bearer …`。
+
+**DSH**：在宿主的 MCP 配置里加一条**远端入口**（不是装插件）——transport 选 `streamable-http`，地址同上，加请求头 `Authorization: Bearer <token>`。
+
+**401 与 403 不是一回事**：401 = token 没带或不对；403 = 请求来源未被放行（`Origin` 不在白名单），用户侧遇到时先确认用的是 `https` 入口、请求头拼写完整。
+
+### 方式二 · 本地 stdio：数据不出本机
+
+进程起在你自己的机器上，工具清单就是当前包那一版；适合不想让查询经过公网的人。
+
+```bash
+npx -p plantomics-hub@0.1.0 plant-omics-mcp
+```
+
+**Claude Code**
+
+```bash
+claude mcp add plant-omics -- npx -p plantomics-hub@0.1.0 plant-omics-mcp
+```
+
+**通用 JSON**（Codex / Reasonix / 其它客户端）
 
 ```json
 {
   "mcpServers": {
     "plant-omics": {
-      "command": "node",
-      "args": ["<仓库路径>/dist/mcp/cli.js"]
+      "command": "npx",
+      "args": ["-p", "plantomics-hub@0.1.0", "plant-omics-mcp"]
     }
   }
 }
 ```
 
-### 3. 作为 DSH 插件（**仅适用于 0.7.x 及更早的旧形态**）
+> 版本号要写**已发布版本**：当前 npm 上 `latest` 是 `0.1.0`，而源码 `package.json` 可能已经更新；用未发布版本号会直接装不上。
 
-> ⚠️ 0.1.0（`plantomics-hub`）**不要按本节安装**：新包是薄插件，工具由远程 MCP 服务提供，安装前必须先起服务，步骤见上方「0.1.0 的形态变了」。本节保留给仍在使用 `dsh-plugin-plant-omics` 旧包的人。
+### 两种方式都支持：按请求只装你要的源
 
-没有现成tgz时，在已完成构建的源码目录生成自己的包，并放到长期保留的目录（不要留在系统临时目录）：
-
-```powershell
-# Windows PowerShell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.dsh\plugin-archives" | Out-Null
-npm pack --pack-destination "$env:USERPROFILE\.dsh\plugin-archives"
-Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\.dsh\plugin-archives\<包名>-<版本>.tgz"
-```
+用请求头 `x-plantomics-sources`，值是逗号/分号/空白分隔的源 id。不带该头的请求行为与全集一致。
 
 ```bash
-# macOS/Linux：命令写法供参考；本轮未实测这两个系统
-mkdir -p "$HOME/.dsh/plugin-archives"
-npm pack --pack-destination "$HOME/.dsh/plugin-archives"
+# 这条请求只看得到 icg 与 scod 的工具（外加 hub_* 元工具）
+curl -s -X POST https://datamcp.moilab.net/mcp \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer <token>' \
+  -H 'x-plantomics-sources: icg,scod' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-文件名取实际package版本；本地构建的哈希不保证与维护者候选包相同。收到别人提供的tgz时先核对对方公布的完整SHA256；仅计算本地哈希不构成来源认证。无源码用户可直接把可信tgz放入长期目录，在插件页粘贴其绝对路径，不必运行下面的可选辅助脚本。
+（方式二没有 HTTP 层，不涉及这个请求头；它按包内注册表全量提供工具。）
 
-⚠️ **`dsh plugin --profile desktop add …` 一定失败**（2026-10-27 实测）：
+约定三条：
 
-```
-error: profile "desktop" is managed exclusively by the Electron application
-```
-
-desktop profile 由桌面端**独占管理**，CLI 连碰都不碰。所以装了也不会成功，别试。
-
-**可选辅助脚本**（源码用户；需要系统 `tar` 命令与已初始化的DSH profile；不是全自动安装）：
-
-```powershell
-# 用仓库当前版本号，从 plugin-archives 里找包
-npm run install:dsh
-
-# 指定某个 tgz（例如别人给的候选包）
-npm run install:dsh -- "C:\path\to\<包名>-<版本>.tgz"
-
-# 只验包与环境，不做任何改动
-npm run install:dsh -- --dry-run
-```
-
-脚本会逐项拦住「装了但没反应」的成因：包名不是 `plantomics-hub`、
-`main` 不是 `./dist/dsh/index.js`、`cordis.patch.yml` 的 `name` 与包名不一致
-（**这条 dsh 不报错、只是静默跳过**，是本插件最容易踩的坑）、必需文件缺失、tgz 解不开。
-通过后它把包复制进 `~/.dsh/plugin-archives/` 并校验哈希，最后打印可粘贴的路径。
-
-> **它不能替你点「添加插件」**——那一步在桌面端进程里，没有 CLI 入口。
-> 脚本也不会去改 profile 的 `package.json` 或直接跑 pnpm：那是绕过桌面端管理，出问题难查。
->
-> 为什么必须归档：profile 的 `package.json` 记的是**绝对路径**。直接把 `%TEMP%` 里的包路径黏进去，
-> 系统清理临时目录后，下次 install 会解析失败。`plugin-archives/` 才是稳的落点。
-
-**然后手动点这三步：**
-
-1. DSH 侧边栏 → **插件** → 右上 **添加插件** → 粘贴脚本给你的完整路径：
-
-   ```
-   C:\Users\<你>\.dsh\plugin-archives\<包名>-<版本>.tgz
-   ```
-
-   该输入框接受**包名 / Git 地址 / 压缩包 / 本地绝对路径**四种写法；
-   **没有文件选择器**，是黏路径或打路径（打了会即时判定类型并显示「压缩包」）。
-2. 装完它出现在 **已安装插件** 列表；页面提示重启就重启 DSH（托盘退出再打开）。
-   ⚠️ 只关窗口不算重启——版本号会变，但内存里跑的还是旧代码。
-3. **新开一个会话**再验证工具——已开着的会话不会因为装插件而重排工具清单。
-
-装好后侧边栏底部会多一个 **组学** 入口（收起到窄轨时只显示徽标），点开是面板：
-
-| 面板里有什么 | 口径 |
+| 情况 | 行为 |
 |---|---|
-| 源、等级、物种、覆盖盲区、版本口径 | 来自各源 `manifest`，构建时生成 |
-| 工具名、何时使用、必填参数 | 来自注册表，与模型实际看到的一致 |
-| MCP 配置片段 | 一份定义两个出口，复制即用（替换 `<安装目录>`） |
+| 不带该头 / 头为空 | 与端点注册表一致（默认全集，行为不变） |
+| 头里有**注册表没有**的 id | `400 invalid source subset`，`detail` 点名拼错的 id 并列出已登记源；**不许静默返回零工具** |
+| 头里有**有但未启用**的 id | `400`，说明当前启用了哪些（服务端环境变量是上限，请求头只能选、不能扩张） |
 
-⚠️ **面板是构建期静态快照，不是运行状态。**（其中的源码时间取自 git 提交或 `SOURCE_DATE_EPOCH`，不是墙钟构建时刻） 顶部固定写「静态快照 · 源码 <提交> · 源码时间 … · 包版本 … · 不表示上游当前可用」；
-上游是否活着只由 `npm run probe` 回答。面板也不会反映运行时的 `sources` 子集配置（改配置后仍显示全量清单）。
+**两条必须知道的性质**：
 
-装完自查两件事（**缺任何一条都会"装了但没反应"**）：
+1. **这是上下文预算手段，不是权限隔离。** 无状态服务每条请求各自判断：同一客户端下一条请求不带这个头，
+   照样拿到全集的全部工具。别把它当成"用户访问不到别的源"——要控访问权得另做鉴权设计。
+2. **`initialize` 的 `instructions` 随子集变化，这是有意的。** 其中写明本次启用的源数与工具数，
+   并提示"本请求只启用了部分源"。客户端若缓存握手结果，注意它只对那次请求成立。
 
-1. `~/.dsh/profiles/desktop/package.json` 的 `dependencies` 里有 `dsh-plugin-plant-omics`；
-2. 同一个文件里 `dsh.profile.bundles` 数组里有它——**只在 dependencies 里、没选进 bundles 不会加载**。
+**`/healthz` 始终报端点全集**，不受该头影响；工具清单以客户端实际收到的 `tools/list` 为准。
 
-> ⚠️ 原来这里还写了第三条 `dsh --profile desktop --dump-config`，**已删除**：
-> 该命令同样被 `managed exclusively by the Electron application` 拒绝（2026-10-28 实测），
-> 写了只会让人白试一次。要确认加载成功，看侧边栏插件页的状态即可。
+### 前置环境
 
-**如果前两步都对、工具还是不出现**：看 `cordis.patch.yml` 里的 `name` 是否与安装后的包名一致。
-dsh 对 unknown name 的 Loader 行是**静默跳过**的，不报错——这是本插件最容易踩的一个坑。
+- **方式一**：不需要装 Node，也不需要 DSH；客户端需支持 Streamable HTTP。
+- **方式二**：Node.js ≥ 20；客户端需能起本地 stdio 进程。
+- 方式一需能访问 `https://datamcp.moilab.net`；方式二需能直连各数据库。
+- 没有 API key 要求，但不保证各地区网络均可达。
 
-> 非 desktop 的 profile（如 `web` / `tui`）才用 CLI：
-> `dsh plugin --profile <name> add file:<tgz>`
->
-> 不推荐手工改 profile 的 `package.json` + 自己跑 pnpm：那是绕过桌面端的管理，出问题难查。
+## 升级与验证
 
----
-
-## 升级、验证与回滚
-
-升级前保留旧tgz、旧源码提交及客户端配置。DSH使用插件管理页升级，按提示重启并新开会话；模型应能调用 `gwh_assembly_lookup`（entity=assembly，id=GWHAAAA00000000）或 `icg_lookup`（entity=species，id=ICG00115），并保留查询出处。另问一个未覆盖问题，确认不会用错误物种的数据凑答案。静态面板可见不等于查询成功。
-
-MCP更新源码后重新 `npm ci && npm run check`，重启客户端的MCP进程；若调用失败，区分参数错误、上游故障与本地启动路径。先检查命令中的Node及入口**绝对路径**，Windows JSON路径须用正斜杠或双反斜杠；`mcpServers`示例是通用格式，具体客户端的配置文件位置/键名以其官方文档为准。
-
-回滚DSH：通过同一插件管理页重新选择保留的旧tgz，按宿主提示操作、重启并新开会话；若管理器不接受降版，先停用插件，按该宿主官方卸载/重装流程处理，不手改profile依赖或删除数据。回滚MCP：在单独目录checkout已验证旧提交，`npm ci && npm run check`，把客户端命令指回旧目录并重启。没有保留旧包/旧提交时不要承诺可一键恢复。
+- **方式一**：没有安装物，无所谓升级；能力以入口当时返回的 `/healthz` 与工具清单为准。
+- **方式二**：换版本号即升级（`npx -p plantomics-hub@<version> plant-omics-mcp`）；回滚就是把命令改回旧版本，旧版本是否仍在 npm 上以 registry 为准。
+- **验证一次真实调用**：让模型调 `gwh_assembly_lookup`（`entity=assembly`、`id=GWHAAAA00000000`）或 `icg_lookup`（`entity=species`、`id=ICG00115`），确认结果里带出处尾注；再问一个未被覆盖的问题，确认它如实说没有覆盖，而不是拿别的物种数据凑答案。
+- 改完配置要重启客户端的 MCP 进程（方式二）或重新加载配置（方式一）；已开着的会话不会自动换工具清单。
 
 ## 开发
 
@@ -357,10 +204,9 @@ MCP更新源码后重新 `npm ci && npm run check`，重启客户端的MCP进程
 npm run typecheck   # 类型
 npm test            # 单元 + MCP 协议测试（全离线，不联网）
 npm run probe       # 可达性实测（联网；任一源失败则非零退出）
-npm run stats       # 预算自检（源 ≤20 / 工具 ≤40，超了非零退出）
+npm run stats       # 预算自检（全库只报数；订阅集 > 80 才非零退出）
 npm run counts      # 数量事实（源/工具/逐源/构建信息；--json 出机器产物）
 npm run doctor      # 装机快照自检（已装插件 vs 仓库构建，有实质漂移则非零退出）
-npm run install:dsh # 一键安装：验包 + 归档 + 预检（最后一步仍需在插件页点）
 npm run check       # typecheck + test + build + check:counts + check:wording + stats，提交前最低门槛
 npm run check:wording # web/ 措辞闸（离线）：把 token 生命周期写成确定清除就非零退出
 npm run check:market # 市场双闸（联网）：数量闸 + 措辞闸，任一道红都指出该改哪边
@@ -388,7 +234,7 @@ npm run check:market # 市场双闸（联网）：数量闸 + 措辞闸，任一
 
 ### `npm run doctor`：为什么需要它
 
-DSH 装插件是 **tgz 解包后的物理拷贝**，不是软链。所以同一份代码同时存在两处：
+DSH 装插件是**插件包解包后的物理拷贝**，不是软链。所以同一份代码同时存在两处：
 
 | 你看到的 | 实际跑的是 |
 |---|---|
@@ -410,7 +256,7 @@ npm run doctor -- --json            # 机器可读
 - 只在一侧存在的文件、`.js` 实质内容不同 → 算漂移，退出码 1。
 - **刻意不进 `npm run check`**：开发期未重装是常态，把常态做成红灯等于逼人跳过检查。
 
-> **为什么不用软链省掉这一步？** desktop profile 由 pnpm 托管（`package.json` 里记 `file:…tgz`、
+> **为什么不用软链省掉这一步？** desktop profile 由 pnpm 托管（`package.json` 里记本地包路径、
 > lockfile 记 integrity），手工把 `node_modules/dsh-plugin-plant-omics` 换成软链有两个后果：
 > ① 等于热更新，与本项目「攒一批再装」的做法相反；② pnpm 下次 install 按 lockfile 对账，
 > 软链会被静默还原成拷贝。所以选择「不改变安装方式，但让差异可见」。
@@ -431,18 +277,14 @@ NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://127.0.0.1:7897 node dist/mcp/cli.js
 
 ## 只启用部分源
 
-同一份仓库，各人只挂自己关心的库（对应「各团队独立入口」的用法）：
+两种接入方式各有一个口子，按需选用：
+
+- **远端入口（方式一）**：请求头 `x-plantomics-sources: wheatomics,gwh`，见上方「按请求只装你要的源」。
+  只影响这一次请求的上下文预算，不是权限隔离。
+- **本地 stdio（方式二）**：环境变量 `PLANTOMICS_SOURCES`。
 
 ```bash
-# MCP：环境变量
-PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
-```
-
-```yaml
-# dsh：在 profile 的 cordis.patch.yml 里覆盖本插件的 config
-- id: plant-omics
-  config:
-    sources: [wheatomics]
+PLANTOMICS_SOURCES=wheatomics npx -p plantomics-hub@0.1.0 plant-omics-mcp
 ```
 
 ⚠️ 写错源 id 会**直接报错并列出可用源**，不会静默变成「零工具」。这个取舍是刻意的：
@@ -456,7 +298,7 @@ PLANTOMICS_SOURCES=wheatomics node dist/mcp/cli.js
 
 ## 已知限制
 
-- **上游会间歇性挂。** 2026-10-27 实测：WheatOmics 静态首页 200，而 `/api/*` 在 22:12 之后全部 503（Apache 反向代理返回）。工具会按 `Retry-After` 退避重试（单次调用总时长上限 45 s），但**不能保证每次都成功**。
+- **上游会间歇性挂。** 2026-10-27 实测：WheatOmics 静态首页 200，而 `/api/*` 在 22:12 之后全部 503（上游网关返回）。工具会按 `Retry-After` 退避重试（单次调用总时长上限 45 s），但**不能保证每次都成功**。
 - **只读。** 不提供任何提交/上传/写库能力。
 - **不绕过访问控制。** 需要过 Cloudflare 或登录的源，只登记不实现（见 `docs/源登记表.md` 的 T3 段）。
 - **不做数据镜像。** 要批量下载数据，请回各自的科研项目按那边规则走。

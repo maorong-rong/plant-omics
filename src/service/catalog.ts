@@ -14,6 +14,7 @@
 
 import type { SourceBundle, ToolDefinition } from '../core/types.js';
 import type { ToolRegistry } from '../core/registry.js';
+import { applyPinnedOrder, loadPinnedSources, type PinnedSources } from '../core/pinned.js';
 import { DEFAULT_SET_TOOLS_SOFT_MAX, SUBSET_TOOLS_HARD_MAX } from './budget.js';
 
 /** 实测折算：37 工具 ≈ 10,274 token，约 280 token/工具（契约 §三 固定口径）。 */
@@ -99,7 +100,10 @@ function probeOf(bundle: SourceBundle): CatalogSource['lastProbe'] {
  * @param registry 服务端注册表（环境变量限定后的全集，不是本次请求的子集）
  * @param version  服务端版本，必须与 `/healthz` 的 `version` 同一个来源
  */
-export function buildCatalog(registry: ToolRegistry, options: { version: string; now?: Date }): CatalogResponse {
+export function buildCatalog(
+  registry: ToolRegistry,
+  options: { version: string; now?: Date; pinnedSources?: PinnedSources },
+): CatalogResponse {
   const bundles = registry.listSources();
   const tools: ToolDefinition[] = registry.listTools();
   const metaTools: ToolDefinition[] = registry.listMetaTools();
@@ -124,6 +128,22 @@ export function buildCatalog(registry: ToolRegistry, options: { version: string;
   // 默认集 = 不带订阅头时实际下发的工具数（含元工具：它们真的会进模型上下文）
   const defaultSetTools = tools.length;
 
+  /**
+   * 排序：与 site/ 读**同一份** src/core/pinned-sources.json（构建后 dist/core/）。
+   * 这里不写任何 id 字面量——写死就成了第二份置顶规则。读不到或出现未知 id 一律抛错，
+   * 不回退注册表顺序（回退会让「草莓置顶」悄悄失效，正是今天修掉的那个不一致）。
+   */
+  const pinned = options.pinnedSources ?? loadPinnedSources();
+  const knownIds = new Set(sources.map((source) => source.id));
+  const unknown = pinned.pinned.filter((id) => !knownIds.has(id));
+  if (unknown.length > 0) {
+    throw new Error(
+      `置顶清单里有注册表中不存在的源：${unknown.join(', ')}。已登记：${[...knownIds].join(', ')}；`
+        + '改 src/core/pinned-sources.json，别留着让它静默失效。',
+    );
+  }
+  const orderedSources = applyPinnedOrder(sources, pinned.pinned);
+
   return {
     version: options.version,
     generatedAt: (options.now ?? new Date()).toISOString(),
@@ -136,6 +156,6 @@ export function buildCatalog(registry: ToolRegistry, options: { version: string;
       estTokensPerTool: EST_TOKENS_PER_TOOL,
       subsetToolsHardMaxTokens: SUBSET_TOOLS_HARD_MAX * EST_TOKENS_PER_TOOL,
     },
-    sources,
+    sources: orderedSources,
   };
 }

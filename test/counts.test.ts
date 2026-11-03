@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -15,6 +15,7 @@ import {
   checkSourceIcons,
   checkSourceScope,
   extractTarEntries,
+  inspectRulesAnchor,
   renderDescriptionClause,
   renderReadmeBlock,
   rewriteInlineNumbers,
@@ -136,6 +137,204 @@ describe('离线总校验（--check 的实现）', () => {
     // 真实 README 的标记块由 `npm run counts -- --write` 维护，需要 dist；
     // 这里只核不需要 dist 的那一半，README 一致性由 `npm run check:counts` 在整合时核。
     expect(checkBudgetConstants()).toEqual([]);
+  });
+
+  it('AGENTS.md 三态：在就真核 80，不在就明确「未核对」——两态都不许静默', () => {
+    // 背景（后端负责人 2026-11-03）：AGENTS.md 被 .gitignore 忽略，任何外部 clone（含公开仓）
+    // 都没有它。把它当"必须项"→ 公开树 npm test 必红；把它静默放过 → 规则被改也没人发现。
+    // 所以断言的不是"有没有文件"，而是**函数有没有如实报告自己是哪种状态**。
+    const state = inspectRulesAnchor();
+    const agentsHere = existsSync(new URL('../AGENTS.md', import.meta.url));
+
+    if (agentsHere) {
+      // 文件在：必须真核对，不许偷懒报「未核对」
+      expect(state.status, '本检出有 AGENTS.md，就必须真的核对').toBe('checked');
+      expect(state.problems, '本检出的 AGENTS.md 当前口径行应写 ≤ 80').toEqual([]);
+    } else {
+      // 文件不在：必须是这个状态值，而不是"报错"或"假装查过"
+      expect(state.status, '没有 AGENTS.md 时必须返回 rules-file-absent，不许报错也不许报 checked')
+        .toBe('rules-file-absent');
+      expect(state.problems).toEqual([]);
+    }
+
+    // 双向负控（变异自测）：真造临时根，证明每条分支各自承重。
+    const dir = mkdtempSync(path.join(tmpdir(), 'po-rules-'));
+    const write = (body: string): void => writeFileSync(path.join(dir, 'AGENTS.md'), body, 'utf8');
+    const HARD = (n: string): string => `| **单次订阅集工具数** | **≤ ${n}（唯一硬阈值）** | 上下文成本 |\n`;
+    const SOFT = (n: string): string => `| 默认推荐集 | **≤ ${n}（软建议）** | 保证 32K 级上下文 |\n`;
+    /** 造一份结构完整的规则文档：当前口径在 10.1，另有一节 10.4 历史沿革。 */
+    const DOC = (hard: string, soft: string, opts: { history?: string; comment?: string } = {}): string => [
+      '# 十、入口与工具数量预算',
+      '',
+      '## 10.1 口径',
+      '',
+      opts.comment ?? '',
+      HARD(hard),
+      SOFT(soft),
+      '',
+      '## 10.2 硬阈值只有一个：订阅集',
+      '',
+      '正文说明。',
+      '',
+      '## 10.4 沿革（旧口径，已废止）',
+      '',
+      opts.history ?? '',
+      '',
+      '# 十一、可复现与数字口径',
+      '',
+    ].join('\n');
+    try {
+      // ① 当前口径写 999 → 必须红，且点名数字
+      write(DOC('999', '40'));
+      expect(inspectRulesAnchor(dir).status).toBe('checked');
+      expect(inspectRulesAnchor(dir).problems.length, '当前口径写 ≤ 999 必须红').toBe(1);
+      expect(inspectRulesAnchor(dir).problems[0]).toContain('999');
+
+      // ② R12-B1：80.5 不许被截成 80（取前缀就是假核对）
+      write(DOC('80.5', '40'));
+      const decimal = inspectRulesAnchor(dir);
+      expect(decimal.problems.length, '≤ 80.5 必须红').toBe(1);
+      expect(decimal.problems[0]).toContain('80.5');
+      // 断言「因为格式不合规而拒绝」，不是「解析成 80 之后碰巧不相等」——
+      // 否则把正则退回取前缀，也一样能让这条看起来红过（实际是 80 与 80 相等被别的条件拦下）。
+      expect(decimal.problems[0], '80.5 必须在解析阶段就被判不合格').toContain('不是「≤ 整数（说明）」');
+
+      // ③ R12-B1：历史沿革里放一条同形「≤ 80」表格，当前口径是 999 → 不许被掩盖
+      write(DOC('999', '40', { history: HARD('80') }));
+      const masked = inspectRulesAnchor(dir);
+      expect(masked.problems.length, '历史表格不许掩盖当前口径').toBe(1);
+      expect(masked.problems[0]).toContain('999');
+
+      // ④ R12-B1：用 HTML 注释包住旧 80 表格，当前口径 999 → 注释里的不算
+      write(DOC('999', '40', { comment: `<!--\n${HARD('80')}-->` }));
+      expect(inspectRulesAnchor(dir).problems.length, 'HTML 注释里的旧表格不许算作当前口径').toBe(1);
+
+      // ⑤ 同一小节里重复两行 → 红（哪条算数没有答案，猜一条就是放水）
+      write(DOC('888', '40').replace(SOFT('40'), SOFT('40') + HARD('80')));
+      expect(inspectRulesAnchor(dir).problems.length, '重复行必须红').toBe(1);
+      expect(inspectRulesAnchor(dir).problems[0]).toContain('2 次');
+
+      // ⑥ 默认推荐集（软建议）也要核（R12-B1 残留）：40 → 400 必须红
+      write(DOC('80', '400'));
+      const soft = inspectRulesAnchor(dir);
+      expect(soft.problems.length, '默认集软建议写 400 必须红').toBe(1);
+      expect(soft.problems[0]).toContain('400');
+
+      // ⑥-1 R12 二轮：第十节里出现两个 10.1（第一个 80、第二个 999）→ 必须红，不许取第一个
+      write([
+        '# 十、入口与工具数量预算',
+        '## 10.1 口径',
+        HARD('80'),
+        SOFT('40'),
+        '## 10.1 口径',
+        HARD('999'),
+        SOFT('40'),
+        '## 10.2 硬阈值',
+        '说明',
+        '# 十一、可复现与数字口径',
+        '',
+      ].join('\n'));
+      const dup = inspectRulesAnchor(dir);
+      expect(dup.problems.length, '重复 10.1 必须红').toBe(1);
+      expect(dup.problems[0]).toContain('10.1');
+
+      // ⑥-2 R12 二轮：围栏代码块里贴一整套"完整假规则"（80），正文其实 999 →
+      //      围栏必须整块无视，否则定位会跑进示例里
+      write([
+        '# 十、入口与工具数量预算',
+        '```md',
+        '# 十、入口与工具数量预算',
+        '## 10.1 口径',
+        HARD('80'),
+        SOFT('40'),
+        '# 十一、可复现与数字口径',
+        '```',
+        '## 10.1 口径',
+        HARD('999'),
+        SOFT('40'),
+        '## 10.2 硬阈值',
+        '# 十一、可复现与数字口径',
+        '',
+      ].join('\n'));
+      const fenced = inspectRulesAnchor(dir);
+      expect(fenced.problems.length, '代码块里的示例不许冒充现行规则').toBe(1);
+      expect(fenced.problems[0]).toContain('999');
+
+      // ⑥-2b R12 三轮：同一个反例改用波浪号围栏（~~~）包起来 → 必须同样被剥掉
+      write([
+        '# 十、入口与工具数量预算',
+        '~~~md',
+        '# 十、入口与工具数量预算',
+        '## 10.1 口径',
+        HARD('80'),
+        SOFT('40'),
+        '# 十一、可复现与数字口径',
+        '~~~',
+        '## 10.1 口径',
+        HARD('999'),
+        SOFT('40'),
+        '## 10.2 硬阈值',
+        '# 十一、可复现与数字口径',
+        '',
+      ].join('\n'));
+      const tilde = inspectRulesAnchor(dir);
+      expect(tilde.problems.length, '波浪号围栏里的示例不许冒充现行规则').toBe(1);
+      expect(tilde.problems[0]).toContain('999');
+
+      // ⑥-2c 缩进 4 格的代码块里的表格同样不算（只认行首就是 | 的表格行）
+      write([
+        '# 十、入口与工具数量预算',
+        '## 10.1 口径',
+        '',
+        `    ${HARD('80').trim()}`,
+        `    ${SOFT('40').trim()}`,
+        '',
+        HARD('999'),
+        SOFT('40'),
+        '## 10.2 硬阈值',
+        '# 十一、可复现与数字口径',
+        '',
+      ].join('\n'));
+      const indented = inspectRulesAnchor(dir);
+      expect(indented.problems.length, '缩进代码块里的旧行不许冒充现行口径，且必须因找不到/对不上而红').toBe(1);
+      expect(indented.problems[0]).toContain('999');
+
+      // ⑥-3 R12 二轮：说明列先写一个 ≤ 80，真正的值列写 ≤ 999 → 必须按值列判，不许取整行第一个 ≤
+      write([
+        '# 十、入口与工具数量预算',
+        '## 10.1 口径',
+        '| **单次订阅集工具数** | 说明 ≤ 80（唯一硬阈值） | ≤ 999（唯一硬阈值） |',
+        SOFT('40'),
+        '## 10.2 硬阈值',
+        '# 十一、可复现与数字口径',
+        '',
+      ].join('\n'));
+      const cells = inspectRulesAnchor(dir);
+      expect(cells.problems.length, '阈值出现在值列以外必须红').toBe(1);
+      expect(cells.problems[0]).toContain('单元格');
+
+      // ⑦ 找不到 10.1 小节（结构变了）→ 红，不许"没找到就算过"
+      write('# 十、入口\n\n正文没有小节。\n');
+      expect(inspectRulesAnchor(dir).problems.length, '找不到 10.1 必须红').toBe(1);
+
+      // ⑧ 正常：80 / 40 → 绿，且两档都被取出来
+      write(DOC('80', '40'));
+      expect(inspectRulesAnchor(dir)).toMatchObject({ status: 'checked', problems: [], threshold: 80, soft: 40 });
+
+      // ⑨ 读失败 ≠ 文件不存在（R12-C1）：把 AGENTS.md 变成目录，必须报故障（checked + problem），
+      //    不许伪装成「未核对」——否则权限/路径故障会被当成合理状态静默通过。
+      rmSync(path.join(dir, 'AGENTS.md'));
+      mkdirSync(path.join(dir, 'AGENTS.md'));
+      const broken = inspectRulesAnchor(dir);
+      expect(broken.status, '读失败不许报 rules-file-absent').toBe('checked');
+      expect(broken.problems.length, '读失败必须报问题').toBe(1);
+      rmSync(path.join(dir, 'AGENTS.md'), { recursive: true, force: true });
+
+      // ⑩ 真不存在 → 未核对
+      expect(inspectRulesAnchor(dir).status, '删掉文件必须回到未核对态').toBe('rules-file-absent');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('合成 README 出问题时 checkSourceScope 非空（即 CLI 会非零退出）', () => {

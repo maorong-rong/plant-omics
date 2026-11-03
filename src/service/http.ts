@@ -24,6 +24,7 @@ import type { ToolRegistry } from '../core/registry.js';
 import type { ToolDefinition } from '../core/types.js';
 import { SERVER_INFO } from '../mcp/server.js';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { serviceVersion, readBuildRev } from './version.js';
 import { assertBudget, type BudgetReport } from './budget.js';
 import type { ServiceConfig } from './config.js';
@@ -275,7 +276,16 @@ export function createService(options: ServiceOptions): {
     async start(): Promise<RunningService> {
       const budget = assertBudget(registry, config.serverName);
       // 服务端版本与包版本分离：包可以不变，服务端每加源/工具就换代
-      const servedVersion = serviceVersion(SERVER_INFO.version, readBuildRev((file) => readFileSync(file, 'utf8'), new URL('./build-info.json', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')));
+      const servedVersion = serviceVersion(
+        SERVER_INFO.version,
+        readBuildRev(
+          (file) => readFileSync(file, 'utf8'),
+          // 必须用 fileURLToPath 而不是 `URL.pathname`：后者会把非 ASCII 路径百分号编码
+          // （本机用户名含中文时，中文会被编成 `%E4%BD%99…`），readFileSync 拿到不存在的路径，
+          // 于是静默退化成「版本号里没有 sha」。线上路径是 ASCII，所以只有本机开发时会中。
+          fileURLToPath(new URL('./build-info.json', import.meta.url)),
+        ),
+      );
       const instructionsFor = (active: ToolRegistry, subset: boolean): string => {
         const sources = active.listSources().length;
         const tools = active.listTools().length;

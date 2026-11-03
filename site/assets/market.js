@@ -1,5 +1,8 @@
 /**
- * 市场首屏（设计稿）：从 `GET /catalog` 取实时清单，按源订阅，实时算订阅集成本。
+ * 源市场页（`site/market.html`）：从 `GET /catalog` 取实时清单，按源订阅，实时算订阅集成本。
+ *
+ * 位置：原为 `web/market.js`（设计稿），2026-11-02 按群内决定迁入 `site/`；`web/` 不再留副本，
+ * 唯一引用方是 `site/market.html`，与落地页共用 `assets/style.css` 的配色变量。
  *
  * 四条硬规矩（改之前先读）：
  * 1. **零硬编码数字**：源数、工具数、token、数据时刻全部来自 `/catalog` 或由它推算；
@@ -209,7 +212,7 @@
       return;
     }
     if (sources.length === 0) {
-      grid.appendChild(el('p', 'mk-state', '/catalog 返回了 0 个源——这不是正常状态，别当成「没有数据源」展示。'));
+      grid.appendChild(el('p', 'mk-state full', '/catalog 返回了 0 个源——这不是正常状态，别当成「没有数据源」展示。'));
       return;
     }
     sources.forEach(function (s) {
@@ -306,7 +309,7 @@
   function renderPending(error) {
     var grid = $('#grid');
     grid.innerHTML = '';
-    grid.appendChild(el('p', 'mk-state',
+    grid.appendChild(el('p', 'mk-state full',
       'GET /catalog 未就绪（' + String(error && error.message ? error.message : error) +
       '）。下面是布局骨架：卡片字段与订阅集计数条的位置可评审，但没有任何数字——接口上线后由实时数据填充。'));
     for (var i = 0; i < 3; i += 1) {
@@ -365,10 +368,10 @@
     } else {
       fieldTag('t-warn', state.budgetFields.soft ? 'live' : 'pending',
         state.budgetFields.soft ? '来自 /catalog' : '默认值（/catalog 未给）',
-        state.budgetFields.soft ? '响应 budget.defaultSetSoftMax' : '/catalog 响应里没有 defaultSetSoftMax，此处用仓规默认值 40，不是服务端给的');
+        state.budgetFields.soft ? '响应 budget.defaultSetSoftMax' : '/catalog 响应里没有 defaultSetSoftMax，此处用仓规默认值 40，不是 /catalog 给的');
       fieldTag('t-cap', state.budgetFields.hard ? 'live' : 'pending',
         state.budgetFields.hard ? '来自 /catalog' : '默认值（/catalog 未给）',
-        state.budgetFields.hard ? '响应 budget.subsetToolsHardMax' : '/catalog 响应里没有 subsetToolsHardMax，此处用仓规默认值 80，不是服务端给的');
+        state.budgetFields.hard ? '响应 budget.subsetToolsHardMax' : '/catalog 响应里没有 subsetToolsHardMax，此处用仓规默认值 80，不是 /catalog 给的');
     }
     $('#v-tools').textContent = pending ? '—' : String(t.tools);
     $('#v-tokens').textContent = pending ? '—' : '≈ ' + fmt(t.tokens);
@@ -376,7 +379,7 @@
     setTag('t-tools', pending ? 'pending' : 'live', pending ? '待 /catalog' : '/catalog');
     fieldTag('t-tokens', pending ? 'pending' : 'derived',
       pending ? '待 /catalog' : ('推算 · 工具数 × ' + TOKENS_PER_TOOL + (state.budgetFields.tokens ? '' : '（默认值，/catalog 未给）')),
-      state.budgetFields.tokens ? '响应 budget.estTokensPerTool' : '/catalog 响应里没有 estTokensPerTool，此处用仓规默认值 280，不是服务端给的');
+      state.budgetFields.tokens ? '响应 budget.estTokensPerTool' : '/catalog 响应里没有 estTokensPerTool，此处用仓规默认值 280，不是 /catalog 给的');
 
     var fill = $('#subbar-fill');
     var bar = fill.parentElement;
@@ -432,16 +435,51 @@
         if (startHint) startHint.textContent = '先选源；超过 ' + CAP_AT + ' 个工具时这个按钮会被禁用。';
       } else {
         startBtn.disabled = false;
-        startBtn.title = '带订阅集打开试调页：?sources=' + Object.keys(state.selected).filter(function (id) { return state.selected[id]; }).join(',');
-        if (startHint) startHint.textContent = '会带 ?sources=… 打开试调页（源 id 不是凭据）。';
+        startBtn.title = '复制订阅集参数：?sources=' + Object.keys(state.selected).filter(function (id) { return state.selected[id]; }).join(',');
+        if (startHint) startHint.textContent = '会复制 ?sources=…（源 id 不是凭据）；试调页尚未随本站发布，上线后拼在地址后即可。';
       }
     }
   }
 
+  /**
+   * 「开始使用」不再跳转。
+   * 原地址是 `web/index.html`（试调页，开发稿，没在 `site/` 里）；搬进 `site/` 后
+   * 跳 `index.html` 会落到落地页、跳 `web/…` 是死链——两种都是把按钮做成假动作。
+   * 所以这里只把订阅集参数复制出来，并明说试调页还没发布；等试调页真正搬进 `site/` 再改回跳转。
+   */
   function goStart() {
     var ids = Object.keys(state.selected).filter(function (id) { return state.selected[id]; });
     if (ids.length === 0) return;
-    location.href = 'index.html?sources=' + encodeURIComponent(ids.join(','));
+    var query = '?sources=' + encodeURIComponent(ids.join(','));
+    var hint = $('#start-hint');
+    copyText(query).then(function (ok) {
+      if (hint) hint.textContent = (ok ? '已复制订阅集参数：' : '订阅集参数（复制失败，请手动选取）：') + query;
+    });
+  }
+
+  /** 复制：优先 Clipboard API；不可用时退回隐藏 textarea + execCommand（http/file 下也能用）。 */
+  function copyText(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value).then(function () { return true; }, function () { return legacyCopy(value); });
+    }
+    return Promise.resolve(legacyCopy(value));
+  }
+
+  function legacyCopy(value) {
+    try {
+      var area = document.createElement('textarea');
+      area.value = value;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(area);
+      return ok;
+    } catch (error) {
+      return false;
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -127,7 +127,7 @@ const SIMULATED: readonly string[] = [
  * 闸门仍然要求：每一份有 rawBody 的件都落进上述三类之一（分别是"有 rawBody 的件"那条断言的完备性）。
  * 统计口径上，**实测覆盖只取 CAPTURED**；重建件只到"内部自洽"。
  */
-const CAPTURED_COUNT = 31;
+const CAPTURED_COUNT = 23;
 const RECONSTRUCTED_COUNT = 5;
 
 /** 有 rawBody 但没声明 rawBodySource 的件（当前只有未接线的 UniProt）。补声明后从这里删掉。 */
@@ -138,8 +138,15 @@ const UNDECLARED_SOURCE: readonly string[] = [
 
 interface Entry { rel: string; simulated: boolean; cropped: boolean; payloadRelation?: string; rawBody?: string; rawBodySource?: string; capturedAt?: unknown; rawBodyCollectedAt?: unknown; sha?: string; contentType?: string; payload: unknown }
 
-/** 全仓 fixture 份数（2026-11-01 接入 string 与 uniprot 后：98）。增减要在这里写明理由。 */
-const FIXTURE_TOTAL = 101;
+/**
+ * 全仓 fixture 份数。增减要在这里写明理由。
+ *
+ * 2026-11-02 由 101 回退到 93：UniProt 的 8 份 fixture 属于 **R11 未过审、未提交** 的源，
+ * 它们躺在工作区里、不在 HEAD 里；任何干净检出（含公开仓）只有 93 份。
+ * 断言必须数**真实存在的文件**——按含 uniprot 计数会让外部 clone 的 `npm test` 必红（后端负责人 2026-11-03 裁定）。
+ * R11 过审、uniprot 提交时一次性升回 101，并在提交正文里附审查编号。
+ */
+const FIXTURE_TOTAL = 93;
 
 /**
  * 枚举全部 fixture。

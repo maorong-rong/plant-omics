@@ -30,9 +30,10 @@
     </a>
 
     <nav class="site-nav" aria-label="主导航">
+      <a href="market.html"><span lang="zh">源市场</span><span lang="en">Market</span></a>
       <a href="#what"><span lang="zh">这是什么</span><span lang="en">Overview</span></a>
       <a href="#sources"><span lang="zh">能查什么</span><span lang="en">Coverage</span></a>
-      <a href="#install"><span lang="zh">怎么装</span><span lang="en">Install</span></a>
+      <a href="#install"><span lang="zh">怎么接进来</span><span lang="en">Connect</span></a>
       <a href="#limits"><span lang="zh">边界</span><span lang="en">Limits</span></a>
     </nav>
 
@@ -79,13 +80,21 @@
       </p>
 
       <div class="cta-row">
-        <a class="btn btn-primary" href="#install">
-          <span lang="zh">快速开始</span><span lang="en">Get started</span>
+        <a class="btn btn-primary" href="market.html">
+          <span lang="zh">打开源市场</span><span lang="en">Open the source market</span>
         </a>
-        <a class="btn" href="#sources">
+        <a class="btn" href="#install">
+          <span lang="zh">三种接法</span><span lang="en">Ways to connect</span>
+        </a>
+        <a class="btn btn-quiet" href="#sources">
           <span lang="zh">看能查哪些源</span><span lang="en">See coverage</span>
         </a>
       </div>
+
+      <p class="cta-note">
+        <span lang="zh">源市场按需订阅：<b>选哪些源，模型就只看到哪些工具</b>。工具数、token 估算与订阅集上限都读自运行中的 <code>GET /catalog</code>，页面不写死任何一个数。</span>
+        <span lang="en">Subscribe source by source: <b>the model only sees the tools you pick</b>. Tool counts, token estimates and the subscription cap come from the live <code>GET /catalog</code>; the page hardcodes none of them.</span>
+      </p>
         </div>
 
         <!-- 首屏主视觉：手写 SVG，无外链、无位图，颜色全部走 CSS 变量，暗色下自动换一套。 -->
@@ -267,145 +276,132 @@
     </div>
   </section>
 
-  <!-- ── Install ──────────────────────────────────────────────────────── -->
+  <!-- ── Install / connect ─────────────────────────────────────────────── -->
   <section class="section" id="install">
     <div class="wrap">
       <header class="section-head">
-        <h2><span lang="zh">怎么装</span><span lang="en">How to install</span></h2>
+        <h2><span lang="zh">怎么接进来</span><span lang="en">How to connect</span></h2>
         <p>
-          <span lang="zh">需要 Node.js ≥ 20。没有 API key；只要求能访问 npm 与各数据库站点。三步：装包 → 起服务 → 接客户端。</span>
-          <span lang="en">Requires Node.js ≥ 20. No API keys; you only need to reach npm and the database sites. Three steps: install, start the service, connect a client.</span>
+          <span lang="zh">有云服务了，<b>从最轻的一档开始</b>：能零安装就别装包。两档用的是同一套工具，区别只在数据走哪条路。</span>
+          <span lang="en">A cloud service exists now, so <b>start from the lightest option</b>: never install a package you do not need. Both tiers expose the same tools; they differ only in which path the data takes.</span>
         </p>
       </header>
 
-      <ol class="steps">
-        <li class="step">
-          <div class="step-head">
-            <span class="step-num" aria-hidden="true">1</span>
+      <ol class="tiers">
+
+        <!-- ① 零安装 -->
+        <li class="tier-card tier-primary" id="tier-cloud">
+          <div class="tier-head">
+            <span class="tier-num" aria-hidden="true">1</span>
             <div>
-              <h3><span lang="zh">安装</span><span lang="en">Install the package</span></h3>
-              <p>
-                <span lang="zh">包已发布在 npm：<code>plantomics-hub@<span data-version>0.1.0</span></code>（<code>latest</code>）。只想临时跑一次时用下面注释里那行。<b>装的是这个已发布版本</b>，它实际包含的源与工具以该版本自己的清单为准，与上面「当前源码口径」的数字不一定相同。</span>
-                <span lang="en">Published on npm as <code>plantomics-hub@<span data-version>0.1.0</span></code> (<code>latest</code>). To try it without installing, use the commented line. <b>You install that published version</b>; the sources and tools it actually carries are its own list, which need not equal the source-tree figures above.</span>
-              </p>
-              <p class="pub-note" id="published-note">
-                <span lang="zh">已发布的 <code><span data-pub="spec">—</span></code> 实际包含 <b><span data-pub="sources">—</span> 个源、<span data-pub="tools">—</span> 个工具</b>；尚未随该版本发布的源：<span data-pub="missing" data-pub-lang="zh">—</span>。</span>
-                <span lang="en">The published <code><span data-pub="spec">—</span></code> actually carries <b><span data-pub="sources">—</span> sources and <span data-pub="tools">—</span> tools</b>; not yet in that release: <span data-pub="missing" data-pub-lang="en">—</span>.</span>
+              <h3>
+                <span lang="zh">零安装：连云服务</span><span lang="en">Zero-install: use the cloud service</span>
+                <span class="tier-badge"><span lang="zh">推荐</span><span lang="en">recommended</span></span>
+              </h3>
+              <p class="tier-lede">
+                <span lang="zh">客户端直接连公网 MCP 端点，不装包、不起服务、不配反代。换电脑、换机器、只想先试两个工具时选它。</span>
+                <span lang="en">Point the client straight at the public MCP endpoint: no package, no local process, no reverse proxy. Right when you switch machines or just want to try two tools.</span>
               </p>
             </div>
           </div>
-          <div class="code" data-code>
-            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
-            <pre><code>npm install plantomics-hub@<span data-version>0.1.0</span>
 
-# run once without installing
-npx -p plantomics-hub@<span data-version>0.1.0</span> plantomics-hub-mcp</code></pre>
-          </div>
-        </li>
-
-        <li class="step">
-          <div class="step-head">
-            <span class="step-num" aria-hidden="true">2</span>
-            <div>
-              <h3><span lang="zh">起服务</span><span lang="en">Start the MCP service</span></h3>
-              <p>
-                <span lang="zh">默认只监听回环地址、不鉴权，适合本机用。起完先看 <code>/healthz</code>：它不需要 token，也不泄露工具清单。</span>
-                <span lang="en">Listens on loopback only, without auth, which suits local use. Check <code>/healthz</code> after starting: it needs no token and does not leak the tool list.</span>
-              </p>
-            </div>
-          </div>
-          <div class="code" data-code>
-            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
-            <pre><code>npx plantomics-hub-mcp            # Streamable HTTP, default 127.0.0.1:8787
-curl http://127.0.0.1:8787/healthz</code></pre>
-          </div>
-          <p class="hint">
-            <span lang="zh">健康检查的真实响应（本机实测，数字随注册表变化）：</span>
-            <span lang="en">Actual health response (measured locally; figures follow the registry):</span>
+          <p class="tier-when">
+            <span lang="zh"><b>谁在用：</b>外部访客、跨机器使用、先验证能不能查。<b>代价：</b>查询内容过公网，且需要一个 token。</span>
+            <span lang="en"><b>Who:</b> outside visitors, people on several machines, anyone checking whether this is useful at all. <b>Cost:</b> queries leave your network, and you need a token.</span>
           </p>
-          <div class="code code-out">
-            <pre><code id="healthz-sample">—</code></pre>
+
+          <h4>Claude Code</h4>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>claude mcp add --transport http plantomics-hub https://datamcp.moilab.net/mcp --header "Authorization: Bearer &lt;token&gt;"</code></pre>
+          </div>
+
+          <h4>Codex<span lang="zh">（<code>~/.codex/config.toml</code>）</span><span lang="en"> (<code>~/.codex/config.toml</code>)</span></h4>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>[mcp_servers.plantomics-hub]
+url = "https://datamcp.moilab.net/mcp"
+bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
           </div>
           <p class="hint small">
-            <span lang="zh"><code>version</code> 可能带构建后缀（如 <code>0.1.0+svc.6</code>），不影响用法；该端点不校验 token，也不返回工具清单。上面的 <code>sources</code>/<code>tools</code> 是<b>当前源码口径</b>的本机实测值，你装已发布版本时可能不同。</span>
-            <span lang="en"><code>version</code> may carry a build suffix (e.g. <code>0.1.0+svc.6</code>); it does not change how you use it, and this endpoint requires no token and returns no tool list. The <code>sources</code>/<code>tools</code> numbers above are this working tree's, measured locally; a published install may report different ones.</span>
+            <span lang="zh">token 放环境变量 <code>PLANTOMICS_HUB_TOKEN</code>，不写进配置文件；Codex 会自己加 <code>Authorization: Bearer …</code>。</span>
+            <span lang="en">Keep the token in <code>PLANTOMICS_HUB_TOKEN</code> rather than the file; Codex adds the <code>Authorization: Bearer …</code> header itself.</span>
+          </p>
+
+          <h4>DeepSeek Harness</h4>
+          <p class="small">
+            <span lang="zh">在宿主的接入配置里加一条<b>远端入口</b>（不是装插件）：transport 选 <code>streamable-http</code>，地址 <code>https://datamcp.moilab.net/mcp</code>，加请求头 <code>Authorization: Bearer &lt;token&gt;</code>。装插件那条路属于下面第二档。</span>
+            <span lang="en">Add a <b>remote entry</b> in the host's MCP configuration (not a plugin): transport <code>streamable-http</code>, URL <code>https://datamcp.moilab.net/mcp</code>, header <code>Authorization: Bearer &lt;token&gt;</code>. The plugin route belongs to the local tier below.</span>
+          </p>
+
+          <p class="tier-note">
+            <span lang="zh"><b>token 从哪来：</b>目前没有自助发放，向维护者申请；<code>&lt;token&gt;</code> 只是占位符，别把真实值贴进任何仓库或截图。<b>两种失败要分清</b>（2026-11-03 实测）：<code>401 {"error":"unauthorized"}</code> = 没有 token 或 token 不对；<code>403</code> = 来源域名不在服务端白名单。把 401 当成「服务没起来」是最常见的误判。</span>
+            <span lang="en"><b>Where the token comes from:</b> there is no self-service issuance yet; ask the maintainer. <code>&lt;token&gt;</code> is a placeholder — never paste a real value into a repository or a screenshot. <b>Two failures, two meanings</b> (measured 2026-11-03): <code>401 {"error":"unauthorized"}</code> means no token or a wrong one; <code>403</code> means the calling origin is not on the server's allowlist. Reading 401 as “the service is down” is the most common mistake here.</span>
+          </p>
+
+          <p class="hint small">
+            <span lang="zh">端点形状：<code>POST https://datamcp.moilab.net/mcp</code>；服务端契约要求 <code>Content-Type: application/json</code> 与 <code>Accept: application/json, text/event-stream</code>。先在浏览器打开 <code>https://datamcp.moilab.net/healthz</code> 能直接看到服务是否活着（免鉴权）。</span>
+            <span lang="en">Endpoint shape: <code>POST https://datamcp.moilab.net/mcp</code>; the server contract asks for <code>Content-Type: application/json</code> and <code>Accept: application/json, text/event-stream</code>. Check <code>https://datamcp.moilab.net/healthz</code> in a browser first — it needs no token and tells you whether the service is up.</span>
           </p>
         </li>
 
-        <li class="step">
-          <div class="step-head">
-            <span class="step-num" aria-hidden="true">3</span>
+        <!-- ② 本地 stdio -->
+        <li class="tier-card" id="tier-stdio">
+          <div class="tier-head">
+            <span class="tier-num" aria-hidden="true">2</span>
             <div>
-              <h3><span lang="zh">接客户端</span><span lang="en">Connect a client</span></h3>
-              <p>
-                <span lang="zh">三种接法，按你的客户端选一个。DSH 桌面端要把<b>服务先起起来</b>再装插件，否则插件装上、工具一个都不会出现。</span>
-                <span lang="en">Pick the one that matches your client. On DSH desktop the <b>service must be running first</b>, otherwise the plugin installs and no tool ever appears.</span>
+              <h3>
+                <span lang="zh">本地 stdio：不把查询送出去</span><span lang="en">Local stdio: keep queries on your machine</span>
+              </h3>
+              <p class="tier-lede">
+                <span lang="zh">客户端把工具进程直接起在本地，取数从你的机器发出。不需要自己起 HTTP 服务，也不需要 token。</span>
+                <span lang="en">The client spawns the tool process locally, so requests leave from your machine. No HTTP service to run, no token needed.</span>
               </p>
             </div>
           </div>
 
-          <div class="client-grid">
-            <article class="client">
-              <h4>DeepSeek Harness<span lang="zh">（插件）</span><span lang="en"> (plugin)</span></h4>
-              <p>
-                <span lang="zh">服务地址不是默认值时，先设环境变量再启动 DSH：</span>
-                <span lang="en">If the service is not on the default URL, set these before starting DSH:</span>
-              </p>
-              <div class="code" data-code>
-                <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
-                <pre><code>PLANTOMICS_HUB_URL=http://127.0.0.1:8787/mcp
-PLANTOMICS_HUB_TOKEN=&lt;token&gt;</code></pre>
-              </div>
-              <p class="small">
-                <span lang="zh">插件包从本地 tgz 装（插件管理器只接受压缩包或路径，不接受包名）。工具名带命名空间前缀，形如 <code>mcp__plantomics-hub__wheatomics_search_known_genes</code>。</span>
-                <span lang="en">Install the plugin from a local tgz; the plugin manager takes an archive or a path, not a package name. Tool names carry a namespace prefix, e.g. <code>mcp__plantomics-hub__wheatomics_search_known_genes</code>.</span>
-              </p>
-            </article>
+          <p class="tier-when">
+            <span lang="zh"><b>谁在用：</b>数据不宜过公网、或云服务抽风时的退路。<b>代价：</b>第一次要下载包（需要 Node.js ≥ 20）；工具清单是包里那一版，不是云上最新版。</span>
+            <span lang="en"><b>Who:</b> anyone whose data should not cross the public internet, or anyone needing a fallback when the cloud is down. <b>Cost:</b> the first run downloads the package (Node.js ≥ 20), and you get that package's tool list, which need not match the newest cloud build.</span>
+          </p>
 
-            <article class="client">
-              <h4>Claude Code<span lang="zh">（stdio）</span><span lang="en"> (stdio)</span></h4>
-              <p>
-                <span lang="zh">不需要起服务，直接接 stdio 出口：</span>
-                <span lang="en">No service needed; connect the stdio exit directly:</span>
-              </p>
-              <div class="code" data-code>
-                <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
-                <pre><code>claude mcp add plant-omics -- node "&lt;仓库路径&gt;/dist/mcp/cli.js"</code></pre>
-              </div>
-            </article>
-
-            <article class="client">
-              <h4><span lang="zh">通用 JSON 配置</span><span lang="en">Generic JSON config</span></h4>
-              <p>
-                <span lang="zh">Codex / Reasonix 等客户端通用；路径按你的实际安装位置改。</span>
-                <span lang="en">Works for Codex, Reasonix and similar; adjust the path to your install.</span>
-              </p>
-              <div class="code" data-code>
-                <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
-                <pre><code>{
-  "mcpServers": {
-    "plant-omics": {
-      "command": "node",
-      "args": ["&lt;仓库路径&gt;/dist/mcp/cli.js"]
-    }
-  }
-}</code></pre>
-              </div>
-            </article>
+          <h4>Claude Code</h4>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>claude mcp add plant-omics -- npx -p <span data-install-spec>plantomics-hub</span> plant-omics-mcp</code></pre>
           </div>
 
-          <div class="callout">
-            <p>
-              <span lang="zh"><b>只挂一部分源：</b>同一份安装，用 <code>PLANTOMICS_SOURCES=wheatomics</code> 控制加载哪些源；源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。</span>
-              <span lang="en"><b>Load a subset:</b> one install, choose sources with <code>PLANTOMICS_SOURCES=wheatomics</code>. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools.</span>
-            </p>
-            <p>
-              <span lang="zh"><b>对外提供服务：</b>必须同时设 <code>PLANTOMICS_HUB_HOST=0.0.0.0</code>、至少 16 字符的 <code>PLANTOMICS_HUB_TOKEN</code>；放到反向代理后面还要用 <code>PLANTOMICS_HUB_ALLOWED_HOSTS</code> 放行代理域名，否则 403。</span>
-              <span lang="en"><b>Expose it:</b> set <code>PLANTOMICS_HUB_HOST=0.0.0.0</code> together with a <code>PLANTOMICS_HUB_TOKEN</code> of at least 16 characters; behind a reverse proxy also allow the proxy host via <code>PLANTOMICS_HUB_ALLOWED_HOSTS</code>, or requests get 403.</span>
-            </p>
+          <h4><span lang="zh">其它 stdio 客户端</span><span lang="en">Any other stdio client</span></h4>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>npx -p <span data-install-spec>plantomics-hub</span> plant-omics-mcp</code></pre>
           </div>
+          <p class="hint small">
+            <span lang="zh">包里的这条命令是 stdio 出口：进程起在你的机器上，工具清单就是包里那一版。只为用 stdio 时 <code>npx -p</code> 就够，不必全局安装。</span>
+            <span lang="en">That command is the stdio exit: the process runs on your machine and the tool list is whatever that package carries. If you only need stdio, <code>npx -p</code> is enough — no global install.</span>
+          </p>
         </li>
+
       </ol>
+
+      <div class="callout">
+        <p>
+          <span lang="zh"><b>只挂一部分源：</b>两档都支持 <code>PLANTOMICS_SOURCES=wheatomics</code> 这样的白名单；源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。<b>挑哪些源、装多少工具</b>先去<a href="market.html">源市场</a>勾，订阅集硬上限是 80 个工具。</span>
+          <span lang="en"><b>Load a subset:</b> both tiers honour a whitelist such as <code>PLANTOMICS_SOURCES=wheatomics</code>. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools. Pick sources in the <a href="market.html">source market</a> first; the hard cap is 80 tools per subscription.</span>
+        </p>
+      </div>
+
+      <!-- 版本口径：装的是哪个版本，与上面「当前源码口径」分开说 -->
+      <div class="notice version-note" id="published-note">
+        <p>
+          <span lang="zh"><b>第二档装的是 npm 上已发布的 <code><span data-pub="spec">—</span></code></b>：它实际包含 <b><span data-pub="sources">—</span> 个源、<span data-pub="tools">—</span> 个工具</b>；还没随该版本发布的源：<span data-pub="missing" data-pub-lang="zh">—</span>。<b>第一档不受这个版本号约束</b>——它连的是云服务当前构建，清单以端点自己报的为准。</span>
+          <span lang="en"><b>Tier 2 installs <code><span data-pub="spec">—</span></code> from npm</b>, which actually carries <b><span data-pub="sources">—</span> sources and <span data-pub="tools">—</span> tools</b>; not yet in that release: <span data-pub="missing" data-pub-lang="en">—</span>. <b>Tier 1 is not bound to that version</b>: it talks to the cloud service's current build, whose list is whatever the endpoint reports.</span>
+        </p>
+        <p class="small">
+          <span lang="zh">源码里的 <code><span data-version>—</span></code> 是<b>开发版本号，不是 npm 上的版本</b>——发布前它会大于线上可用版本，所以安装命令钉的是上面那个已发布 spec，不是源码里的数字。</span>
+          <span lang="en">The source tree's <code><span data-version>—</span></code> is a <b>development version, not the version on npm</b>: before a release it runs ahead of what is installable, so the commands above pin the published spec, not the source number.</span>
+        </p>
+      </div>
     </div>
   </section>
 

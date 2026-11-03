@@ -21,6 +21,8 @@
   --code-bg: #111a16;
   --code-ink: #dce9e1;
   --on-accent: #ffffff;
+  --bad: #b23b32;
+  --bad-soft: #fbeceb;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(20, 33, 26, .05), 0 8px 24px -18px rgba(20, 33, 26, .45);
   --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
@@ -48,6 +50,8 @@
     --code-bg: #0a110e;
     --code-ink: #d7e6dc;
     --on-accent: #0c1511;
+    --bad: #e08b84;
+    --bad-soft: #2e1a19;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -22px rgba(0, 0, 0, .9);
   }
 }
@@ -63,6 +67,7 @@ html[data-theme="light"] {
   --accent: #2a7a4c; --accent-ink: #1c5a37; --accent-soft: #e6f0e8;
   --t1: #2a7a4c; --t1-soft: #e6f0e8; --t2: #9a6516; --t2-soft: #f6eddd;
   --code-bg: #111a16; --code-ink: #dce9e1; --on-accent: #ffffff;
+  --bad: #b23b32; --bad-soft: #fbeceb;
   --shadow: 0 1px 2px rgba(20, 33, 26, .05), 0 8px 24px -18px rgba(20, 33, 26, .45);
 }
 html[data-theme="dark"] {
@@ -73,6 +78,7 @@ html[data-theme="dark"] {
   --accent: #6fc48f; --accent-ink: #9ad9b2; --accent-soft: #1b2b22;
   --t1: #6fc48f; --t1-soft: #1b2b22; --t2: #e0ab5e; --t2-soft: #2b2317;
   --code-bg: #0a110e; --code-ink: #d7e6dc; --on-accent: #0c1511;
+  --bad: #e08b84; --bad-soft: #2e1a19;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -22px rgba(0, 0, 0, .9);
 }
 
@@ -245,7 +251,11 @@ code {
 }
 .lead b { color: var(--ink); font-weight: 620; }
 
-.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 40px; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 14px; }
+/* 主按钮旁边的一句说明：市场是首屏最醒目的入口（2026-11-02 群内定），
+   所以按钮下面直接讲清它凭什么值得点——数字全部来自 /catalog，不是营销词。 */
+.cta-note { margin: 0 0 34px; font-size: 13px; color: var(--ink-3); max-width: 62ch; }
+.cta-note b { color: var(--ink-2); font-weight: 620; }
 
 .stat-strip {
   display: grid;
@@ -492,7 +502,78 @@ code {
 
 .loading { color: var(--ink-3); font-size: 14px; }
 
-/* ── 安装步骤 ────────────────────────────────────────────────────────── */
+/* ── 接入三档 ────────────────────────────────────────────────────────── */
+/* 2026-11-03 改两档：自建服务那档整段删掉（不对外承诺用户运维服务器）。
+   卡片按「谁在用 / 什么时候选 / 代价」三段写，避免读者只在命令之间做选择。 */
+.tiers { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+
+.tier-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 22px 20px;
+  min-width: 0;
+}
+.tier-card.tier-primary {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow: inset 4px 0 0 var(--accent), var(--shadow);
+}
+
+.tier-head { display: flex; gap: 14px; align-items: flex-start; }
+.tier-num {
+  flex: none;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+}
+.tier-head h3 { font-size: 17.5px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tier-badge {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+}
+.tier-lede { color: var(--ink-2); font-size: 14.8px; margin-top: 8px; max-width: 72ch; }
+
+.tier-when {
+  margin: 16px 0 4px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.tier-when b { color: var(--ink); }
+
+.tier-card h4 { margin: 20px 0 8px; font-size: 13.5px; }
+.tier-note {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--t2-soft);
+  border: 1px solid color-mix(in srgb, var(--t2) 40%, transparent);
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.version-note { margin-top: 22px; }
+.version-note p + p { margin-top: 8px; }
+
+/* ── 安装步骤（旧结构，保留给历史页；接入段已改用 .tiers） ─────────────── */
 .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 34px; }
 
 .step-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
@@ -572,6 +653,12 @@ code {
 .client .code pre { padding: 12px 14px; font-size: 12.4px; overflow-x: hidden; }
 /* 客户端代码块是短命令：宁可折行也不藏起来——窄卡片里横向滚动等于看不见 */
 .client .code pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* 接入卡片的命令块：小屏折行显示，别看起来像被截断。
+   折行只是视觉折行，DOM 文本仍是原来那一行，复制按钮拿到的还是完整命令。 */
+@media (max-width: 700px) {
+  .tier-card .code pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+}
 .client .code { margin-top: auto; }
 
 .callout {

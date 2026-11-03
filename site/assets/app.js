@@ -159,6 +159,15 @@
     }
   }
 
+  /* 安装命令钉的是**已发布 spec**，不是源码里的开发版本号。
+     起因（2026-11-03 实测）：npm 上 latest = 0.1.0，而 package.json 已是 0.1.1，
+     照源码版本号写命令会让用户 `npm install plantomics-hub@0.1.1` 直接失败。
+     缺 market/copy.json 时不猜版本，退回不带版本号的包名，由发布口径那块说明缺数。 */
+  var installSpec = published && published.spec ? published.spec : 'plantomics-hub';
+  document.querySelectorAll('[data-install-spec]').forEach(function (node) {
+    node.textContent = installSpec;
+  });
+
   var footerSnap = document.getElementById('footer-snapshot');
   if (footerSnap) {
     footerSnap.textContent =

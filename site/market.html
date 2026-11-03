@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源市场 · PlantOmics Hub — 按需订阅数据源</title>
+<meta name="description" content="按需订阅植物组学数据源：选哪些源，模型就只看到哪些工具。工具数、token 估算与订阅集阈值全部读自运行中的 GET /catalog，接口未上线时显示「待 /catalog」，不用构建期快照冒充。">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/market.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html" aria-label="PlantOmics Hub 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 27V13"/>
+          <path d="M16 17c-5 0-8-3-8-8 5 0 8 3 8 8Z"/>
+          <path d="M16 21c5 0 8-3 8-8-5 0-8 3-8 8Z"/>
+          <path d="M6 27h20"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>PlantOmics Hub</strong>
+        <small>源市场 / Source market</small>
+      </span>
+    </a>
+
+    <nav class="site-nav" aria-label="页面导航">
+      <a href="index.html">落地页 / Overview</a>
+      <a href="index.html#sources">源清单 / Coverage</a>
+      <a href="index.html#install">安装 / Install</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <p class="mk-status" id="data-status" data-state="pending">
+      <span class="dot" aria-hidden="true"></span><span id="data-text">数据时刻：待 /catalog</span>
+    </p>
+
+    <section class="mk-hero">
+      <h1>按需订阅数据源</h1>
+      <p class="lede">
+        库房不设上限，书包设上限：你订阅哪些源，模型就只看到哪些工具。
+        下面每个数字都标了来源——<b>实时数字来自 <code>GET /catalog</code></b>；接口没上线时一律显示「待 /catalog」，不拿构建期快照冒充。
+      </p>
+    </section>
+
+    <div class="mk-stub" id="stub-note" hidden>
+      <b>调试参数 <code>?stub=</code></b>：本页请求带调试 query（<code>?time=</code> / <code>?load=</code> / <code>?fail=</code>）。数据是否来自线上，取决于你连的是哪个端点。
+    </div>
+
+    <div class="mk-schema" id="schema-note" hidden></div>
+
+    <section class="subbar" aria-label="订阅集计数">
+      <div class="subbar-nums">
+        <div class="sub-n"><span class="v" id="v-sources">—</span><span class="k">已订源</span><span class="src-tag" id="t-sources">待 /catalog</span></div>
+        <div class="sub-n"><span class="v" id="v-tools">—</span><span class="k">工具数（含元工具）</span><span class="src-tag" id="t-tools">待 /catalog</span></div>
+        <div class="sub-n"><span class="v" id="v-tokens">—</span><span class="k">预估上下文 token</span><span class="src-tag" id="t-tokens">由工具数推算 · 280/工具</span></div>
+        <div class="sub-n"><span class="v" id="v-warn">—</span><span class="k">警示线</span><span class="src-tag" id="t-warn">待 /catalog</span></div>
+        <div class="sub-n"><span class="v" id="v-cap">—</span><span class="k">硬上限</span><span class="src-tag" id="t-cap">待 /catalog</span></div>
+      </div>
+      <div class="subbar-bar" aria-hidden="true"><span id="subbar-fill"></span></div>
+      <p class="subbar-note" id="subbar-note">选中源后这里显示订阅集的工具总数与 token 估算；超过警示线只提醒，超过硬上限拒绝——两条线都取自 <code>/catalog</code>。</p>
+      <div class="verdict" id="verdict" hidden></div>
+    </section>
+
+    <div class="mk-actions">
+      <button id="start" class="btn btn-primary" type="button" disabled>复制订阅集参数</button>
+      <span class="mk-hint" id="start-hint">先选源；超过硬上限时这个按钮会被禁用。</span>
+    </div>
+
+    <div id="grid" class="mk-grid">
+      <p class="mk-state">正在读取 <code>GET /catalog</code>…</p>
+    </div>
+
+    <p class="mk-source-note">
+      数据来源：<code>GET /catalog</code>（只读、免鉴权，由运行中的注册表实时生成）。接口未上线时本页所有数字位显示「待 /catalog」，
+      <b>不使用 <code>data/catalog.json</code> 这类构建期快照冒充活数据</b>。本页不发起任何 MCP 调用，也不含任何凭据输入。
+    </p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-col">
+      <strong>源市场 / Source market</strong>
+      <p class="small">
+        只读取 <code>GET /catalog</code>；本页不发起 MCP 调用，不接收任何 token。
+      </p>
+    </div>
+    <div class="footer-col">
+      <strong>继续看</strong>
+      <ul class="plain">
+        <li><a href="index.html">这是什么、怎么装 / Overview &amp; install</a></li>
+        <li><a href="index.html#sources">每个源的工具与盲区 / Tools and blind spots</a></li>
+        <li><a href="https://github.com/maorong-rong/plant-omics" target="_blank" rel="noopener">GitHub 仓库</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/source-icons.js"></script>
+<script src="assets/market.js"></script>
+</body>
+</html>

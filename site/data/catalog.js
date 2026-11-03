@@ -1,23 +1,24 @@
 /* 由 site/scripts/build-data.mjs 生成，勿手改。源：dist/ 注册表。 */
 window.__PLANTOMICS_CATALOG__ = {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-01T08:52:37.453Z",
-  "gitCommit": "54ef8dd",
+  "generatedAt": "2026-11-03T01:27:28.206Z",
+  "gitCommit": "1c92f17",
   "package": {
     "name": "plantomics-hub",
     "version": "0.1.1"
   },
   "build": {
-    "sourceRev": "54ef8dd",
-    "builtAt": "2026-11-01T16:42:35+08:00",
-    "packageVersion": "0.1.0"
+    "sourceRev": "1c92f17",
+    "builtAt": "2026-11-03T09:24:37+08:00",
+    "packageVersion": "0.1.1",
+    "dirty": false
   },
   "budget": {
-    "sources": 8,
-    "tools": 37
+    "sources": 9,
+    "tools": 39
   },
   "tiers": {
-    "T1": 7,
+    "T1": 8,
     "T2": 1,
     "T3": 0
   },
@@ -40,6 +41,11 @@ window.__PLANTOMICS_CATALOG__ = {
         "id": "ensemblplants",
         "name": "Ensembl Plants（EMBL-EBI）",
         "nameEn": "Ensembl Plants (EMBL-EBI)"
+      },
+      {
+        "id": "string",
+        "name": "STRING 蛋白互作数据库（ELIXIR）",
+        "nameEn": "STRING — protein interactions (ELIXIR)"
       }
     ],
     "snapshotAt": "2026-10-31T02:52:09.482Z"
@@ -164,7 +170,7 @@ window.__PLANTOMICS_CATALOG__ = {
         },
         {
           "name": "wheatomics_variant_query",
-          "summary": "查 WheatOmics VariantHub 里某个数据集、某个染色体区间的变异记录（SNP/InDel），返回位点、ID、ref/alt、质量、过滤标记与 VEP 注释摘要。当用户问「chr1A 上 1–200kb 有哪些变异」「这个区间有没有 SNP」时用。**region 是单个字符串参数**，格式 chrom:start-end（如 chr1A:1-200000），不是三个参数。区间为**闭区间，两端都含**（start 与 end 都包含）——这是**端点包含性的实测结论，不涉及 1-based / 0-based 的命名**。**起点与终点不能相同**：上游会以 400 拒绝这种等端点区间，本仓在本地先拒（不是\"该位点没有变异\"）；查单位点请给 pos-1-pos+1。**0 条不等于该区间没有变异**：数据集与坐标体系可能不匹配，请先用 wheatomics_variant_datasets 确认 genome_concordant=true。**区间参数非法会被上游以 400 拒绝，那不是\"没有变异\"**，本仓在本地先做该校验。**本仓不暴露按变异 ID 查询**：上游该路径是全表扫描（实测约 19 s，超出本仓上游超时预算），能力面差异归本仓、不是上游缺陷；本工具只按区间查。**本仓不提供 offset**：上游支持分页，本仓未暴露分页参数；上游标记\"还有更多\"时请缩小 region 后重查，不要指望翻页。"
+          "summary": "查 WheatOmics VariantHub 里某个数据集、某个染色体区间的变异记录（SNP/InDel），返回位点、ID、ref/alt、质量、过滤标记与 VEP 注释摘要。当用户问「chr1A 上 1–200kb 有哪些变异」「这个区间有没有 SNP」时用。**region 是单个字符串参数**，格式 chrom:start-end（如 chr1A:1-200000），不是三个参数。区间为**闭区间，两端都含**（start 与 end 都包含）——这是**端点包含性的实测结论，不涉及 1-based / 0-based 的命名**。**起点与终点不能相同**：上游会以 400 拒绝这种等端点区间，本仓在本地先拒（不是\"该位点没有变异\"）；查单位点请给 pos-1-pos+1。**0 条不等于该区间没有变异**：数据集与坐标体系可能不匹配，请先用 wheatomics_variant_datasets 确认 genome_concordant=true。**区间参数非法会被上游以 400 拒绝，那不是\"没有变异\"**，本仓在本地先做该校验。**本仓不暴露按变异 ID 查询**：上游该路径是全表扫描（实测约 19 s，超出本仓上游超时预算），能力面差异归本仓、不是上游缺陷；本工具只按区间查。**分页**：`has_more=true` 时用 `offset` 翻页——把 `offset` 设成本次已取回的条数，从那里继续；命中密集、缩小区间也缩不下去时，**翻页比缩区间更有效**。上游 `offset` 默认 0；`limit` 上游默认 200、上限 5000，本仓限 1–100——**这两个范围是本仓策略，不是上游限制**。"
         },
         {
           "name": "wheatomics_gene_annotation",
@@ -451,6 +457,51 @@ window.__PLANTOMICS_CATALOG__ = {
       ],
       "pinned": false,
       "order": 7
+    },
+    {
+      "id": "string",
+      "displayName": "STRING 蛋白互作数据库",
+      "label": {
+        "zh": {
+          "name": "STRING 蛋白互作数据库（ELIXIR）",
+          "blurb": "拟南芥与粳稻的蛋白互作：先把标识符解析成 STRING ID，再查互作伙伴；小麦、玉米的互作能力尚未验证。"
+        },
+        "en": {
+          "name": "STRING — protein interactions (ELIXIR)",
+          "blurb": "Protein interactions for Arabidopsis and japonica rice: resolve identifiers to STRING IDs first, then query interaction partners; wheat and maize are not yet verified."
+        }
+      },
+      "tier": "T1",
+      "homepage": "https://string-db.org/",
+      "species": [
+        "Arabidopsis thaliana",
+        "Oryza sativa Japonica Group"
+      ],
+      "caveats": [
+        "**上游会自行解析基因名**：直接传 `AT1G65480` 实测返回 200 / 10 条互作。本仓仍要求传已解析的 `stringId`，是为了让尾注留下\"解析到了哪个 ID\"、让空结果可解释——**这是本仓策略，不是接口限制**",
+        "**三种\"没有\"按端点各自成立，不许互相借用**：`get_string_ids` 不认识标识符 → `200 + []`（2 B，无 Error 码）；`interaction_partners` 不认识标识符 → `404 + Error:\"not found\"`（591 B）；两者物种不存在 → `400 + Error:\"unknown organism\"`。`\"nothing found\"` 属本仓**不接**的 `interactions` 端点，在伙伴端点从未观察到，不映射成\"查无\"",
+        "**`200 + []` 的含义按端点分开**：resolve 侧 = \"没解析出来\"，partners 侧 = \"解析成功但无伙伴或被 `required_score` 滤空\"。任一单端点内部都无法自证，本仓拒绝把这种空当作\"没有互作\"",
+        "**`species` 必填是本仓策略，理由已实测**：上游该参数非必填，但不传时**会跨物种乱解析**——`get_string_ids?identifiers=FT`（不传 species）实测返回 `10090.ENSMUSP00000112375` **小鼠**，而同一 `FT` 传 `species=3702` 返回拟南芥 `3702.Q9SXZ2`。故本仓要求必填并回读 `ncbiTaxonId` 核对，不依赖上游自行选物种",
+        "**物种回显是明确映射表，不是\"任意不一致先提示后放行\"**：`3702→3702`、`39947→39947`（均有直接正例）、`4530→39947`（一次实测，原样发出、如实转述回显）。除此之外任何不一致一律拒答。**不认定 4530 与 39947 等价，也不允许反推**",
+        "**`get_string_ids` 的 `limit` 未观察到任何效果，本仓已不发送该参数**：单标识符 `limit=1/3/20/100` 响应字节完全相同（如 `AT1G65480` 四次均 743 B / 1 条）；换行分隔 2–3 个标识符传 `limit=1` 仍逐条各返回 1 条。原实现固定发 `limit=3`，实测既不截断也不影响输出，属解释不了的魔数，已删除；不传该参数实测同为 200 / 743 B",
+        "**小麦 4565 / 玉米 4577 的基因级互作能力未验证**：本仓尚未取得这两个物种的有效 STRING 标识符样例（实测只试过 1 个基因编号，返回 200+[]）；这不等于该物种无数据",
+        "**`limit` 1–100 与 `required_score` 默认 400 都是本仓策略**：上游 `limit` 是软上限（传 1000 回 290 条不报错），收窄只为控上下文预算，不是上游限制",
+        "不接 network（add_nodes=100 实测 878,896 B / 3,336 条，且 limit 被忽略、无分页）；不接 enrichment（需基因集，属另一意图）"
+      ],
+      "versionNote": "上游自报版本 12.5（GET /api/json/version）；本仓未核验各物种数据随版本更新的具体日期，不按 ID 外观推断版本",
+      "toolCount": 2,
+      "tools": [
+        {
+          "name": "string_resolve_ids",
+          "summary": "把基因名/编号解析成 STRING 的 stringId（形如 3702.Q9SXZ2），用于确认“STRING 认不认这个基因/这个物种”。**这是可选工具，不是查互作的前置步骤**：上游 interaction_partners 本身就能解析基因名（实测直接传 AT1G65480 返回 10 条），所以不调本工具也能查到互作。需要它的两个场景：① 想知道某个编号会被解析成哪个 stringId；② 查互作拿到空结果、想确认是“编号解析不出来”还是“确实没有互作”。只支持已实测物种（拟南芥 3702、水稻 39947/4530）；小麦/玉米的基因级解析能力未验证。不做批量转换（一次一个标识符），不返回互作关系。"
+        },
+        {
+          "name": "string_interaction_partners",
+          "summary": "查一个**已解析的 STRING ID**（形如 3702.Q9SXZ2）的互作伙伴，给出综合置信度 score 与主要证据通道。当用户问“这个基因和谁互作”“有哪些实验/共表达证据”时用。**上游会自行解析基因名**：实测直接传 AT1G65480 也能返回 10 条互作，所以“必须先解析”不是接口要求。本仓仍要求传已解析的 stringId（如 3702.Q9SXZ2），**这是本仓策略、不是接口限制**：一是让尾注能留下“解析到了哪个 ID”的证据，二是让空结果可解释。传入 AT1G65480 这类原始编号会被本地拒绝（零请求），并给出去换成 ID 的具体做法；**不会返回空列表冒充“没有互作”**。身份核验方式：本地核对 `string_id` 的 taxon 前缀与 `species` 一致；形状合法但实际不存在的 ID 由上游 404 明确否定（不是空数组）。只支持已实测物种（3702 拟南芥、39947/4530 水稻 Japonica）；小麦/玉米基因级互作能力未验证。不返回网络图（体积不可控），不做富集分析，不返回逐条证据的全文。"
+        }
+      ],
+      "pinned": false,
+      "order": 8
     }
   ],
   "metaTools": [

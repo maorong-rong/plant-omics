@@ -1,9 +1,87 @@
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { describeError } from '../src/core/errors.js';
 import { utf8Bytes } from '../src/core/format.js';
 import { RAW_BODY_LIMIT_BYTES, createFetcher, retryDelayMs } from '../src/core/http.js';
 import type { HttpResult } from '../src/core/types.js';
+
+/**
+ * 用 TypeScript AST 扫"到底有哪些地方在读响应头"。
+ *
+ * 为什么不用正则（R12-C2 实测）：正则既**看不见**合法写法 `res.headers?.["x-…"]`
+ * （可选链里的点被漏掉），又会**误报**注释里的 `// headers["x-…"]`——
+ * 一头漏一头多，两个方向都能让白名单闸门失灵。AST 天然不含注释，
+ * 也让"不是字面量的头名"能被单独抓出来（不许静默漏）。
+ */
+interface HeaderReads { names: string[]; dynamic: string[] }
+
+function scanHeaderReads(fileName: string, text: string): HeaderReads {
+  const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
+  const names = new Set<string>();
+  const dynamic: string[] = [];
+  const add = (raw: string): void => {
+    const name = raw.toLowerCase();
+    if (name.startsWith('x-')) names.add(name);
+  };
+  const literal = (node: ts.Node | undefined): string | null => {
+    if (!node) return null;
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+    return null;
+  };
+  const noteDynamic = (node: ts.Node): void => { dynamic.push(node.getText(sf).slice(0, 100)); };
+  /** 类型位置里的 `headers`（如 `res: { headers?: Record<string,string> }`）不是读取，别误报。 */
+  const inTypeContext = (node: ts.Node): boolean => {
+    for (let cursor: ts.Node | undefined = node.parent; cursor; cursor = cursor.parent) {
+      if (ts.isTypeNode(cursor)) return true;
+    }
+    return false;
+  };
+
+  const visit = (node: ts.Node): void => {
+    // ① 调用形式：header(res, 'x-…')；第二参不是字面量就记动态——
+    //    `header(res, key)` 是已支持调用模式里的失败关闭缺口（R12 二轮实测）。
+    //    只认**两参及以上**：源层里还有同名的本地排版助手 `header(0)` / `header(title)`，
+    //    那是标题渲染，不是读响应头（实测误报，2026-11-03）。
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'header'
+      && node.arguments.length >= 2) {
+      const name = literal(node.arguments[1]);
+      if (name !== null) add(name);
+      else noteDynamic(node);
+    }
+
+    // ② headers 容器的**任何**用法：只有"字面量下标直接取名"算正常读取，其余一律记动态。
+    //    这一条是"拒绝而不是猜"：别名（const h = res.headers）、对象解构
+    //    （const { 'x-…': v } = res.headers）、遍历（Object.entries(res.headers)）、
+    //    方法调用、当值传出去——全都静态核不了白名单，必须报出来而不是静默漏。
+    //    容器有三种写法：`res.headers`、`res["headers"]`、裸 `headers`（参数或解构所得）。
+    if (!inTypeContext(node)) {
+      const isHeadersProperty =
+        ts.isPropertyAccessExpression(node) && node.name.getText(sf) === 'headers';
+      const isHeadersIndex =
+        ts.isElementAccessExpression(node) && literal(node.argumentExpression) === 'headers';
+      const isBareHeaders =
+        ts.isIdentifier(node) && node.text === 'headers'
+        && !(ts.isPropertyAccessExpression(node.parent) && node.parent.name === node);
+
+      const container = isHeadersProperty || isHeadersIndex || isBareHeaders;
+      if (container) {
+        const parent = node.parent;
+        // 容器外面再套一个「字面量下标」才是读头：res.headers['x-a']、res["headers"]["x-a"]
+        if (ts.isElementAccessExpression(parent) && parent.expression === node) {
+          const name = literal(parent.argumentExpression);
+          if (name !== null) add(name);
+          else noteDynamic(parent);
+        } else {
+          noteDynamic(node);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return { names: [...names], dynamic };
+}
 
 /**
  * HTTP 层的单元测试。
@@ -165,13 +243,34 @@ describe('响应头透出（白名单 x-*，2026-11-01 后端负责人裁定）'
 });
 
 describe('白名单与源层读取项必须对齐（2026-11-01 后端负责人）', () => {
-  it('源码里读到的每个响应头名，都必须出现在 RESPONSE_HEADER_ALLOWLIST 里', async () => {
-    // 防的是：源层要读 x-uniprot-release，白名单里没它 → 能力白加，且没人发现。
-    // 做法：扫 src/sources 下所有 .ts，找 header(res, 'x-…') 与 headers['x-…'] 两种写法。
+  /**
+   * 白名单里暂时没有读取者的头：必须**显式登记**，不许靠"反正没人管"放过。
+   * 现在只有 UniProt 一对（R11 未过审、未提交，源没进注册表）。
+   *
+   * 登记是有代价的：一个头一旦真有已注册的源在读，它就必须从这里删掉（见 stale 断言）。
+   * 这就是"先声明再接线"的反向闸门——清单不会自己过期。
+   */
+  const PENDING_READERS: Readonly<Record<string, string>> = {
+    'x-total-results': 'UniProt（R11 未过审、未提交；接入时从此表删掉）',
+    'x-uniprot-release': '同上：UniProt 的数据版本头',
+  };
+
+  it('已注册源读到的头必须在白名单里；白名单里也不许有没人读的头', async () => {
+    // 防的是：源层要读某个头，白名单里没它 → 能力白加，且没人发现。
+    // 做法：扫**已注册源**目录下的 .ts，找 header(res, 'x-…') 与 headers['x-…'] 两种写法。
     const { readdirSync, readFileSync: rf, statSync } = await import('node:fs');
     const { fileURLToPath } = await import('node:url');
     const { join } = await import('node:path');
     const { RESPONSE_HEADER_ALLOWLIST } = await import('../src/core/http.js');
+    const { registry } = await import('../src/sources/index.js');
+
+    // 2026-11-03 后端负责人裁定：只扫**已注册**的源。未接线但躺在工作区里的源（UniProt）
+    // 不算数——白名单的语义是"给已接入能力用的"，不是"预留给将来"。
+    // 也随之撤掉原来那条「至少应扫到 UniProt 的计数头」：UniProt 未提交，要求它出现
+    // 等于让任何干净检出 / 公开仓的 npm test 必红；红线应该钉在"真实存在的源"上。
+    const sourcesRoot = fileURLToPath(new URL('../src/sources', import.meta.url));
+    const registered: string[] = registry.listSources().map((bundle) => bundle.manifest.id as string).sort();
+    expect(registered.length, '注册表为空：先看 src/sources/index.ts').toBeGreaterThan(0);
 
     const files: string[] = [];
     const walk = (dir: string): void => {
@@ -182,24 +281,98 @@ describe('白名单与源层读取项必须对齐（2026-11-01 后端负责人�
       }
     };
     // 用 fileURLToPath：pathname 不解码，中文路径会变成 %E4%BD%99… 导致 scandir 失败
-    walk(fileURLToPath(new URL('../src/sources', import.meta.url)));
+    for (const id of registered) walk(join(sourcesRoot, id));
+    // 扫到 0 个文件 = 注册 id 与目录对不上；这条比"必须扫到某个源的头"更早暴露问题
+    expect(files.length, `按注册表扫到 ${files.length} 个源文件：注册 id 与目录对不上`).toBeGreaterThan(0);
 
     const used = new Map<string, string[]>();
+    const dynamic: string[] = [];
     for (const file of files) {
-      const text = rf(file, 'utf8');
-      for (const m of text.matchAll(/(?:header\([^,]+,\s*|headers\??\[\s*)'([a-z0-9-]+)'/gi)) {
-        const name = m[1].toLowerCase();
-        if (!name.startsWith('x-')) continue;
-        used.set(name, [...(used.get(name) ?? []), file.replace(/.*src[\\/]sources[\\/]/, '')]);
-      }
+      const rel = file.replace(/.*src[\\/]sources[\\/]/, '');
+      // 走 AST：注释天然不算，可选链也算（R12-C2 实测：正则两个方向都会错）
+      const reads = scanHeaderReads(file, rf(file, 'utf8'));
+      for (const name of reads.names) used.set(name, [...(used.get(name) ?? []), rel]);
+      for (const snippet of reads.dynamic) dynamic.push(`${rel}: ${snippet}`);
     }
-    expect(used.size, '至少应扫到 UniProt 读的计数头/版本头；扫不到说明正则或目录错了').toBeGreaterThan(0);
+    // 头名不是字面量（res.headers[key]）时，静态核对无法保证它在白名单里——
+    // 宁可红，也不许"看起来扫过了"。真需要动态取头时，改成字面量或在这里显式放开。
+    expect(dynamic, `这些地方的头名不是字面量，无法核对白名单：${dynamic.join(' | ')}`).toEqual([]);
+
+    const orphans = Object.keys(PENDING_READERS).filter((name) => !RESPONSE_HEADER_ALLOWLIST.has(name));
     const missing = [...used.keys()].filter((name) => !RESPONSE_HEADER_ALLOWLIST.has(name));
     // 反向：白名单里没有读取者的项 = 死条目（声明了没用，以后没人会删）。
     // 没有这条，x-uniprot-release-date 能白挂一辈子而测试一直绿（后端负责人 2026-11-01）。
-    const dead = [...RESPONSE_HEADER_ALLOWLIST].filter((name) => !used.has(name));
-    expect(dead, `这些头在白名单里但没有任何源读取（死条目）：${dead.join(', ')}`).toEqual([]);
+    // 例外只有一个：PENDING_READERS 里显式登记过的待接入头。
+    const dead = [...RESPONSE_HEADER_ALLOWLIST].filter((name) => !used.has(name) && !(name in PENDING_READERS));
+    const stale = Object.keys(PENDING_READERS).filter((name) => used.has(name));
+    // R12：孤儿登记。登记一个白名单里根本没有的头，它既不参与 missing 也不参与 dead，
+    // 等于在闸门旁边开一格没人看的抽屉——写错了永远不响。所以登记必须是白名单的子集。
+    expect(orphans, `PENDING_READERS 登记了白名单里没有的头：${orphans.join(', ')}——要么补白名单，要么删掉登记`)
+      .toEqual([]);
+    expect(dead, `这些头在白名单里但没有任何已注册源读取（死条目）：${dead.join(', ')}`).toEqual([]);
+    expect(stale, '这些头已经有已注册的源在读，把登记从 PENDING_READERS 里删掉（过期登记同样是 bug）').toEqual([]);
     expect(missing, `这些头被源层读取但不在白名单里（读到的永远是 undefined）：${missing.join(', ')}`).toEqual([]);
+  });
+});
+
+/**
+ * 扫描器自身的正负控（R12-C2）。这些用例不看仓库现状，只看"扫描器会不会瞎"——
+ * 上面那条对齐断言的可信度全部建立在它身上。
+ */
+describe('响应头读取扫描：注释不算、可选链要算、动态头名要报（R12-C2）', () => {
+  it('注释里的读取不算——否则会凭空冒出 stale/dead 误报', () => {
+    expect(scanHeaderReads('c.ts', '// headers["x-total-results"]\nconst a = 1;').names).toEqual([]);
+    expect(scanHeaderReads('c.ts', '/* header(res, "x-uniprot-release") */').names).toEqual([]);
+  });
+
+  it('可选链 res.headers?.["x-…"] 与下标 res.headers["x-…"] 都要算', () => {
+    const optional = scanHeaderReads(
+      'a.ts',
+      'export function f(res: { headers?: Record<string, string> }) { return res.headers?.["x-qq-probe"]; }',
+    );
+    expect(optional.names, '可选链漏检 = 换个写法就能绕过白名单').toEqual(['x-qq-probe']);
+    const index = scanHeaderReads('a.ts', 'const v = res.headers["x-total-results"];');
+    expect(index.names).toEqual(['x-total-results']);
+  });
+
+  it('header() 的单引号、双引号、无插值模板串都算', () => {
+    const reads = scanHeaderReads('b.ts', "const a = header(res, 'x-a'); const b = header(res, \"x-b\"); const c = header(res, `x-c`);");
+    expect(reads.names).toEqual(['x-a', 'x-b', 'x-c']);
+  });
+
+  it('非字面量的头名必须被单独报出来，不许静默漏', () => {
+    const reads = scanHeaderReads('d.ts', "const key = 'x-a'; const v = res.headers[key];");
+    expect(reads.names).toEqual([]);
+    expect(reads.dynamic.length, '动态头名要交给调用方判红').toBe(1);
+  });
+
+  // R12 二轮列出的四种"合法但静态核不了"的读法：一律记动态（拒绝），不许静默漏。
+  it.each([
+    ['header(res, key) 非字面参数', 'const key = "x-qq-probe"; const v = header(res, key);'],
+    ['对象解构', 'const { "x-qq-probe": v } = res.headers;'],
+    ['遍历 Object.entries', 'const v = Object.entries(res.headers).filter(([k]) => k.startsWith("x-"));'],
+    ['转交别名', 'const h = res.headers; const v = h["x-qq-probe"];'],
+    ['下标形式转交别名', 'const h = res["headers"]; const v = h["x-qq-probe"];'],
+    ['下标形式解构', 'const { "x-qq-probe": v } = res["headers"];'],
+  ])('%s → 必须记动态', (_label, code) => {
+    const reads = scanHeaderReads('e.ts', code);
+    expect(reads.names, '这些写法认不出具体头名，names 必须为空').toEqual([]);
+    expect(reads.dynamic.length, '认不出就必须报动态，不许当没看见').toBeGreaterThan(0);
+  });
+
+  it('res["headers"]["x-…"] 这种下标容器也要能读出具体头名', () => {
+    const reads = scanHeaderReads('g.ts', 'const v = res["headers"]["x-qq-probe"];');
+    expect(reads.names).toEqual(['x-qq-probe']);
+    expect(reads.dynamic).toEqual([]);
+  });
+
+  it('类型注解里的 headers 不算读取（否则每条签名都误报）', () => {
+    const reads = scanHeaderReads(
+      'f.ts',
+      'export function f(res: { headers?: Record<string, string> }): { headers: Record<string, string> } { return res as never; }',
+    );
+    expect(reads.dynamic).toEqual([]);
+    expect(reads.names).toEqual([]);
   });
 });
 

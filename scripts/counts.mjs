@@ -367,6 +367,137 @@ export function checkReadmeTable(readme, counts) {
  *    `buildBudgetReport()`，看它到底拦不拦：81 必须红、80 不红、默认集 41 只警示、
  *    全库 200 源 200 工具不红。**行为不对，名字对也没用。**
  */
+/**
+ * 规则文件（`AGENTS.md`）核对的三态。
+ *
+ * 为什么要三态：两态（有/无都当错误）会让**任何外部 clone 的 `npm test` 必红**——
+ * `AGENTS.md` 被 `.gitignore` 忽略、从不进公开仓，缺它不是仓库坏了，是这个检出本来就没有规则文件；
+ * 两态（有/无都放过）又会变成静默跳过，规则被改而代码没跟也没人发现。
+ * 所以这里返回**显式状态值**，由调用方分别断言，谁也糊弄不了：
+ *   `{ status: 'checked', problems: [], threshold: 80, soft: 40 }` 文件在，当前口径两档都对得上
+ *   `{ status: 'checked', problems: [ ... ] }`                     文件在但规则对不上 / 读不了 → 必须红
+ *   `{ status: 'rules-file-absent', problems: [] }`                文件**真不存在**（ENOENT）→ 未核对
+ *
+ * 取值口径（R12 两轮复验逼出来的，不是"能跑就行"）：
+ *   ① **只认当前口径所在的小节**：先剥 HTML 注释，再定位「十、入口与工具数量预算」里的 10.1，
+ *      历史沿革（10.4）、正文示例、注释里的同形表格都不参与——否则"先写个旧表格 80、再写当前 999"
+ *      或"用注释包住旧 80"都能骗过检查（R12-B1）。
+ *   ② **同一行只许出现一次**：出现两次就红——重复行意味着"哪条算数"没有答案，猜一条等于放水。
+ *   ③ **完整解析整数，不取前缀**：`≤ 80.5` 必须被拒，不许截成 80（R12-B1）；格式不合规等于红。
+ *   ④ **两档都核**：硬上限（唯一硬阈值）与默认推荐集软建议（R12-B1 残留）。
+ *   ⑤ **读失败 ≠ 文件不存在**：只有 ENOENT 算未核对，EACCES / 路径是目录 / 编码坏一律红（R12-C1）。
+ */
+const RULES_SECTION = /^#\s*十、[\s\S]*?(?=^#\s*十一、)/m;
+
+/**
+ * 剥掉 HTML 注释与 **Markdown 围栏代码块**后，取「十、」那一节的 10.1 小节正文。
+ *
+ * 围栏必须整块删掉：正文里贴一段示例（里面自带「十、/10.1/十一」的完整假文档）
+ * 会把定位骗到示例里去（R12 第二轮实测）。反引号 ``` 与波浪号 ~~~ 两种围栏都算。
+ * 删掉后，示例里的标题既不算节、也不算小节。
+ *
+ * 10.1 出现两次直接拒绝——"哪段才算当前口径"没有答案时，猜第一个就是放水。
+ */
+function ruleScope(text) {
+  const cleaned = text
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // 反引号围栏（``` 或更多），整块删
+    .replace(/^[ \t]*`{3,}[^\n]*\n[\s\S]*?^[ \t]*`{3,}[ \t]*$/gm, '')
+    // 波浪号围栏（~~~），整块删——只认 ``` 的话，示例用 ~~~ 包起来就又能冒充现行规则
+    .replace(/^[ \t]*~{3,}[^\n]*\n[\s\S]*?^[ \t]*~{3,}[ \t]*$/gm, '');
+  const section = RULES_SECTION.exec(cleaned)?.[0];
+  if (!section) return { error: 'AGENTS.md 里找不到「十、入口与工具数量预算」这一节：规则结构变了，先对规则' };
+  const headings = section.match(/^##\s*10\.1(?=\s|$)/gm) ?? [];
+  if (headings.length === 0) return { error: '第十节里找不到 10.1 小节（当前口径表所在）：规则结构变了，先对规则' };
+  if (headings.length > 1) {
+    return { error: `第十节里出现了 ${headings.length} 个 10.1 小节：无法判断哪段是当前口径，先合并成一段` };
+  }
+  // 注意结尾用 (?![\s\S]) 而不是 $：多行模式下 $ 会匹配行尾，小节会被截成第一行。
+  const sub = /^##\s*10\.1[^\n]*\n([\s\S]*?)(?=^##\s|(?![\s\S]))/m.exec(section);
+  if (!sub) return { error: '10.1 小节内容取不出来：规则结构变了，先对规则' };
+  return { scope: sub[1] };
+}
+
+/**
+ * 从当前口径小节里取「标签 | ≤ N（说明） | …」这一行。
+ *
+ * 按**单元格**解析，不按整行找第一个 `≤`（R12 第二轮实测的反例：说明列先写一个 ≤ 80，
+ * 真正的值列写 ≤ 999，按整行找会取到 80 然后报"对得上"）。规则：
+ *   - 行必须是表格行，第一格是标签，第二格是值；
+ *   - 值格必须**整格**就是「≤ 整数（说明）」，不做前缀匹配、不接受小数；
+ *   - 标签格和其它格不许再出现 `≤`（否则又是一处歧义）；
+ *   - 同一标签在当前口径里只许出现一次。
+ */
+function parseLimitRow(scope, label, suffix) {
+  // 只认"行首就是 |"的表格行：缩进 4 格的缩进代码块里的表（Markdown 的另一种代码块）
+  // 因此不会被当成现行表格；真被缩进了就找不到行 → 红（安全失败），不是静默放过。
+  const rows = scope.split('\n').filter((line) => line.startsWith('|') && line.includes(label));
+  if (rows.length === 0) return { error: `当前口径（10.1）里找不到「${label}」这一行：规则被改/被删` };
+  if (rows.length > 1) {
+    return { error: `「${label}」在当前口径里出现 ${rows.length} 次：哪条算数没有答案，先删掉重复行` };
+  }
+  const line = rows[0].trim();
+  const cells = line.replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
+  if (cells.length < 3) {
+    return { error: `「${label}」行不是「标签 | 阈值 | 说明」三列表格行：${line}` };
+  }
+  if (!cells[0].includes(label)) {
+    return { error: `「${label}」没有出现在第一格（标签列）：${line}` };
+  }
+  const otherCells = cells.filter((_, index) => index !== 1);
+  if (otherCells.some((cell) => cell.includes('≤'))) {
+    return { error: `「${label}」行的阈值出现在除值列以外的单元格里，无法判断哪格算数：${line}` };
+  }
+  const valueCell = cells[1].replace(/\*/g, '').trim();
+  // 整格匹配：≤ 整数（说明），小数/全角/带前缀说明一律不合格
+  const match = /^≤\s*(\d+)(?![\d.])\s*（([^）]*)）$/.exec(valueCell);
+  if (!match) {
+    return { error: `「${label}」的值列不是「≤ 整数（说明）」：${valueCell}（80.5 这类小数/异常写法一律算不合格）` };
+  }
+  if (suffix && !match[2].includes(suffix)) {
+    return { error: `「${label}」的值列缺少「${suffix}」字样：${valueCell}` };
+  }
+  return { value: Number(match[1]) };
+}
+
+export function inspectRulesAnchor(root = ROOT) {
+  let agents;
+  try {
+    agents = readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+  } catch (error) {
+    // 只有"文件确实不在"才算未核对；读不了是故障，必须红，不许伪装成 absent。
+    if (error?.code === 'ENOENT') return { status: 'rules-file-absent', problems: [] };
+    return {
+      status: 'checked',
+      problems: [`读 AGENTS.md 失败（${error?.code ?? 'unknown'}：${error?.message ?? error}）：不是"没有规则文件"，是这个文件读不了`],
+    };
+  }
+
+  const scope = ruleScope(agents);
+  if (scope.error) return { status: 'checked', problems: [scope.error] };
+
+  const problems = [];
+  const hard = parseLimitRow(scope.scope, '单次订阅集工具数', '唯一硬阈值');
+  const soft = parseLimitRow(scope.scope, '默认推荐集', '软建议');
+
+  if (hard.error) problems.push(hard.error);
+  else if (hard.value !== MAX_SUBSCRIPTION_TOOLS) {
+    problems.push(
+      `AGENTS.md 当前口径写 ≤ ${hard.value}，代码常量 MAX_SUBSCRIPTION_TOOLS=${MAX_SUBSCRIPTION_TOOLS}：`
+        + '改阈值必须先改规则、再改代码，两边不许各说各话',
+    );
+  }
+  if (soft.error) problems.push(soft.error);
+  else if (soft.value !== DEFAULT_SET_TOOLS_SOFT_MAX) {
+    problems.push(
+      `AGENTS.md 当前口径的默认推荐集写 ≤ ${soft.value}，代码常量 DEFAULT_SET_TOOLS_SOFT_MAX=${DEFAULT_SET_TOOLS_SOFT_MAX}：`
+        + '源码常量写对不能证明规则正文也对',
+    );
+  }
+
+  return { status: 'checked', problems, threshold: hard.value, soft: soft.value };
+}
+
 export function checkBudgetConstants(root = ROOT) {
   const problems = [];
 
@@ -411,15 +542,9 @@ export function checkBudgetConstants(root = ROOT) {
   }
 
   // 规则文档存在性：§10.2 里仍写着「≤ 80」。只做存在性判断，不解析结构，排版变了不会误报。
-  const agentsPath = path.join(root, 'AGENTS.md');
-  try {
-    const agents = readFileSync(agentsPath, 'utf8');
-    if (!/≤\s*80/.test(agents)) {
-      problems.push('AGENTS.md 里找不到「≤ 80」：规则被改了而代码没跟，或规则段落被删——先对规则');
-    }
-  } catch {
-    problems.push('读不到 AGENTS.md，无法核对规则里的 80 阈值');
-  }
+  // 三态由 inspectRulesAnchor 给出：文件在 → 真核；文件不在 → 明确「未核对」，**不当成错误**。
+  const rules = inspectRulesAnchor(root);
+  problems.push(...rules.problems);
 
   // ① 常量一致性：新阈值两处同值；历史常量只作展示，也要对齐
   const pairs = [
@@ -870,11 +995,18 @@ async function main(argv) {
       process.stderr.write(`（读不到 dist/client/catalog.js：${error.message}；置顶顺序这一项会报缺失）\n`);
     }
     const problems = checkSourceScope({ counts, catalog });
-    if (asJson) process.stdout.write(`${JSON.stringify({ counts, problems }, null, 2)}\n`);
+    // 规则文件三态：不能让「没有 AGENTS.md」静默滑过去，所以每一次 --check 都要印出来。
+    const rules = inspectRulesAnchor();
+    const rulesNote = rules.status === 'checked'
+      ? '规则核对：已核对 AGENTS.md 的「≤ 80」阈值'
+      : '规则核对：**未核对** —— 本检出没有 AGENTS.md（公开仓不含规则文件）；'
+        + `阈值以源码字面锚定 ${MAX_SUBSCRIPTION_TOOLS} / ${MAX_TOOLS} 为准，有规则文件时必须真核对`;
+    if (asJson) process.stdout.write(`${JSON.stringify({ counts, problems, rules }, null, 2)}\n`);
     if (problems.length > 0) {
       fail(problems, '❌ 数量校验失败（README 与 dist 实测不符）');
       return;
     }
+    process.stdout.write(`${rulesNote}\n`);
     process.stdout.write(
       `✅ 数量校验通过：README 标记块与逐源表格、预算口径（订阅集硬上限 ${MAX_SUBSCRIPTION_TOOLS} / 默认集软建议 ${MAX_TOOLS}，含 4 条行为断言）、置顶顺序、源图标都与 dist 一致`
         + `（${counts.sources} 源 / ${counts.tools} 工具，置顶 ${catalog?.pinned.join(', ') ?? '-'}）\n`,

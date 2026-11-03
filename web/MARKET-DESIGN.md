@@ -1,7 +1,8 @@
-# 市场首屏设计稿（FE-01）
+# 源市场设计稿（FE-01）
 
-> 状态：**设计稿 + 可点开线框**。实现与 `/catalog` 接线归后续；本稿只定信息层级、数字来源、阈值行为与三态。
-> 线框：`web/market-sketch.html`（数据走 `GET /catalog`，接口未上线时全页显示「待 /catalog」）。
+> 状态：**设计稿 + 已实现页面**。2026-11-02 按群内决定，页面从 `web/market-sketch.html` 迁到 **`site/market.html`**
+> （`site/assets/market.js` / `site/assets/market.css`），`web/` 不再留副本；`/catalog` 接线由后端负责。
+> 本地验证：`node site/scripts/serve.mjs 8093 --catalog-upstream http://127.0.0.1:8787`（显式开关，默认不反代）。
 
 ---
 

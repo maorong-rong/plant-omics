@@ -117,9 +117,51 @@ describe('catalog 的 coverage 与盲区字段（按契约输出）', () => {
       }],
     });
 
-    const catalog = buildCatalog(registry, { version: 'test' });
+    const catalog = buildCatalog(registry, { version: 'test', pinnedSources: { schemaVersion: 1, pinned: [] } });
     expect(catalog.sources[0]?.coverage).toEqual(['未登记覆盖范围']);
     expect(catalog.sources[0]?.blindSpots).toEqual([]);
     expect(catalog.sources[0]?.blindSpotsTotal).toBe(0);
+  });
+});
+
+/**
+ * 2026-11-03 审查发现：`/catalog` 的 `sources` 是注册表原序（wheatomics 第一），
+ * 而落地页按 `src/core/pinned-sources.json` 把 strawberry 置顶——同一份数据两种顺序。
+ * 修法是让 `/catalog` 也读那一份，而不是在市场页里再排一次。
+ */
+describe('catalog 的 sources 顺序与 site/ 同源（pinned-sources.json）', () => {
+  it('第一个源是置顶源，且未列出的源保持注册表原序', async () => {
+    const { buildCatalog } = await import('../src/service/catalog.js');
+    const { registry } = await import('../src/sources/index.js');
+    const { loadPinnedSources, applyPinnedOrder } = await import('../src/core/pinned.js');
+
+    const pinned = loadPinnedSources();
+    const expected = applyPinnedOrder(
+      registry.listSources().map((bundle) => ({ id: bundle.manifest.id })),
+      pinned.pinned,
+    ).map((item) => item.id);
+    const catalog = buildCatalog(registry, { version: 'test' });
+    expect(catalog.sources.map((source) => source.id)).toEqual(expected);
+    expect(catalog.sources[0]?.id).toBe(pinned.pinned[0]);
+  });
+
+  it('置顶清单里出现注册表没有的 id → 抛错，不回退注册表顺序', async () => {
+    const { buildCatalog } = await import('../src/service/catalog.js');
+    const { registry } = await import('../src/sources/index.js');
+    expect(() => buildCatalog(registry, {
+      version: 'test',
+      pinnedSources: { schemaVersion: 1, pinned: ['not-a-source'] },
+    })).toThrow(/不存在的源/);
+  });
+
+  it('换一份置顶清单，顺序跟着变（证明不是写死的 strawberry）', async () => {
+    const { buildCatalog } = await import('../src/service/catalog.js');
+    const { registry } = await import('../src/sources/index.js');
+    const catalog = buildCatalog(registry, {
+      version: 'test',
+      pinnedSources: { schemaVersion: 1, pinned: ['icg'] },
+    });
+    expect(catalog.sources[0]?.id).toBe('icg');
+    expect(catalog.sources.map((source) => source.id).filter((id) => id === 'icg')).toHaveLength(1);
   });
 });

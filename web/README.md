@@ -106,10 +106,7 @@ web/
 ├── picker.html       选源页（静态版）：卡片勾选 + 工具数/token 预算
 ├── picker.js         选源逻辑：作物筛选、预算计算、复制 PLANTOMICS_SOURCES
 ├── picker.css        选源页样式
-├── market-sketch.html 市场首屏线框（数据走 GET /catalog；接口未上线时全页「待 /catalog」）
-├── market.js         市场首屏逻辑：订阅集、阈值（>40 警示 / >80 拒绝）、数据时刻
-├── market.css        市场首屏样式
-├── MARKET-DESIGN.md  市场首屏设计稿：数字来源标注、卡片字段、阈值行为、三态
+├── MARKET-DESIGN.md  源市场设计稿：数字来源标注、卡片字段、阈值行为、三态（**页面本身已迁到 `site/market.html`**）
 ├── panel-sketch.html 侧边栏面板线框（六种状态可切换，设计稿不是成品）
 ├── PANEL-DESIGN.md   面板设计稿：层级 / 三态 / 与 web 的复用边界 / 子集提示
 ├── dev-server.mjs    本地开发服务器：静态站 + /mcp /healthz 反代（同源）

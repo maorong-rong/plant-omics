@@ -96,6 +96,17 @@ export const SOURCE_LABELS = {
         'Gene lookup by symbol or ID, genomic sequence and external cross-references for four species: Arabidopsis, rice, wheat, maize.',
     },
   },
+  string: {
+    zh: {
+      name: 'STRING 蛋白互作数据库（ELIXIR）',
+      blurb: '拟南芥与粳稻的蛋白互作：先把标识符解析成 STRING ID，再查互作伙伴；小麦、玉米的互作能力尚未验证。',
+    },
+    en: {
+      name: 'STRING — protein interactions (ELIXIR)',
+      blurb:
+        'Protein interactions for Arabidopsis and japonica rice: resolve identifiers to STRING IDs first, then query interaction partners; wheat and maize are not yet verified.',
+    },
+  },
 };
 
 /**
