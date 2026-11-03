@@ -48,7 +48,10 @@ export function parseServiceConfig(env: NodeJS.ProcessEnv = process.env): Servic
   if (!host) throw new ServiceConfigError('PLANTOMICS_HUB_HOST 不能为空');
 
   // PaaS 平台普遍注入 PORT；我们的专用变量优先，便于本机固定端口
-  const rawPort = (env.PLANTOMICS_HUB_PORT ?? env.PORT ?? '8787').trim();
+  const rawPortRaw = (env.PLANTOMICS_HUB_PORT ?? env.PORT ?? '8787').trim();
+  // 空串/纯空白视为「没设置」→ 用默认端口。不这样处理时 Number('') === 0，
+  // 端口 0 是合法的"随机端口"，服务会静默起在一个没人知道的端口上（2026-11-01）。
+  const rawPort = rawPortRaw === '' ? '8787' : rawPortRaw;
   const port = Number(rawPort);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new ServiceConfigError(`PLANTOMICS_HUB_PORT / PORT 必须是 0–65535 的整数，收到 ${JSON.stringify(rawPort)}`);

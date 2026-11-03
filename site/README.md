@@ -18,11 +18,28 @@ node site/scripts/serve.mjs 8091     # → http://127.0.0.1:8091/
 
 `site/data/catalog.js` 就是渲染用的数据；用 `file://` 直开也能看到内容（脚本不是 `fetch`，是 `<script>` 注入）。
 
+### 脏构建防线（`-dirty` 默认拒绝生成）
+
+`dist/` 是**可变共享目录**：谁跑一次 `npm run build`，`dist/service/build-info.json` 的 `sourceRev` 就变一次。
+它以 `-dirty` 结尾时，说明这份产物来自**未提交的工作区**——里面可能有未过审的源。
+
+所以 `build-data.mjs` **默认拒绝在 `-dirty` 构建上生成**（非零退出，并说明先用干净 HEAD 构建）。
+**身份读不出来也一样拒绝**：`dist/service/build-info.json` 缺失、不是合法 JSON、或没有 `sourceRev` 时，
+生成器不猜「大概没事」——不知道这份 `dist` 从哪来，比知道它脏更没底。
+要生成必须显式加逃生口：
+
+```bash
+node site/scripts/build-data.mjs --allow-dirty   # 仅供本地看渲染
+```
+
+放行时数据里写 `build.dirty: true`，页面顶部显示「**工作区构建，非发布口径**」——不许静静地产出一份
+看着正常的快照。起因：2026-11-01 有人为拿干净身份换了 `dist/`，另一边核对时读出旧数，37 vs 39 就是这么来的。
+
 ## 2. 数据从哪来（重要）
 
 | 页面上的东西 | 来源 | 谁来保证它对 |
 |---|---|---|
-| 源数、工具数、预算（8/20、37/40） | `dist/` 注册表 | `build-data.mjs` 与 `npm run stats` 交叉核对，不一致即失败 |
+| 源数、工具数（全库只报数、**不设上限**） | `dist/` 注册表 | `build-data.mjs` 与 `scripts/counts.mjs --json` 交叉核对，不一致即失败 |
 | 每个源的工具数、工具名 | 同上 | 同上 |
 | 盲区（`caveats`） | `manifest.caveats` **原文**，不翻译不改写 | 页面 `details` 里逐条列出 |
 | 版本口径（`versionNote`） | `manifest.versionNote` | 同上 |

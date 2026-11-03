@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -87,6 +88,29 @@ describe('按请求选源：指定子集', () => {
   });
 });
 
+describe('订阅集唯一硬阈值（v2.3 §10.2）', () => {
+  it('80 通过、81 拒绝；且阈值只在 createRegistry 里做一次（两条入口共用）', async () => {
+    const { assertSubsetBudget } = await import('../src/service/budget.js');
+    expect(() => assertSubsetBudget(80)).not.toThrow();
+    expect(() => assertSubsetBudget(81)).toThrow(/硬上限 80/);
+
+    // 接线证明：阈值函数若没被调用，这条会红（防"有函数没人用"）。
+    // v2.3 修正（2026-11-01，对抗审查者 P1）：原来只断言 resolveSubset 里调了它，
+    // 于是"环境变量那条路也能起 81 工具"这个洞正好落在断言之外。
+    // 现在钉的是**唯一校验点**：createRegistry({ enabled }) 里调，subset.ts 不再重复调。
+    const registrySource = readFileSync(new URL('../src/sources/index.ts', import.meta.url), 'utf8');
+    expect(registrySource).toContain('assertSubsetBudget(registry.listTools().length)');
+    const subsetSource = readFileSync(new URL('../src/service/subset.ts', import.meta.url), 'utf8');
+    expect(subsetSource).not.toContain('assertSubsetBudget(');
+  });
+
+  it('真实子集（当前 9 源）远低于硬上限：不因阈值误拒', () => {
+    const resolution = resolveSubset(defaultRegistry, 'icg,scod');
+    expect(resolution.requested).toEqual(['icg', 'scod']);
+    expect(resolution.registry.listTools().length).toBeLessThanOrEqual(80);
+  });
+});
+
 describe('按请求选源：未知 id 必须报错', () => {
   it('完全未知的 id → HTTP 400，点名 id，不返回空清单', async () => {
     const instance = await start();
@@ -138,13 +162,13 @@ describe('按请求选源：不指定时行为不变', () => {
   it('不带请求头 → 工具清单与服务端注册表逐项相同', async () => {
     const names = await toolNames();
     expect(names).toEqual(defaultRegistry.listTools().map((tool) => tool.name).sort());
-    expect(names).toHaveLength(37);
+    expect(names).toHaveLength(39);
   });
 
   it('只有分隔符/空白 → 当作没指定（退回全集，不是空集）', async () => {
     for (const value of ['', '   ', ',', ' , ; ']) {
       const names = await toolNames({ [SOURCE_SUBSET_HEADER]: value });
-      expect(names).toHaveLength(37);
+      expect(names).toHaveLength(39);
     }
   });
 
@@ -155,15 +179,15 @@ describe('按请求选源：不指定时行为不变', () => {
     });
     expect(health.status).toBe(200);
     const payload = (await health.json()) as { sources: number; tools: number; metaTools: number };
-    expect(payload.sources).toBe(8);
-    expect(payload.tools).toBe(37);
+    expect(payload.sources).toBe(9);
+    expect(payload.tools).toBe(39);
     expect(payload.metaTools).toBe(2);
   });
 
   it('子集请求不会污染默认注册表', async () => {
     await toolNames({ [SOURCE_SUBSET_HEADER]: 'icg' });
-    expect(defaultRegistry.listSources()).toHaveLength(8);
-    expect(defaultRegistry.listTools()).toHaveLength(37);
+    expect(defaultRegistry.listSources()).toHaveLength(9);
+    expect(defaultRegistry.listTools()).toHaveLength(39);
   });
 });
 
@@ -177,7 +201,7 @@ describe('按请求选源：握手 instructions 随子集变化（有意设计�
 
     const fullClient = await connect(instance);
     const fullInstructions = fullClient.getInstructions() ?? '';
-    expect(fullInstructions).toContain('本次请求启用 8 个源、37 个工具');
+    expect(fullInstructions).toContain('本次请求启用 9 个源、39 个工具');
     expect(fullInstructions).not.toContain('只启用了部分源');
   });
 
@@ -187,7 +211,7 @@ describe('按请求选源：握手 instructions 随子集变化（有意设计�
     expect((await subsetClient.listTools()).tools).toHaveLength(4);
 
     const plainClient = await connect(instance);
-    expect((await plainClient.listTools()).tools).toHaveLength(37);
+    expect((await plainClient.listTools()).tools).toHaveLength(39);
   });
 });
 

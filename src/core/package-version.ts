@@ -8,4 +8,4 @@
  *
  * 必须与 `package.json` 的 `version` 一致——`test/core.test.ts` 有断言盯着。
  */
-export const PACKAGE_VERSION = '0.1.0';
+export const PACKAGE_VERSION = '0.1.1';

@@ -237,10 +237,20 @@ async function modeJudge() {
     // 仅物种命中：物种识别成功、意图为空。这类必须直接拒答（state=B、候选 0），
     // 否则"物种接得住"会被误读成"能力也接得住"，模型会照着候选去调不该调的源。
     const speciesOnly = recognized.species.length > 0 && (recognized.intents ?? []).length === 0;
-    const saysNoCover = /没有覆盖|未覆盖|不在本服务目录/.test(text);
+    /**
+     * 题级硬排除（分析/计算）与"没覆盖"是**两件不同的事**，文案判据也必须分开：
+     * 前者要写「本服务不支持该任务／不是没有覆盖」，后者要写「没有覆盖／不在本服务目录」。
+     * 混用会让"本服务不做"被读成"本服务没接"，反之亦然（后端负责人 2026-11-01 明确）。
+     */
+    const isComputation = typeof raw.computation === 'string';
+    const saysNoCover = isComputation
+      ? /不是没有覆盖|不支持该任务/.test(text)
+      : /没有覆盖|未覆盖|不在本服务目录/.test(text);
     const contradiction = zero && /没能识别出可用意图/.test(text) && recognized.sources.length > 0;
-    const coverageBothKinds = !zero || recognized.species.length === 0 || unknownSpecies.length > 0
-      || /有源覆盖|能力缺口|点名了/.test(text);
+    const coverageBothKinds = isComputation
+      ? true // 题级硬排除不做覆盖判定，不适用"物种没人接"这条
+      : (!zero || recognized.species.length === 0 || unknownSpecies.length > 0
+        || /有源覆盖|能力缺口|点名了/.test(text));
 
     // ①-c 预算截断时正文必须明说"另有 N 个命中源未展示"
     const renderedCount = new Set([...text.matchAll(/^([\u2460-\u2473]) ([a-z0-9]+)｜/gmu)].map((m) => m[2])).size;
@@ -318,6 +328,44 @@ async function modeJudge() {
      * 只钉"该给的一定给、不该给的一定不给"这一对反例。
      */
     const expect = c.expect ?? {};
+    /**
+     * 题级硬排除（分析/计算类）：必须**在意图识别之前**拦，且 `intents` 必须为空。
+     *
+     * 反例（真实语料，2026-11-01）：「帮我设计 PCR 引物」里含"引物"，
+     * 旧实现给出 `intents=[reference-gene]`（内参基因），映射层据此会把用户导向内参源。
+     * 所以这一条不只判"有没有拒答"，还要判 `recognized.intents` 是否为空——
+     * 文案对不对是第二步，意图有没有漏出去是第一步。
+     * `hardExclude: false` 是**正控**：合法查询（「小麦的引物有哪些」）不得被误判成计算任务。
+     */
+    const hardExclude = expect.hardExclude ?? null;
+    const hardExcludeCheck = hardExclude === null
+      ? 'n/a'
+      : hardExclude
+        ? (raw.state === 'B' && candidates.length === 0 && returnedTools.length === 0 && typeof raw.computation === 'string'
+          && !/没有任何源覆盖|不在本服务目录/.test(text)
+          ? 'PASS'
+          : `FAIL state=${raw.state} 候选=${candidates.length} 工具=${returnedTools.length} computation=${raw.computation ?? '(缺)'}`
+            + `；误写成"没接"=${/没有任何源覆盖|不在本服务目录/.test(text)}`)
+        : (raw.computation === undefined && recognized.intents.length > 0
+          ? 'PASS'
+          : `FAIL 合法查询被误判成硬排除（computation=${raw.computation ?? '(无)'} intents=[${recognized.intents.join(',')}]）`);
+    /**
+     * 「本服务不做」与「本服务没接」必须**各有一条用例**（2026-11-01 后端负责人）：
+     * 只测一边等于没测——两条分支的文案一旦互换，读者会把"我们不做分析"读成"我们没接这个物种"。
+     *
+     * `uncovered:true` 侧要求：零候选 + 明确"没有任何源覆盖/不在本服务目录"，**且不得出现"不支持该任务"**；
+     * `hardExclude:true` 侧（上面那条）反过来：必须写"不支持该任务/不是没有覆盖"，不得写成"没接"。
+     */
+    const uncoveredExpect = expect.uncovered ?? null;
+    const uncoveredCheck = uncoveredExpect === null
+      ? 'n/a'
+      : (raw.state === 'B' && candidates.length === 0
+        && /没有任何源覆盖|不在本服务目录/.test(text)
+        && !/不支持该任务/.test(text)
+        ? 'PASS'
+        : `FAIL state=${raw.state} 候选=${candidates.length}`
+          + `；缺"没接"表述=${!/没有任何源覆盖|不在本服务目录/.test(text)}`
+          + `；混入"不做"表述=${/不支持该任务/.test(text)}`);
     const expectIntents = expect.intents ?? null;
     const sameSet = (want, got) => want.length === got.length && want.every((x) => got.includes(x));
     const intentMismatch = expectIntents === null
@@ -347,6 +395,8 @@ async function modeJudge() {
         ? 'n/a'
         : missingTool.length > 0 ? `FAIL 缺工具 ${missingTool.join(',')}`
           : forbiddenTool.length > 0 ? `FAIL 不该给 ${forbiddenTool.join(',')}` : 'PASS',
+      '计算类硬排除（前置于意图识别）': hardExcludeCheck,
+      '没接 ≠ 不做（没接侧）': uncoveredCheck,
       '② 零候选如实说不覆盖': zero ? (saysNoCover ? 'PASS' : 'FAIL 没写没有覆盖') : 'n/a',
       '② 不把能力缺口写成物种没人接': coverageBothKinds ? 'PASS' : 'FAIL 只有物种不覆盖的解释',
       '② 点名源不得与"没能识别出可用意图"并存': contradiction ? 'FAIL' : 'PASS',
@@ -365,9 +415,52 @@ async function modeJudge() {
     });
   }
 
+  /**
+   * `hub_status` 展示口径（AGENTS.md v2.3「源市场制」）——这类"展示"最容易在下次改动里
+   * 被顺手改回旧口径，所以这里用**禁止模式**断言，而不是只断言新文案存在：
+   *   - 禁止 `源 8/20`、`工具 37/40` 这类像上限的分母（全库本来没有上限）；
+   *   - 禁止「剩余额度 N」（旧口径的产物，会让人以为"再铺就到顶了"）；
+   *   - 必须报订阅集硬上限 80 与其 token 代价、默认集软建议 40。
+   * 阈值不在这里写死：先从 `dist/service/budget.js` 读常量，再核"常量仍是 v2.3 的 80/40"，
+   * 这样既防展示回退，也防有人悄悄改常量而不改规则。
+   */
+  const budgetMod = await import(pathToFileURL(join(repoRoot, 'dist', 'service', 'budget.js')).href);
+  const hardMax = budgetMod.SUBSET_TOOLS_HARD_MAX;
+  const softMax = budgetMod.DEFAULT_SET_TOOLS_SOFT_MAX;
+  const statusTool = registry.listMetaTools().find((t) => t.name === 'hub_status');
+  const status = await statusTool.run({}, ctx); // ctx.http 会抛错并计数：顺带验证 hub_status 不联网
+  const stText = status.text ?? '';
+  const market = status.raw?.market ?? {};
+  const denominator = /(?:源|工具)\s*\d+\s*\/\s*\d+/;
+  const quotaWord = /剩余.{0,6}额度|还能加\s*\d+\s*个/;
+  const statusChecks = {
+    'hub_status 常量仍是 v2.3（80/40）': (hardMax === 80 && softMax === 40)
+      ? 'PASS'
+      : `FAIL 硬上限=${hardMax} 软建议=${softMax}，规则 v2.3 写死 80/40`,
+    'hub_status 不带 /20 /40 式分母': denominator.test(stText)
+      ? `FAIL 出现分母「${(stText.match(denominator) ?? [])[0]}」`
+      : 'PASS',
+    'hub_status 不出现"剩余额度"': quotaWord.test(stText)
+      ? `FAIL 出现旧口径「${(stText.match(quotaWord) ?? [])[0]}」`
+      : 'PASS',
+    'hub_status 报订阅集硬上限 80': new RegExp(`硬阈值[^\\n]*${hardMax}`).test(stText) ? 'PASS' : 'FAIL 没写硬阈值 80',
+    'hub_status 报默认集软建议 40': new RegExp(`软建议[^\\n]*${softMax}`).test(stText) ? 'PASS' : 'FAIL 没写软建议 40',
+    'hub_status 报 token 代价 22,400': /22,400/.test(stText) ? 'PASS' : 'FAIL 没写 token 代价',
+    'hub_status raw.market 与常量一致': (market.subsetToolsHardMax === hardMax
+      && market.defaultSetSoftMax === softMax
+      && market.estTokensPerTool === 280
+      && market.subsetToolsHardMaxTokens === hardMax * 280
+      && market.librarySources === registry.listSources().length)
+      ? 'PASS'
+      : `FAIL ${JSON.stringify(market)}`,
+  };
+
   const fails = rows.flatMap((r) => Object.entries(r.checks)
     .filter(([, v]) => String(v).startsWith('FAIL'))
-    .map(([k, v]) => `${r.id} ${k}: ${v}`));
+    .map(([k, v]) => `${r.id} ${k}: ${v}`))
+    .concat(Object.entries(statusChecks)
+      .filter(([, v]) => String(v).startsWith('FAIL'))
+      .map(([k, v]) => `hub_status ${k}: ${v}`));
 
   const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex').toUpperCase();
   const summary = {
@@ -386,6 +479,7 @@ async function modeJudge() {
       mcpToolCount: mcpTools.length,
       upstreamAttempts,
     },
+    statusChecks,
     rows, failCount: fails.length, fails,
   };
   writeFileSync(outPath, JSON.stringify(summary, null, 2), 'utf8');
@@ -394,6 +488,9 @@ async function modeJudge() {
     const flag = Object.values(r.checks).some((v) => String(v).startsWith('FAIL')) ? 'FAIL' : 'PASS';
     console.log(`${flag} ${r.id} 候选=${r.candidateCount} 工具=${r.returnedTools.length} 意图=[${r.intents.join(',')}] `
       + Object.entries(r.checks).map(([k, v]) => `${k}=${v}`).join(' | '));
+  }
+  for (const [k, v] of Object.entries(statusChecks)) {
+    console.log(`${String(v).startsWith('FAIL') ? 'FAIL' : 'PASS'} ${k}=${v}`);
   }
   console.log(`\n合计 ${rows.length} 题，FAIL 项 ${fails.length}；零上游尝试 ${upstreamAttempts} 次；saved ${outPath}`);
   if (fails.length) console.log(fails.join('\n'));

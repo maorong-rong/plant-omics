@@ -1,0 +1,26 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://string-db.org/api/json/interactionPartners?identifiers=3702.Q9SXZ2&species=3702&limit=3",
+    "status": 404,
+    "contentType": "",
+    "sourceBytes": 109,
+    "sourceSha256": "21D978350B2B350235908402DFED1BE225FC680927943CA74FF1886A8B833550",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via node execFileSync，单次 GET，未加超时伪装",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T03:39:21.896Z",
+    "captureTimeNote": "本文件由脚本一次抓取即写盘，capturedAt 为脚本记录的 UTC 时刻（抓取与记录同一动作内完成）。",
+    "durationMs": 702,
+    "purpose": "STR-B：camelCase 方法名 → 404 text/html 转发桩的真实原件（此前测试是合成串）",
+    "cropping": "verbatim; 未删字段（ErrorMessage 的 HTML 由工具清洗，不改 fixture）",
+    "rawBodyNote": "rawBody 是 2026-11-01 重取所得的上游原体逐字副本：其字节 sha256 与 sourceSha256 相等。**这只能说明\"与给定基线（sourceSha256）逐字节一致\"，不证明历史采集发生过**——当初那次抓取是否真的发生、何时发生，本文件无法证明（captureTimeStatus=\"未知\"的件尤其如此）。**不得据此把 captureTimeStatus 从\"未知\"改成\"确证\"。** payload 是同一 JSON 的重排版（derived），离线可用 JSON.parse(rawBody) 复算比对。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T04:04:26.097Z",
+    "canonicalSha256": "21D978350B2B350235908402DFED1BE225FC680927943CA74FF1886A8B833550",
+    "canonicalSha256OfRawBody": "21D978350B2B350235908402DFED1BE225FC680927943CA74FF1886A8B833550",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256（与 test 里 canonicalJson 同算法）；非 JSON 原体（HTML 桩）按原文 UTF-8 直接哈希。sourceSha256 只对给定基线验一致性，不证明历史采集动作；**canonicalSha256 表示\"本次比较的这两份内容一致\"，不保证未来抓取仍相同**——它不预设上游的序列化行为会一直不变。"
+  },
+  "payload": "<html><body style='font-family:monospace'>&nbsp;<br/><b>you are being forwarded<br/>&nbsp;<br/></body></html>",
+  "rawBody": "<html><body style='font-family:monospace'>&nbsp;<br/><b>you are being forwarded<br/>&nbsp;<br/></body></html>"
+}

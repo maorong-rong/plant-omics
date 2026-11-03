@@ -331,6 +331,17 @@ code {
   color: var(--ink);
 }
 
+/* 脏构建警告：`--allow-dirty` 生成的快照必须一眼看见，否则「工作区构建」就等于没标。
+   正常发布口径下该元素是 hidden，不占位。 */
+.notice-dirty {
+  margin: 18px 0 0;
+  border: 2px solid var(--t2);
+  border-left-width: 6px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.notice-dirty .mono { font-family: var(--mono); font-size: 12.5px; }
+
 /* ── 区块 ────────────────────────────────────────────────────────────── */
 .section { padding: 64px 0; border-top: 1px solid var(--line); }
 

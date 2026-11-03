@@ -15,6 +15,7 @@
  *   node scripts/probe.mjs --json
  *   node scripts/probe.mjs --attempts 1        # 关掉全部重试（默认连接层 6 次、5xx 3 次）
  *   node scripts/probe.mjs --status-attempts 1 # 5xx 也只发一次
+ *   node scripts/probe.mjs --also-http       # 额外用 http 再探一遍（仅 https 源；**时间约翻倍**）
  *
  * 退出码：任一源不符合预期 → 1（按项目规约，断言必须非零退出，不许只告警）。
  * 产物：probe-report.json（本机临时件，已在 .gitignore 里）。
@@ -78,10 +79,15 @@ export async function probe(bundle, {
   attempts = RETRY_ATTEMPTS,
   statusAttempts = RETRY_STATUS_ATTEMPTS,
   retryDelayMs = RETRY_BASE_DELAY_MS,
+  /** 仅用于 `--also-http`：把声明协议的 URL 换成另一种协议再打一遍（默认 undefined = 按 manifest 声明） */
+  protocol,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 } = {}) {
   const manifest = bundle.manifest ?? bundle;
-  const url = `${manifest.apiBase}${manifest.probe.path}`;
+  const declaredUrl = `${manifest.apiBase}${manifest.probe.path}`;
+  // 协议必须进每条证据：同一个域名 http 与 https 可能一个 102 ms、一个连不上（PlantTFDB 实测）
+  const url = protocol ? declaredUrl.replace(/^https?:/, `${protocol}:`) : declaredUrl;
+  const via = (/^https:/i.test(url) ? 'https' : /^http:/i.test(url) ? 'http' : 'unknown');
   const expected = manifest.probe.expectStatus ?? 200;
   // T1 要求是能解析、且业务信封不报错的 JSON；T2 可能返回 HTML，只看状态码（解析正确性交给离线 fixture）。
   const expect = manifest.probe.expect ?? (manifest.tier === 'T1' ? 'json' : 'any');
@@ -104,13 +110,13 @@ export async function probe(bundle, {
   /** 单次尝试的一行描述。连接层用秒（实测约 10.6 s/次），拿到响应用毫秒并带 content-type。 */
   const fmtAttempt = (t) => {
     if (t.kind === 'connect-fail') {
-      return `attempt ${t.n}: CONNECT_TIMEOUT${t.cause ? `(${t.cause})` : ''}，${(t.ms / 1000).toFixed(1)} s`;
+      return `attempt ${t.n}: CONNECT_TIMEOUT${t.cause ? `(${t.cause})` : ''}，${(t.ms / 1000).toFixed(1)} s${t.via ? `，${t.via}` : ''}`;
     }
     if (t.kind === 'body-read-fail') {
       return `attempt ${t.n}: HTTP ${t.status} 但正文未读完（${t.ms} ms${t.cause ? `，${t.cause}` : ''}）`;
     }
     const media = t.contentType ? `，${t.contentType.split(';', 1)[0].trim()}` : '';
-    return `attempt ${t.n}: HTTP ${t.status}（${t.ms} ms${media}）`;
+    return `attempt ${t.n}: HTTP ${t.status}（${t.ms} ms${media}${t.via ? `，${t.via}` : ''}）`;
   };
   /**
    * 结论句只陈述"这次有没有拿到数据"，**不作源可用性判断**。
@@ -135,7 +141,7 @@ export async function probe(bundle, {
     } catch (error) {
       // **真正**的连接层失败（DNS/超时/连接重置）：重试，cause code 与本次耗时留在明细里。
       lastTransportError = error;
-      trail.push({ n: tries, kind: 'connect-fail', cause: causeOf(error), ms: Date.now() - attemptStarted });
+      trail.push({ n: tries, via, kind: 'connect-fail', cause: causeOf(error), ms: Date.now() - attemptStarted });
       continue;
     }
 
@@ -152,7 +158,7 @@ export async function probe(bundle, {
       body = await response.text();
     } catch (error) {
       trail.push({
-        n: tries, kind: 'body-read-fail', cause: causeOf(error), ms: Date.now() - attemptStarted,
+        n: tries, via, kind: 'body-read-fail', cause: causeOf(error), ms: Date.now() - attemptStarted,
         status: response.status, contentType: response.headers.get('content-type') ?? '',
       });
       lastTransportError = error;
@@ -183,7 +189,7 @@ export async function probe(bundle, {
     const ms = Date.now() - started;
     const contentType = response.headers.get('content-type') ?? '';
     const base = { id: manifest.id, url, status: response.status, expected, ms, attempts: tries };
-    trail.push({ n: tries, status: response.status, ms: Date.now() - attemptStarted, contentType });
+    trail.push({ n: tries, via, status: response.status, ms: Date.now() - attemptStarted, contentType });
 
     if (response.status !== expected) {
       /**
@@ -276,11 +282,21 @@ export async function probe(bundle, {
 }
 
 /** No imports of dist, network requests or writes occur until called. */
-export async function runProbe({ registry, fetch: fetcher = globalThis.fetch, only, attempts, statusAttempts } = {}) {
+export async function runProbe({ registry, fetch: fetcher = globalThis.fetch, only, attempts, statusAttempts, alsoHttp = false } = {}) {
   registry ??= (await import('../dist/sources/index.js')).createRegistry();
   const sources = registry.listSources().filter(({ manifest }) => !only || manifest.id === only);
   const results = [];
-  for (const bundle of sources) results.push(await probe(bundle, { fetch: fetcher, attempts, statusAttempts }));
+  for (const bundle of sources) {
+    results.push(await probe(bundle, { fetch: fetcher, attempts, statusAttempts }));
+    if (alsoHttp) {
+      // 双协议对照：仅当声明的是 https 时才补一轮 http；用于区分"服务挂了"与"只是这个协议不通"
+      const declared = `${bundle.manifest.apiBase}${bundle.manifest.probe.path}`;
+      if (/^https:/i.test(declared)) {
+        const alt = await probe(bundle, { fetch: fetcher, attempts, statusAttempts, protocol: 'http' });
+        results.push({ ...alt, id: `${alt.id}(http)`, alsoHttp: true });
+      }
+    }
+  }
   return { date: new Date().toISOString().slice(0, 10), results };
 }
 
@@ -323,7 +339,8 @@ export async function main({
     if (statusAttempts === null) return 2;
   }
 
-  const report = await runProbe({ registry, fetch: fetcher, only, attempts, statusAttempts });
+  const alsoHttp = args.includes('--also-http');
+  const report = await runProbe({ registry, fetch: fetcher, only, attempts, statusAttempts, alsoHttp });
   const { date, results } = report;
   if (!results.length) {
     stderr(`没有匹配的源${only ? `：${only}` : ''}\n`);
@@ -334,11 +351,12 @@ export async function main({
   if (args.includes('--json')) stdout(json);
   else {
     stdout(`# 可达性实测 ${date}\n\n`);
-    stdout('| 源 | 端点 | HTTP | 期望 | 耗时 | 结论 |\n|---|---|---|---|---|---|\n');
+    stdout('| 源 | 端点（含协议） | HTTP | 期望 | 耗时 | 结论 |\n|---|---|---|---|---|---|\n');
     for (const r of results) {
-      stdout(`| ${r.id} | ${r.url.replace(/^https?:\/\//, '')} | ${r.status} | ${r.expected} | ${r.ms} ms | ${r.ok ? `✅ ${r.note}` : `❌ ${r.note}`} |\n`);
+      stdout(`| ${r.id} | ${r.url} | ${r.status} | ${r.expected} | ${r.ms} ms | ${r.ok ? `✅ ${r.note}` : `❌ ${r.note}`} |\n`);
     }
     stdout('\n> 本表只证明所列探活端点及其断言通过，不代表全部工具可用；工具正确性由离线 fixture 测试保证。\n');
+    if (alsoHttp) stdout('> 本次带 `--also-http`：每个 https 源额外探了一轮 http（id 后缀 `(http)`），运行时间约为单协议的两倍。\n');
   }
   const failed = results.filter((r) => !r.ok);
   if (failed.length) stderr(`\n${failed.length}/${results.length} 个源实测失败：${failed.map((r) => r.id).join(', ')}\n`);

@@ -16,7 +16,14 @@
     "captureTimeImpact": "不影响 payload 字节/结构/字段与解析回归；不足以证明\"对应某一次具体上游请求\"",
     "captureTimeNote": "抓取时刻不可确证：原始抓取目录无任何日志/curl 输出可回溯；原记录只有本地时间且未记时区。按负责人口径，mtime 不能证明抓取时刻，故不填任何抓取时间值。",
     "fileWriteTimeMtime": "2026-10-30T12:51:59+08:00",
-    "fileWriteTimeNote": "仅为文件写入磁盘的时间（mtime），不代表抓取上游响应的时刻；拷贝/检出/同步都会改写它"
+    "fileWriteTimeNote": "仅为文件写入磁盘的时间（mtime），不代表抓取上游响应的时刻；拷贝/检出/同步都会改写它",
+    "rawBodySource": "reconstructed-from-payload",
+    "rawBodyNote": "rawBody 由 `JSON.stringify(payload)` **重建**，不是重抓件：它逐字节等于当初原体（`sha256(rawBody) === sourceSha256` 且字节数相等），所以能离线复核哈希；但**重建不等于采集**——它不能证明当初那次请求发生过，也**没有、也不许有**采集时刻字段。按三档口径，本件只到「内部自洽」。",
+    "rawBodyReconstructedAt": "2026-11-01",
+    "canonicalSha256": "C960BDDC3402907A0B36D4ACC72F5DAD351DAEC5FE168DF598C2A3E86C544F38",
+    "canonicalSha256OfRawBody": "C960BDDC3402907A0B36D4ACC72F5DAD351DAEC5FE168DF598C2A3E86C544F38",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256，跨次稳定；本上游 JSON 键序不稳定（同一请求两次，字节数相同、内容相同、字节 sha256 不同），所以字节哈希对它不可复现。",
+    "payloadRelation": "verbatim"
   },
   "payload": [
     {
@@ -124,5 +131,6 @@
       "dbname": "Uniprot_gn",
       "db_display_name": "UniProtKB Gene Name"
     }
-  ]
+  ],
+  "rawBody": "[{\"version\":\"0\",\"info_text\":\"\",\"db_display_name\":\"NASC Gene ID\",\"dbname\":\"NASC_GENE_ID\",\"synonyms\":[],\"primary_id\":\"AT1G65480\",\"info_type\":\"DIRECT\",\"display_id\":\"AT1G65480-TAIR-G\",\"description\":\"PEBP (phosphatidylethanolamine-binding protein) family protein\"},{\"dbname\":\"TAIR_LOCUS\",\"db_display_name\":\"TAIR\",\"version\":\"0\",\"info_text\":\"\",\"info_type\":\"DIRECT\",\"primary_id\":\"AT1G65480\",\"synonyms\":[],\"description\":\"PEBP (phosphatidylethanolamine-binding protein) family protein\",\"display_id\":\"AT1G65480\"},{\"dbname\":\"TAIR_SYMBOL\",\"db_display_name\":\"TAIR Gene Name\",\"version\":\"0\",\"info_text\":\"\",\"display_id\":\"FT\",\"description\":\"\",\"primary_id\":\"FT\",\"info_type\":\"DIRECT\",\"synonyms\":[]},{\"version\":\"0\",\"info_text\":\"\",\"db_display_name\":\"Expression Atlas\",\"dbname\":\"ArrayExpress\",\"synonyms\":[],\"info_type\":\"DIRECT\",\"primary_id\":\"AT1G65480\",\"description\":null,\"display_id\":\"AT1G65480\"},{\"info_text\":\"\",\"version\":\"0\",\"db_display_name\":\"NCBI gene (formerly Entrezgene)\",\"dbname\":\"EntrezGene\",\"display_id\":\"FT\",\"description\":\"PEBP (phosphatidylethanolamine-binding protein) family protein\",\"synonyms\":[\"F5I14.3\",\"F5I14_3\",\"FLOWERING LOCUS T\",\"REDUCED STEM BRANCHING 8\",\"RSB8\"],\"primary_id\":\"842859\",\"info_type\":\"DEPENDENT\"},{\"version\":\"0\",\"info_text\":\"\",\"db_display_name\":\"KNETMINER_ARA\",\"dbname\":\"KNETMINER_ARA\",\"display_id\":\"AT1G65480\",\"description\":null,\"synonyms\":[],\"primary_id\":\"AT1G65480\",\"info_type\":\"DEPENDENT\"},{\"description\":null,\"display_id\":\"FT\",\"info_type\":\"DEPENDENT\",\"primary_id\":\"Q9SXZ2\",\"synonyms\":[],\"db_display_name\":\"UniProtKB Gene Name\",\"dbname\":\"Uniprot_gn\",\"info_text\":\"\",\"version\":null},{\"db_display_name\":\"WikiGene\",\"dbname\":\"WikiGene\",\"info_text\":\"\",\"version\":\"0\",\"description\":\"PEBP (phosphatidylethanolamine-binding protein) family protein\",\"display_id\":\"FT\",\"info_type\":\"DEPENDENT\",\"primary_id\":\"842859\",\"synonyms\":[]},{\"synonyms\":[],\"info_type\":\"DEPENDENT\",\"primary_id\":\"A0A1P8AMK0\",\"description\":null,\"display_id\":\"FT\",\"info_text\":\"\",\"version\":null,\"dbname\":\"Uniprot_gn\",\"db_display_name\":\"UniProtKB Gene Name\"}]"
 }

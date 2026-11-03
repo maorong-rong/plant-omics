@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { optionalIntArg, parseNumericToken } from '../src/core/shape.js';
+
 import { DEFAULT_MAX_BYTES, truncateToBytes, utf8Bytes } from '../src/core/format.js';
 import { validateArgs } from '../src/core/invoke.js';
 import { ToolRegistry } from '../src/core/registry.js';
@@ -120,5 +122,48 @@ describe('版本单一来源', () => {
   it('SERVER_INFO.version 与 package.json 一致', () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { version: string };
     expect(SERVER_INFO.version).toBe(pkg.version);
+  });
+});
+
+describe('parseNumericToken：没给 / 给了空 / 给错 / 给了（AGENTS §16）', () => {
+  it('缺失与空串必须分开，且都不许落成 0', () => {
+    expect(parseNumericToken(undefined).kind).toBe('absent');
+    expect(parseNumericToken(null).kind).toBe('absent');
+    expect(parseNumericToken('').kind).toBe('empty');        // 空串不是 absent
+    expect(parseNumericToken('   ').kind).toBe('empty');     // 纯空白也不是
+    // 关键：'0' 必须是 value 0，与上面的 empty 分开
+    expect(parseNumericToken('0')).toEqual({ kind: 'value', value: 0 });
+    expect(parseNumericToken(0)).toEqual({ kind: 'value', value: 0 });
+  });
+
+  it('给错（非数字 / 布尔 / 对象）是 invalid，不是 absent', () => {
+    expect(parseNumericToken('abc').kind).toBe('invalid');
+    expect(parseNumericToken(true).kind).toBe('invalid');
+    expect(parseNumericToken([]).kind).toBe('invalid');
+    expect(parseNumericToken({}).kind).toBe('invalid');
+    expect(parseNumericToken(Number.NaN).kind).toBe('invalid');
+  });
+
+  it('integer 档拒绝小数与科学计数，decimal 档接受小数', () => {
+    expect(parseNumericToken('1.5', 'integer').kind).toBe('invalid');
+    expect(parseNumericToken('1.5')).toEqual({ kind: 'value', value: 1.5 });
+    expect(parseNumericToken('499900', 'integer')).toEqual({ kind: 'value', value: 499900 });
+    expect(parseNumericToken(1.5, 'integer').kind).toBe('invalid');
+    // 超长数字：过正则、Number() 得 1e+21、isFinite 仍为 true——必须按不安全整数拒掉
+    expect(parseNumericToken('999999999999999999999', 'integer').kind).toBe('invalid');
+    expect(parseNumericToken(1e21, 'integer').kind).toBe('invalid');
+    // 边界内仍要正常：Number.MAX_SAFE_INTEGER 是合法整数
+    expect(parseNumericToken(String(Number.MAX_SAFE_INTEGER), 'integer'))
+      .toEqual({ kind: 'value', value: Number.MAX_SAFE_INTEGER });
+  });
+});
+
+describe('optionalIntArg：纯空白也算「没给」', () => {
+  it('空串与纯空白都回落到 fallback，不变成 0', () => {
+    expect(optionalIntArg({ n: '' }, 'n', 7, 0, 10)).toBe(7);
+    expect(optionalIntArg({ n: '   ' }, 'n', 7, 0, 10)).toBe(7);   // 旧实现这里会得到 0
+    expect(optionalIntArg({ n: '0' }, 'n', 7, 0, 10)).toBe(0);     // 真的给了 0，必须是 0
+    // 给错了要抛错，不能兜底成 fallback 或 0
+    expect(() => optionalIntArg({ n: 'abc' }, 'n', 7, 0, 10)).toThrow();
   });
 });

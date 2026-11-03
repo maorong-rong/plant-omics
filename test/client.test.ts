@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MAX_SOURCES, MAX_TOOLS, buildCatalog } from '../src/client/catalog.js';
+import { DEFAULT_SET_TOOLS_SOFT_MAX, SUBSET_TOOLS_HARD_MAX } from '../src/service/budget.js';
 import { createRegistry } from '../src/sources/index.js';
 
 /**
@@ -232,7 +233,7 @@ describe('侧边栏静态清单', () => {
     }
   });
 
-  it('预算口径与 scripts/counts.mjs 的常量一致（两边漂移就红）', () => {
+  it('预算口径与 scripts/counts.mjs 的常量一致（v2.3：订阅集 80 / 默认集 40）', () => {
     const countsSource = readFileSync(path.join(root, 'scripts', 'counts.mjs'), 'utf8');
     const readConst = (name: string): number => {
       const match = new RegExp(`const ${name} = (\\d+);`).exec(countsSource);
@@ -240,8 +241,11 @@ describe('侧边栏静态清单', () => {
       return Number(match[1]);
     };
 
-    expect(MAX_SOURCES).toBe(readConst('MAX_SOURCES'));
-    expect(MAX_TOOLS).toBe(readConst('MAX_TOOLS'));
+    // v2.3：真正要一致的是两个职责常量，兼容别名只核其目标值
+    expect(SUBSET_TOOLS_HARD_MAX).toBe(readConst('MAX_SUBSCRIPTION_TOOLS'));
+    expect(DEFAULT_SET_TOOLS_SOFT_MAX).toBe(readConst('DEFAULT_SET_TOOLS_SOFT_MAX'));
+    expect(MAX_SOURCES).toBe(readConst('HISTORICAL_SOURCE_LIMIT'));
+    expect(MAX_TOOLS).toBe(readConst('DEFAULT_SET_TOOLS_SOFT_MAX')); // 别名已改义为默认集软建议
 
     const catalog = buildCatalog(createRegistry());
     expect(catalog.budget.maxSources).toBe(MAX_SOURCES);

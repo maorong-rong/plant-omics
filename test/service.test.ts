@@ -1,6 +1,8 @@
 import { request as httpRequest } from 'node:http';
 import { connect } from 'node:net';
 
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it, afterEach } from 'vitest';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -9,7 +11,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { PlantOmicsError } from '../src/core/errors.js';
 import { ToolRegistry } from '../src/core/registry.js';
 import type { SourceBundle, ToolDefinition } from '../src/core/types.js';
-import { assertBudget, BudgetError, MAX_SOURCES, MAX_TOOLS } from '../src/service/budget.js';
+import { assertBudget, assertSubsetBudget, BudgetError } from '../src/service/budget.js';
 import { parseServiceConfig, ServiceConfigError } from '../src/service/config.js';
 import { SERVICE_IDENTITY, readBuildRev, serviceVersion } from '../src/service/version.js';
 import { createService, MAX_REQUEST_BODY_BYTES, type RunningService, type ServiceLogEntry } from '../src/service/http.js';
@@ -81,33 +83,42 @@ async function startService(overrides: Partial<Parameters<typeof parseServiceCon
   return instance;
 }
 
-describe('启动期预算门禁', () => {
-  it('正常注册表通过，并报出工具名预算', () => {
+describe('启动期预算门禁（v2.3 源市场制）', () => {
+  it('正常注册表通过，并报出工具名预算与两级阈值', () => {
     const report = assertBudget(defaultRegistry, 'plantomics-hub');
-    expect(report.tools).toBe(37);
+    expect(report.tools).toBe(39);
     expect(report.nameBudget).toBe(43);
     expect('mcp__plantomics-hub__'.length).toBe(21);
+    // v2.3：全库只统计；硬阈值挂在订阅集上
+    expect(report.subsetToolsHardMax).toBe(80);
+    expect(report.defaultSetToolsSoftMax).toBe(40);
+    expect(report.warnings).toEqual([]); // 37 ≤ 40，不警示
   });
 
-  it('工具数超过 40 → 拒绝，且消息点名超限数量', () => {
-    const many = syntheticRegistry({ tools: Array.from({ length: MAX_TOOLS + 1 }, (_, i) => `t${i}`) });
-    let error: unknown;
-    try {
-      assertBudget(many, 'plantomics-hub');
-    } catch (failure) {
-      error = failure;
-    }
-    expect(error).toBeInstanceOf(BudgetError);
-    expect(String((error as Error).message)).toContain(`超过上限 ${MAX_TOOLS}`);
+  it('全库 41 工具：**不拒绝**，只对默认集超过软建议给警示', () => {
+    const many = syntheticRegistry({ tools: Array.from({ length: 41 }, (_, i) => `t${i}`) });
+    const report = assertBudget(many, 'plantomics-hub');
+    expect(report.tools).toBe(41);
+    expect(report.warnings.join()).toContain('软建议 40');
+    // 警示不是错误：没有抛错、也没有 problems
+    expect(report.warnings.length).toBe(1);
   });
 
-  it('源数超过 20 → 拒绝', () => {
-    const many = syntheticRegistry({ tools: Array.from({ length: MAX_SOURCES + 1 }, (_, i) => `t${i}`), sources: MAX_SOURCES + 1 });
-    expect(() => assertBudget(many, 'plantomics-hub')).toThrow(BudgetError);
+  it('全库 21 源：**不拒绝**（v2.3 源数不设上限）', () => {
+    const many = syntheticRegistry({ tools: Array.from({ length: 21 }, (_, i) => `t${i}`), sources: 21 });
+    expect(() => assertBudget(many, 'plantomics-hub')).not.toThrow();
+    expect(many.listSources().length).toBe(21);
   });
 
-  it('工具名超过名字预算 → 拒绝（不许静默改名）', () => {
-    // 名字总长（含源前缀）必须超过 43；合成源前缀是 synth0_（7 字符）
+  it('单次订阅集：80 通过、81 拒绝（唯一硬阈值）', () => {
+    expect(() => assertSubsetBudget(80)).not.toThrow();
+    expect(() => assertSubsetBudget(81)).toThrow(PlantOmicsError);
+    let message = '';
+    try { assertSubsetBudget(81); } catch (e) { message = String((e as Error).message); }
+    expect(message).toContain('硬上限 80');
+  });
+
+  it('工具名超过名字预算 → 仍拒绝（宿主 64 字符约束，不是我们的预算）', () => {
     const registry = syntheticRegistry({ tools: ['x'.repeat(44)] });
     let error: unknown;
     try {
@@ -124,17 +135,33 @@ describe('启动期预算门禁', () => {
     expect(() => assertBudget(registry, 'plantomics-hub')).not.toThrow();
   });
 
-  it('门禁失败时没有监听端口（启动即失败，不是带病接客）', async () => {
-    const many = syntheticRegistry({ tools: Array.from({ length: MAX_TOOLS + 1 }, (_, i) => `t${i}`) });
+  it('41 工具 / 21 源能真的启动并监听（旧 20/40 硬拦已拆）', async () => {
+    const many = syntheticRegistry({
+      tools: Array.from({ length: 41 }, (_, i) => `t${i}`),
+      sources: 21,
+    });
     const config = parseServiceConfig({ PLANTOMICS_HUB_HOST: '127.0.0.1', PLANTOMICS_HUB_PORT: '0' } as NodeJS.ProcessEnv);
     const service = createService({ registry: many, config });
-    await expect(service.start()).rejects.toBeInstanceOf(BudgetError);
+    const instance = await service.start();
+    try {
+      expect(instance.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+    } finally {
+      await instance.close().catch(() => {});
+    }
   });
 });
 
 describe('服务配置', () => {
   it('无 token 时不允许绑定非回环地址', () => {
     expect(() => parseServiceConfig({ PLANTOMICS_HUB_HOST: '0.0.0.0' } as NodeJS.ProcessEnv)).toThrow(ServiceConfigError);
+  });
+
+  it('端口空串/纯空白视为未设置（回落 8787），不许变成 0 = 随机端口', () => {
+    // Number('') === 0，而端口 0 是合法的"随机端口"——不挡会静默起在没人知道的端口
+    expect(parseServiceConfig({ PLANTOMICS_HUB_PORT: '' } as NodeJS.ProcessEnv).port).toBe(8787);
+    expect(parseServiceConfig({ PLANTOMICS_HUB_PORT: '   ' } as NodeJS.ProcessEnv).port).toBe(8787);
+    expect(parseServiceConfig({ PLANTOMICS_HUB_PORT: '0' } as NodeJS.ProcessEnv).port).toBe(0); // 显式给 0 才允许
+    expect(() => parseServiceConfig({ PLANTOMICS_HUB_PORT: 'abc' } as NodeJS.ProcessEnv)).toThrow();
   });
 
   it('token 过短 → 拒绝', () => {
@@ -181,7 +208,7 @@ describe('HTTP 鉴权', () => {
       requestInit: { headers: { authorization: `Bearer ${TOKEN}` } },
     }));
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(37);
+    expect(tools.length).toBe(39);
   });
 
   it('认证失败发生在传输层：零上游调用，也不伪装成"本次未返回"', async () => {
@@ -631,7 +658,7 @@ describe('健康检查（上云探针）', () => {
     expect(status.code).toBe(200);
     const payload = JSON.parse(status.body) as { status: string; version: string; tools: number };
     expect(payload.status).toBe('ok');
-    expect(payload.tools).toBe(37);
+    expect(payload.tools).toBe(39);
     expect(payload.version).toBeTruthy();
     // 不泄露工具清单
     expect(status.body).not.toContain('wheatomics_');
@@ -661,16 +688,25 @@ describe('服务端版本独立于包版本', () => {
     const instance = await startService();
     const response = await fetch(new URL('/healthz', instance.url));
     const payload = (await response.json()) as { version: string; package: string; sources: number; tools: number };
-    expect(payload.version.startsWith(serviceVersion(payload.package))).toBe(true);
-    expect(payload.version).toMatch(/^0\.1\.0\+svc\.\d+(\.g[0-9a-f]{7,}(-dirty)?)?$/);
-    expect(payload.package).toBe('0.1.0');
-    expect(payload.sources).toBe(8);
-    expect(payload.tools).toBe(37);
+    // 只钉形状会放过"长得像版本号"的错版本（对抗审查者 2026-11-01）。
+    // 三段一起核：package.json 的 version、package-version.ts 的单一来源常量、serviceVersion(实际包版本)。
+    const pkgVersion = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version;
+    const coreVersion = (await import('../src/core/package-version.js')).PACKAGE_VERSION;
+    expect(coreVersion, 'package-version.ts 必须等于 package.json（单一来源）').toBe(pkgVersion);
+    expect(payload.package, '对外报告的包版本必须是实际包版本，不是形状像就行').toBe(pkgVersion);
+
+    const base = serviceVersion(pkgVersion);
+    expect(payload.version).toMatch(/^\d+\.\d+\.\d+\+svc\.\d+(\.g[0-9a-f]{7,}(-dirty)?)?$/);
+    // 版本 = serviceVersion(实际包版本)，或在其后带构建 sha 后缀；别的值一律不许
+    const versionOk = payload.version === base || payload.version.startsWith(`${base}.g`);
+    expect(versionOk, `version=${payload.version} 不在 serviceVersion(${pkgVersion})=${base} 或其 .g<sha> 后缀内`).toBe(true);
+    expect(payload.sources).toBe(9);
+    expect(payload.tools).toBe(39);
   });
   it('版本可带构建 sha：+svc.N.g<sha>，拿不到 sha 时退化', () => {
-    expect(serviceVersion('0.1.0')).toBe('0.1.0+svc.6');
-    expect(serviceVersion('0.1.0', 'abc1234')).toBe('0.1.0+svc.6.gabc1234');
-    expect(serviceVersion('0.1.0', 'abc1234-dirty')).toBe('0.1.0+svc.6.gabc1234-dirty');
+    expect(serviceVersion('0.1.0')).toBe('0.1.0+svc.7');
+    expect(serviceVersion('0.1.0', 'abc1234')).toBe('0.1.0+svc.7.gabc1234');
+    expect(serviceVersion('0.1.0', 'abc1234-dirty')).toBe('0.1.0+svc.7.gabc1234-dirty');
     expect(readBuildRev(() => JSON.stringify({ sourceRev: 'deadbee' }), 'x')).toBe('deadbee');
     expect(readBuildRev(() => 'not json', 'x')).toBeUndefined();
     expect(readBuildRev(() => JSON.stringify({}), 'x')).toBeUndefined();

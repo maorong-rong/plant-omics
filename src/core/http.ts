@@ -153,6 +153,31 @@ export interface FetchJsonConfig {
  * 造一个 fetcher。允许注入 `fetch` 是为了测试：单元测试用 mock，
  * 不必联网、也不会因为上游改版而红。
  */
+/**
+ * 透出的响应头**白名单**（键统一小写）。
+ *
+ * 为什么不是"全部 `x-*`"：泛收等于把上游随便什么自定义头都带进工具输出与模型上下文，
+ * 其中可能夹带会话标识之类的东西。**只列确实承载"数据"的头，新增要走这条清单。**
+ *
+ * 缺省返回 `undefined`（不是空对象），让"上游没给任何白名单头"与"给了空集合"可区分；
+ * **缺头 ≠ 值为 0**：字段缺失表示上游没给，值为 `'0'` 才是给了 0，源层不许 `?? 0` 兜底。
+ */
+export const RESPONSE_HEADER_ALLOWLIST: ReadonlySet<string> = new Set([
+  // 只有**确实有消费者**的头才进这里（后端负责人 2026-11-01：没有消费者的头是以后没人会删的死条目）。
+  // 反向断言（test/http.test.ts）会扫源层实际读取项，白名单里有而没人读的直接判红。
+  'x-total-results',      // UniProt：命中总数（totalFrom 四态在用）
+  'x-uniprot-release',    // UniProt：数据版本（尾注「数据版本」行在用）
+]);
+
+function responseHeaders(headers: Headers): Readonly<Record<string, string>> | undefined {
+  const out: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    const name = key.toLowerCase();
+    if (RESPONSE_HEADER_ALLOWLIST.has(name)) out[name] = value;
+  });
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function createFetcher(
   config: FetchJsonConfig = {},
   // 惰性转发，不在模块初始化时把 globalThis.fetch 拷走：
@@ -273,6 +298,7 @@ export function createFetcher(
         }
 
         return { data: parsed, url, status: response.status, durationMs, attempts: attempt, contentType,
+          headers: responseHeaders(response.headers),
           bodyKind: body.length === 0 ? 'empty' : 'json' };
       } catch (error) {
         if (error instanceof UpstreamError) throw error;

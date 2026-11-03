@@ -1,0 +1,30 @@
+{
+  "capture": {
+    "date": "2026-10-31",
+    "request": "GET https://string-db.org/api/json/interaction_partners?identifiers=NOT_A_REAL_ID_ZZZ&species=3702&limit=3",
+    "status": 404,
+    "contentType": "text/json; charset=utf-8",
+    "sourceBytes": 592,
+    "sourceSha256": "11B4E4BDAD085CE5EFDA07066634CE79139F916B55689097920D5E0BA47ECA4A",
+    "simulated": false,
+    "client": "curl 8.x (schannel) via PowerShell, --connect-timeout 40",
+    "captureTimeStatus": "未知",
+    "captureTimeNote": "抓取时刻未记录；原始抓取目录无日志可回溯，按三档口径不填任何抓取时间值。",
+    "fileWriteTimeMtime": "2026-10-31T08:07:12.362Z",
+    "fileWriteTimeNote": "仅为文件写入磁盘时间，不代表抓取上游响应的时刻。",
+    "cropping": "verbatim; 未删字段（ErrorMessage 的 HTML 由工具清洗，不改 fixture）",
+    "rawBodyNote": "rawBody 是 2026-11-01 重取所得的上游原体逐字副本：其字节 sha256 与 sourceSha256 相等。**这只能说明\"与给定基线（sourceSha256）逐字节一致\"，不证明历史采集发生过**——当初那次抓取是否真的发生、何时发生，本文件无法证明（captureTimeStatus=\"未知\"的件尤其如此）。**不得据此把 captureTimeStatus 从\"未知\"改成\"确证\"。** payload 是同一 JSON 的重排版（derived），离线可用 JSON.parse(rawBody) 复算比对。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T04:04:27.767Z",
+    "canonicalSha256": "68C091A326E3F7F93625D125C6D4757E60E7B1EBC8A15411FC2B837359C13057",
+    "canonicalSha256OfRawBody": "68C091A326E3F7F93625D125C6D4757E60E7B1EBC8A15411FC2B837359C13057",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256（与 test 里 canonicalJson 同算法）；非 JSON 原体（HTML 桩）按原文 UTF-8 直接哈希。sourceSha256 只对给定基线验一致性，不证明历史采集动作；**canonicalSha256 表示\"本次比较的这两份内容一致\"，不保证未来抓取仍相同**——它不预设上游的序列化行为会一直不变。"
+  },
+  "payload": [
+    {
+      "Error": "not found",
+      "ErrorMessage": "<p>Sorry, STRING did not find a protein called 'NOT_A_REAL_ID_ZZZ' in the taxon '3702'.</p><p>Generally, STRING understands a number of different names/symbols for proteins.<br/>Here is a selection of typical names: 'YEL036C', 'TRPB_ECOLI', 'trpB', 'ENSP00000249373', 'BRCA1', 'CG11561', 'daf-3', ...</p><p>Try to identify your protein with a different name/symbol that you might know. Alternatively, you can paste the raw amino-acid sequence of your protein into the input-form, and STRING will try to identify it via a similarity search.</p>"
+    }
+  ],
+  "rawBody": "[{ \"Error\" : \"not found\", \"ErrorMessage\" : \"<p>Sorry, STRING did not find a protein called 'NOT_A_REAL_ID_ZZZ' in the taxon '3702'.</p><p>Generally, STRING understands a number of different names/symbols for proteins.<br/>Here is a selection of typical names: 'YEL036C', 'TRPB_ECOLI', 'trpB', 'ENSP00000249373', 'BRCA1', 'CG11561', 'daf-3', ...</p><p>Try to identify your protein with a different name/symbol that you might know. Alternatively, you can paste the raw amino-acid sequence of your protein into the input-form, and STRING will try to identify it via a similarity search.</p>\"  }]"
+}

@@ -73,7 +73,7 @@ node web/scripts/check-wording.mjs    # 未加限定词的清除断言、或缺�
 
 - 每张卡：图标（`source-icons.js`）+ 名称 + 作物标签（来自 `manifest.species`，页面注明**不等于收录范围**）+ 工具数 + 等级。
 - 摘要条：已选源 / 工具数（含 2 个 `hub_*` 元工具）/ **预估 token** / 上限 40，配预算进度条（接近上限转黄、超限转红）。
-  token 估算的出处：论文侧用 cl100k_base 实测「全量 `tools/list`」合计 **10 253 token**，除以 37 个工具 **≈ 277**，取整按 **280/工具**（测量对象是工具声明本身：名字 + 描述 + `inputSchema`；换 tokenizer 或改描述就会变，所以只作估算）。
+  token 估算的出处：论文侧用 cl100k_base 实测「全量 `tools/list`」合计 **10,274 token**（当前构建 `2af6639`；旧值 10,253 已作废），除以 37 个工具 **≈ 278**，取整按 **280/工具**（测量对象是工具声明本身：名字 + 描述 + `inputSchema`；换 tokenizer 或改描述就会变，所以只作估算）。
 - 超过 40 直接弹红色横幅「**装不下**」，并写清后果是「工具声明要全量常驻上下文，超了得先有检索层或砍源」，不是「慢一点」。
 - 作物筛选：小麦 / 水稻 / 玉米 / 草莓 / 甘蔗 / 拟南芥 / 橡胶蒲公英 / 病原真菌（按数据里实际出现的作物生成，不写死）。
 - 「复制选择」输出 `PLANTOMICS_SOURCES=wheatomics,gwh,…`，直接用于启动服务时限定子集。
@@ -106,6 +106,10 @@ web/
 ├── picker.html       选源页（静态版）：卡片勾选 + 工具数/token 预算
 ├── picker.js         选源逻辑：作物筛选、预算计算、复制 PLANTOMICS_SOURCES
 ├── picker.css        选源页样式
+├── market-sketch.html 市场首屏线框（数据走 GET /catalog；接口未上线时全页「待 /catalog」）
+├── market.js         市场首屏逻辑：订阅集、阈值（>40 警示 / >80 拒绝）、数据时刻
+├── market.css        市场首屏样式
+├── MARKET-DESIGN.md  市场首屏设计稿：数字来源标注、卡片字段、阈值行为、三态
 ├── panel-sketch.html 侧边栏面板线框（六种状态可切换，设计稿不是成品）
 ├── PANEL-DESIGN.md   面板设计稿：层级 / 三态 / 与 web 的复用边界 / 子集提示
 ├── dev-server.mjs    本地开发服务器：静态站 + /mcp /healthz 反代（同源）

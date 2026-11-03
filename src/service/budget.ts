@@ -1,18 +1,41 @@
 /**
- * 启动期预算门禁。
+ * 启动期预算门禁（**AGENTS.md v2.3「源市场制」口径，2026-10-31**）。
  *
- * 为什么要在服务启动时拦、而不是继续只靠构建期 `npm run stats`：
- * 这个进程随时可能被单独重启以"上线新源"，重启前没人保证跑过 stats。
- * 一旦超过规则阈值（20 源 / 40 工具）或工具名会被宿主静默截断，
- * 正确的行为是**拒绝接客**，让旧进程继续服务，而不是带着不可预测的工具名上线。
+ * 口径变了，语义也跟着变——不是"把 40 改成 80"：
  *
- * 注意：这里只做"能不能开"的判断，不做运行中热替换。
+ * - **全库不设上限**：源数、工具总数只统计、**不拦截**。库房可以一直加源。
+ * - **唯一硬阈值是单次订阅集：≤ 80 工具**（约 2.2 万 token，128K 上下文的 17%）。
+ *   它只对**指定了订阅集**（`x-plantomics-sources` / `PLANTOMICS_SOURCES`）的请求生效；
+ *   默认集不触发硬上限。
+ * - **默认推荐集 ≤ 40 是软建议**：超了**只警示、不拒绝**。
+ * - 工具名长度仍是**硬约束**：宿主对 `mcp__<server>__<tool>` 有 64 字符上限，
+ *   超出会被静默截断加哈希、已发布契约作废。这是宿主约束，不是我们的预算。
+ *
+ * 旧口径（源 ≤ 20、工具 ≤ 40、超了拒绝启动）已废止；`src/service/budget.ts` 的
+ * 20/40 硬拦曾与规则不同步——规则、`stats`、启动门禁三处必须同源（v2.3 §10.3）。
  */
 
 import type { ToolRegistry } from '../core/registry.js';
+import { PlantOmicsError } from '../core/errors.js';
 
+/** 单次订阅集的工具数硬上限（v2.3 唯一硬阈值）。 */
+export const SUBSET_TOOLS_HARD_MAX = 80;
+/** 默认推荐集的工具数软建议（超过只警示）。 */
+export const DEFAULT_SET_TOOLS_SOFT_MAX = 40;
+/** 历史值：v2.3 起**不再作为拦截条件**，仅保留导出供统计/展示对照。 */
+export const HISTORICAL_SOURCE_LIMIT = 20;
+export const HISTORICAL_TOOL_LIMIT = 40;
+
+/**
+ * 兼容别名：**只供既有展示代码（如 `src/retrieval/status.ts`）与
+ * `scripts/counts.mjs` 的三处常量一致性检查编译，不参与任何拦截**。
+ *
+ * v2.3 已废止"全库 20/40"这套阈值；这两个名字若被当成门禁用，就是规则回潮。
+ * 真正的阈值只有两个，见上方 `SUBSET_TOOLS_HARD_MAX`（硬）与 `DEFAULT_SET_TOOLS_SOFT_MAX`（软）。
+ */
 export const MAX_SOURCES = 20;
 export const MAX_TOOLS = 40;
+
 /**
  * 工具名长度检查是**针对当前连接名**的兼容限制，不是所有源工具的通用命名规则。
  *
@@ -28,7 +51,7 @@ const PUBLIC_PREFIX_BYTES = (serverName: string): number => `mcp__${serverName}_
 export class BudgetError extends Error {
   readonly problems: readonly string[];
   constructor(problems: readonly string[]) {
-    super(`预算门禁未通过，服务拒绝启动：\n- ${problems.join('\n- ')}`);
+    super(`预算门禁未通过：\n- ${problems.join('\n- ')}`);
     this.name = 'BudgetError';
     this.problems = problems;
   }
@@ -37,38 +60,69 @@ export class BudgetError extends Error {
 export interface BudgetReport {
   readonly sources: number;
   readonly tools: number;
-  /** 其中的元工具数（如检索层入口）；metaTools ⊆ tools，预算按 tools 计 */
+  /** 其中的元工具数（如检索层入口）；metaTools ⊆ tools */
   readonly metaTools: number;
   /** 每个工具名在规则前缀下的可用字符预算 */
   readonly nameBudget: number;
+  /** 默认推荐集是否超过软建议（只警示，不影响启动） */
+  readonly warnings: readonly string[];
+  readonly subsetToolsHardMax: number;
+  readonly defaultSetToolsSoftMax: number;
 }
 
 /**
- * 校验注册表是否可以对外服务。任何一条不满足就整体拒绝，不做"先起来再说"。
+ * 启动期校验：**只拦宿主硬约束**（工具名长度），全库数量一律不拦。
+ *
+ * 默认集超 40 记一条 warning，交给调用方展示（`/healthz`、日志），**不抛错**。
  */
 export function assertBudget(registry: ToolRegistry, serverName: string): BudgetReport {
   const sources = registry.listSources().length;
   const tools = registry.listTools();
   const problems: string[] = [];
 
-  if (sources > MAX_SOURCES) {
-    problems.push(`源 ${sources} 个，超过上限 ${MAX_SOURCES}`);
-  }
-  if (tools.length > MAX_TOOLS) {
-    problems.push(`工具 ${tools.length} 个，超过上限 ${MAX_TOOLS}`);
-  }
-
+  // 宿主前缀截断是硬约束：名字不可预测就等于契约作废，这个仍然拒绝启动。
   const nameBudget = HOST_MAX_PUBLIC_NAME - PUBLIC_PREFIX_BYTES(serverName);
   for (const tool of tools) {
-    // 宿主会静默截断+哈希：名字一旦不可预测，就已发布契约就作废了。
     if (tool.name.length > nameBudget) {
       problems.push(
-        `工具名 ${tool.name}（${tool.name.length} 字符）超过预算 ${nameBudget}；` +
-          `公开名 mcp__${serverName}__${tool.name} 会被宿主截断并加哈希，工具名不可预测`,
+        `工具名 ${tool.name}（${tool.name.length} 字符）超过预算 ${nameBudget}；`
+          + `公开名 mcp__${serverName}__${tool.name} 会被宿主截断并加哈希，工具名不可预测`,
       );
     }
   }
-
   if (problems.length > 0) throw new BudgetError(problems);
-  return { sources, tools: tools.length, metaTools: registry.listMetaTools().length, nameBudget };
+
+  const warnings: string[] = [];
+  if (tools.length > DEFAULT_SET_TOOLS_SOFT_MAX) {
+    warnings.push(
+      `默认推荐集 ${tools.length} 个工具，超过软建议 ${DEFAULT_SET_TOOLS_SOFT_MAX}（不拒绝启动）；`
+      + '32K 级上下文会明显拥挤，建议用户按需订阅，或按默认集取舍（v2.3 §10.2）',
+    );
+  }
+
+  return {
+    sources,
+    tools: tools.length,
+    metaTools: registry.listMetaTools().length,
+    nameBudget,
+    warnings,
+    subsetToolsHardMax: SUBSET_TOOLS_HARD_MAX,
+    defaultSetToolsSoftMax: DEFAULT_SET_TOOLS_SOFT_MAX,
+  };
+}
+
+/**
+ * 单次订阅集的**唯一硬阈值**校验：> 80 拒绝。
+ *
+ * 只对"指定了订阅集"的请求调用；默认集（未指定）不经过这里。
+ * 抛 `PlantOmicsError`（服务层映射为 400），因为这是**请求参数**超限，不是服务配置坏了。
+ */
+export function assertSubsetBudget(toolCount: number): void {
+  if (toolCount > SUBSET_TOOLS_HARD_MAX) {
+    throw new PlantOmicsError(
+      `订阅集 ${toolCount} 个工具，超过硬上限 ${SUBSET_TOOLS_HARD_MAX}。`
+      + `按实测折算约 ${Math.round((toolCount * 10_274) / 37 / 100) * 100} token，`
+      + '会把 32K 级上下文挤爆；请减少订阅的源，或改用默认集只取常用的几个',
+    );
+  }
 }

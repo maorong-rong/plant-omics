@@ -22,6 +22,10 @@ const HERE = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(HERE);
 const PORT = Number(process.argv[2] || process.env.PLANTOMICS_DEV_PORT || 8094);
 const UPSTREAM = new URL(process.env.PLANTOMICS_UPSTREAM || 'http://127.0.0.1:8787');
+// `/catalog` 单独指一个上游（通常是 web/catalog-stub.mjs）；不设就落到同一个 UPSTREAM。
+const CATALOG_UPSTREAM = process.env.PLANTOMICS_CATALOG_UPSTREAM
+  ? new URL(process.env.PLANTOMICS_CATALOG_UPSTREAM)
+  : null;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -35,23 +39,25 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8'
 };
 
-function proxy(req, res) {
+function proxy(req, res, target = UPSTREAM) {
   // Host 换成上游自己的 host：服务端的 Host 白名单是按「谁在监听」判断的。
   // Origin 原样透传：同源 POST 浏览器也会带，服务端要求它在白名单里（回环地址默认放行）。
-  const headers = { ...req.headers, host: UPSTREAM.host };
+  const headers = { ...req.headers, host: target.host };
   // 负控开关：模拟「旧版服务端不认 x-plantomics-sources」，用来验证前端会不会把全集冒充成子集。
   // 只用于测试，别在任何真实部署里开。
   if (process.env.PLANTOMICS_STRIP_SUBSET === '1') delete headers['x-plantomics-sources'];
   const upstreamReq = httpRequest(
     {
-      protocol: UPSTREAM.protocol,
-      hostname: UPSTREAM.hostname,
-      port: UPSTREAM.port || 80,
+      protocol: target.protocol,
+      hostname: target.hostname,
+      port: target.port || 80,
       path: req.url,
       method: req.method,
       headers
     },
     (upstreamRes) => {
+      // 上游刻意不发 Date 时，别让 Node 替它补一个——否则「都没有时间」这个分支永远测不到
+      if (!upstreamRes.headers.date) res.sendDate = false;
       res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
       upstreamRes.pipe(res);
     }
@@ -69,6 +75,12 @@ const server = createServer(async (req, res) => {
 
   if (url.pathname === '/mcp' || url.pathname === '/healthz') {
     proxy(req, res);
+    return;
+  }
+
+  // /catalog：有 stub 就转 stub（验证真实 fetch 路径），没有就转服务端同名路径
+  if (url.pathname === '/catalog') {
+    proxy(req, res, CATALOG_UPSTREAM || UPSTREAM);
     return;
   }
 

@@ -5,21 +5,34 @@ flowchart TB
     P1 --> P2{"② 实测定级（不许跳）<br/>curl 至少 2 个端点"}
     P2 -->|"有文档化 JSON"| T1["T1<br/>写 docs 地址"]
     P2 -->|"无文档但 URL 稳定"| T2["T2<br/>写 URL 模式与反例"]
-    P2 -->|"SPA / 登录墙"| T3["T3<br/>只登记，不写代码"]
+    P2 -->|"SPA / 登录墙 / 旧入口失效"| T3["T3<br/>只登记，不写代码"]
     T1 --> P3
     T2 --> P3
     T3 --> REG["docs/源登记表.md"]
     P3["③ 能力取舍与防误用<br/>区间语义 / 查无 / 空参 / 响应量 / 计算类 / 写接口"] --> P4["④ 契约<br/>源适配者起草｜名字 ≤64 字符、查无判据、失败四分类、正文 1408 B"]
+    P4 --> RC{"④′ 契约独立审查<br/>契约不通过 = 不进入实现"}
+    RC -->|"不通过"| P4
   end
-  subgraph G2["实现到上线（关 5–9）"]
+
+  subgraph G2["实现到市场（关 5–9）"]
     direction LR
-    P5["⑤ 实现<br/>三种区间语义分别处理、超限在读前拒绝"] --> P6["⑥ fixture 与离线测试<br/>真实响应裁剪；simulated 不得声称上游行为"]
+    P5["⑤ 实现<br/>manifest / tools / fixtures<br/>每源工具数按能力定，不设每源硬上限"] --> P6["⑥ fixture 与离线测试<br/>真实响应裁剪；simulated 不得声称上游行为<br/>声称有原体哈希就必须真有 rawBody"]
     P6 --> P7["⑦ 可达性实测 probe（联网）<br/>全源覆盖，任一不符 exit 1"]
     P7 --> P8["⑧ 独立审查<br/>独立复跑关键断言、反例优先"]
-    P8 --> P9["⑨ 集成与发布<br/>登记表 / README / 测试三处同步"]
-    P9 --> BUDGET{"工具数 > 40 或源数 > 20?"}
-    BUDGET -->|"是"| RS["先停下：检索层扩展，或合并下线低价值工具<br/>并写决策记录"]
-    BUDGET -->|"否"| DONE["上线"]
-    RS --> DONE
+    P8 --> P9["⑨ 接线与登记<br/>src/sources/index.ts 接线，工具数只从 registry.listTools() 取<br/>登记表 / README / 测试三处同步"]
+    P9 --> P10["⑩ 市场可见<br/>GET /catalog 由运行中注册表实时生成<br/>全库源数与工具数只统计，不拦截"]
   end
+
+  subgraph G3["用户按需装（v2.3 源市场制）"]
+    direction LR
+    P10 --> SUB{"用户选订阅集<br/>x-plantomics-sources"}
+    SUB -->|"本次工具数 > 80"| HARD["服务端 400 拒绝<br/>给出上限与 token 代价"]
+    SUB -->|"本次工具数 ≤ 80"| DEF{"是否超过默认推荐集 40？"}
+    DEF -->|"超过"| SOFT["仅警示 + 显示预估 token<br/>不拒绝"]
+    DEF -->|"未超过"| OK["正常下发 tools/list"]
+    SOFT --> OK
+  end
+
   G1 --> G2
+  G2 --> G3
+  HARD -.->|"缩小订阅集后重试"| SUB

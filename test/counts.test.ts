@@ -57,11 +57,11 @@ const table = (alpha = 3, beta = 1, alphaTier = 'T1') =>
 
 const readme = (block = renderReadmeBlock(counts), rows = table()) => `${block}\n${head(rows)}`;
 
-/** README 里另外两处内联数量（`/healthz` 示例与「全量常驻」句）的规范行。 */
-const inlineLines = (healthz = '"sources":2,"tools":5,"metaTools":1', budget = '当前源码的 5 个工具仍全量常驻（规则允许到 40 个）') =>
+/** README 里另外两处内联数量（`/healthz` 示例与「默认全部加载」句）的规范行。 */
+const inlineLines = (healthz = '"sources":2,"tools":5,"metaTools":1', budget = '当前源码的 5 个工具默认全部加载（订阅集上限 80 个）') =>
   `- \`GET /healthz\` 返回 \`{${healthz}}\`\n- ${budget}\n`;
 
-describe('README 内联数量（/healthz 示例与「全量常驻」句）', () => {
+describe('README 内联数量（/healthz 示例与「默认全部加载」句）', () => {
   it('与 dist 一致时无问题', () => {
     expect(checkInlineNumbers(inlineLines(), counts)).toEqual([]);
   });
@@ -74,9 +74,9 @@ describe('README 内联数量（/healthz 示例与「全量常驻」句）', () 
   });
 
   it('预算句写旧数字时点名', () => {
-    const problems = checkInlineNumbers(inlineLines(undefined, '当前源码的 34 个工具仍全量常驻（规则允许到 40 个）'), counts);
+    const problems = checkInlineNumbers(inlineLines(undefined, '当前源码的 34 个工具默认全部加载（订阅集上限 80 个）'), counts);
     expect(problems.length).toBe(1);
-    expect(problems[0]).toContain('全量常驻');
+    expect(problems[0]).toContain('默认全部加载');
   });
 
   it('句子被改写到认不出时也判红（改措辞必须同步生成器）', () => {
@@ -86,9 +86,14 @@ describe('README 内联数量（/healthz 示例与「全量常驻」句）', () 
   });
 
   it('--write 会把旧数字改成规范值，改完即通过', () => {
-    const stale = inlineLines('"sources":6,"tools":25', '当前源码的 34 个工具仍全量常驻（规则允许到 40 个）');
+    const stale = inlineLines('"sources":6,"tools":25', '当前源码的 34 个工具默认全部加载（订阅集上限 80 个）');
     expect(rewriteInlineNumbers(stale, counts)).toBe(inlineLines());
     expect(checkInlineNumbers(rewriteInlineNumbers(stale, counts), counts)).toEqual([]);
+  });
+
+  it('旧口径措辞（「仍全量常驻（规则允许到 N 个）」）能被 --write 迁移到新口径', () => {
+    const legacy = inlineLines(undefined, '当前源码的 5 个工具仍全量常驻（规则允许到 40 个）');
+    expect(rewriteInlineNumbers(legacy, counts)).toBe(inlineLines());
   });
 });
 

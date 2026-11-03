@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBudgetReport, collectCounts, renderStatsText } from '../scripts/counts.mjs';
+import {
+  MAX_SUBSCRIPTION_TOOLS,
+  TOKENS_PER_TOOL,
+  buildBudgetReport,
+  collectCounts,
+  renderStatsText,
+} from '../scripts/counts.mjs';
 
 /**
- * 预算判定测试。
+ * 预算判定测试（v2.3 源市场口径）。
  *
  * 数量事实的唯一实现在 `scripts/counts.mjs`（`stats.mjs` 已改为薄壳）。
  * 这里直接吃纯函数、注入假注册表：不读 `dist/`（`npm test` 跑在 `npm run build` 之前，
  * 干净克隆没有 dist）、不联网、不改共享文件。
+ *
+ * 口径要点：**全库只报数、不拦截**；唯一失败条件是**指定的订阅集** > 80。
  */
 
 function fakeRegistry(counts: number[]) {
@@ -22,45 +30,83 @@ function fakeRegistry(counts: number[]) {
   };
 }
 
-function run(counts: number[]) {
-  const report = buildBudgetReport(collectCounts(fakeRegistry(counts), { buildInfo: null }));
+function run(
+  counts: number[],
+  subscription?: { requested: string[]; sources: number; tools: number },
+) {
+  const report = buildBudgetReport(
+    collectCounts(fakeRegistry(counts), { buildInfo: null }),
+    subscription,
+  );
   return { code: report.overBudget ? 1 : 0, report, text: renderStatsText(report) };
 }
 
-describe('数量硬阈值与容量假设分离（模拟源）', () => {
-  it('每源2工具不按最低4拒绝', () => {
-    const { code, report } = run([2, 2]);
-    expect(code).toBe(0);
-    expect(report.tools).toBe(4);
-    expect(report.perSource[0]?.tools).toBe(2);
-    expect(report.capacityEstimateAssumption).toEqual({
-      toolsPerSourceLow: 4,
-      toolsPerSourceHigh: 8,
-      isMinimumRequirement: false,
-      bindingConstraintToolsPerSource: 8,
-    });
+describe('全库只报数、不拦截（v2.3 §10.2.3）', () => {
+  it('21 源、41 工具不再失败', () => {
+    expect(run(Array.from({ length: 21 }, () => 1)).code).toBe(0);
+    expect(run([41]).code).toBe(0);
   });
 
-  it('20源各2工具、总数40仍通过，不因估算过线而失败', () => {
-    const { code, report } = run(Array.from({ length: 20 }, () => 2));
+  it('全库再大也不失败（旧口径 20/40 已废止）', () => {
+    const { code, report } = run(Array.from({ length: 40 }, () => 3));
+    expect(report.sources).toBe(40);
+    expect(report.tools).toBe(120);
     expect(code).toBe(0);
+  });
+
+  it('默认集超 40 只警示、不失败', () => {
+    const { code, report, text } = run([41]);
+    expect(code).toBe(0);
+    expect(report.overDefaultSuggestion).toBe(true);
+    expect(text).toContain('已超建议');
+    expect(text).toContain('仅警示，不失败');
+  });
+
+  it('文本写明「只报数，不拦截」与唯一硬阈值', () => {
+    const { text } = run([6, 5]);
+    expect(text).toContain('只报数，不拦截');
+    expect(text).toContain(`硬上限 ${MAX_SUBSCRIPTION_TOOLS}`);
+  });
+});
+
+describe('唯一硬阈值：订阅集 ≤ 80 工具（v2.3 §10.1/§10.2.1）', () => {
+  it('未指定订阅集时只报默认集，report.subscription 为 null', () => {
+    const { report } = run([41]);
+    expect(report.subscription).toBeNull();
     expect(report.overBudget).toBe(false);
-    expect(report.sources).toBe(20);
-    expect(report.tools).toBe(40);
   });
 
-  it('21源或41工具仍非零失败', () => {
-    expect(run(Array.from({ length: 21 }, () => 1)).code).toBe(1);
-    expect(run([41]).code).toBe(1);
+  it('订阅集等于 80 通过、81 失败', () => {
+    const at = run([40, 40], { requested: ['s0', 's1'], sources: 2, tools: 80 });
+    expect(at.code).toBe(0);
+    const over = run([40, 41], { requested: ['s0', 's1'], sources: 2, tools: 81 });
+    expect(over.code).toBe(1);
+    expect(over.text).toContain('❌');
   });
 
-  it('文本和JSON都明确假设而非最低数量要求', () => {
-    const { code, text } = run([6, 5]);
+  it('订阅集判定只看订阅集大小，不看全库大小', () => {
+    // 全库 100 工具，但订阅集只有 10：必须通过
+    const { code, report } = run([60, 40], { requested: ['s1'], sources: 1, tools: 40 });
+    expect(report.tools).toBe(100);
     expect(code).toBe(0);
-    expect(text).toContain('情景估算');
-    expect(text).toContain('4不是每源最低工具数');
-    expect(text).toContain('假设');
-    expect(text).not.toContain('到不了 20 个源');
+  });
+
+  it('token 估算按每工具 280 折算，并给出 80 工具的代价', () => {
+    const { report, text } = run([37]);
+    expect(report.tokenEstimate).toBe(37 * TOKENS_PER_TOOL);
+    expect(text).toContain('默认集约');
+    expect(text).toContain(`${MAX_SUBSCRIPTION_TOOLS * TOKENS_PER_TOOL} token`);
+    // 百分比口径归 AGENTS §10.2，脚本不另算一套
+    expect(text).toContain('§10.2');
+    expect(text).not.toContain('32K 的');
+  });
+
+  it('指定订阅集时，token 报的是订阅集而不是全库', () => {
+    const { report, text } = run([60, 40], { requested: ['s1'], sources: 1, tools: 40 });
+    expect(report.tokenEstimate).toBe(100 * TOKENS_PER_TOOL);
+    expect(report.subscriptionTokens).toBe(40 * TOKENS_PER_TOOL);
+    expect(text).toContain('订阅集约');
+    expect(text).not.toContain('默认集约');
   });
 });
 

@@ -1,0 +1,36 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://string-db.org/api/json/get_string_ids?identifiers=FT&species=3702",
+    "status": 200,
+    "contentType": "text/json; charset=utf-8",
+    "sourceBytes": 736,
+    "sourceSha256": "DE2909C7FE691FBAE401401A87145D0F7F146EA140B499D127C8D07D78F244CC",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T03:55:11.924Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "durationMs": 1195,
+    "purpose": "身份核验反例原件：请求 FT，queryItem=\"FT\"。测试拿它当作\"若请求 AT1G65480 却收到这份响应\"，断言 resolve 必须拒答（queryItem 对不上）而不是把 FT 的解析结果当成 AT1G65480 的",
+    "cropping": "verbatim; 未删字段",
+    "rawBodyNote": "rawBody 是 2026-11-01 重取所得的上游原体逐字副本：其字节 sha256 与 sourceSha256 相等。**这只能说明\"与给定基线（sourceSha256）逐字节一致\"，不证明历史采集发生过**——当初那次抓取是否真的发生、何时发生，本文件无法证明（captureTimeStatus=\"未知\"的件尤其如此）。**不得据此把 captureTimeStatus 从\"未知\"改成\"确证\"。** payload 是同一 JSON 的重排版（derived），离线可用 JSON.parse(rawBody) 复算比对。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T04:04:37.662Z",
+    "canonicalSha256": "AEAEC6DED53ADB88FD06E42B8FDDACABD63CD69AEB91473752219422C6017978",
+    "canonicalSha256OfRawBody": "AEAEC6DED53ADB88FD06E42B8FDDACABD63CD69AEB91473752219422C6017978",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256（与 test 里 canonicalJson 同算法）；非 JSON 原体（HTML 桩）按原文 UTF-8 直接哈希。sourceSha256 只对给定基线验一致性，不证明历史采集动作；**canonicalSha256 表示\"本次比较的这两份内容一致\"，不保证未来抓取仍相同**——它不预设上游的序列化行为会一直不变。"
+  },
+  "payload": [
+    {
+      "queryIndex": 0,
+      "queryItem": "FT",
+      "stringId": "3702.Q9SXZ2",
+      "ncbiTaxonId": 3702,
+      "taxonName": "Arabidopsis thaliana",
+      "preferredName": "FT",
+      "annotation": "Protein FLOWERING LOCUS T; Component of the mobile flower-promoting signal (floral stimulus or florigen). Promotes the transition from vegetative growth to flowering. Required for 'SEPALLATA3' (SEP3) and 'FRUITFULL' (FUL) accumulation in mature rosette leaves. Seems to acts in parallel with 'LEAFY' to induce flowering by regulating 'APETALA1'. Translated in leaves and then transported to the shoot apical meristem where it activates the transcription of several floral meristem identity genes. May play a role in both the autonomous and the long-day flowering pathways."
+    }
+  ],
+  "rawBody": "[{\"queryIndex\": 0, \"queryItem\": \"FT\", \"stringId\": \"3702.Q9SXZ2\", \"ncbiTaxonId\": 3702, \"taxonName\": \"Arabidopsis thaliana\", \"preferredName\": \"FT\", \"annotation\": \"Protein FLOWERING LOCUS T; Component of the mobile flower-promoting signal (floral stimulus or florigen). Promotes the transition from vegetative growth to flowering. Required for 'SEPALLATA3' (SEP3) and 'FRUITFULL' (FUL) accumulation in mature rosette leaves. Seems to acts in parallel with 'LEAFY' to induce flowering by regulating 'APETALA1'. Translated in leaves and then transported to the shoot apical meristem where it activates the transcription of several floral meristem identity genes. May play a role in both the autonomous and the long-day flowering pathways.\"}]"
+}

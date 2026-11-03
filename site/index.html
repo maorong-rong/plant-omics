@@ -47,6 +47,16 @@
 
 <main id="main">
 
+  <!-- 脏构建警告：catalog.build.dirty 为真时才由 app.js 显示。
+       默认 build-data.mjs 会拒绝在 -dirty 构建上生成；这是 --allow-dirty 逃生口的可见标记，
+       防止一份「看着正常」的工作区快照冒充发布口径。 -->
+  <div class="wrap">
+    <div class="notice notice-dirty" id="build-dirty" role="alert" hidden>
+      <span lang="zh"><b>工作区构建，非发布口径。</b>本页数据由 <code>-dirty</code> 构建生成（<span class="mono" data-build-rev>—</span>），可能含未过审或未提交的源；这里的数字与清单不能当作已发布能力。</span>
+      <span lang="en"><b>Working-tree build, not the release basis.</b> This page was generated from a <code>-dirty</code> build (<span class="mono" data-build-rev>—</span>) and may include unreviewed or uncommitted sources; these figures and this list are not published capability.</span>
+    </div>
+  </div>
+
   <!-- ── Hero ─────────────────────────────────────────────────────────── -->
   <section class="hero" id="top">
     <div class="wrap">
@@ -148,14 +158,14 @@
         </figure>
       </div>
 
-      <dl class="stat-strip" aria-label="当前源码口径的预算占用">
+      <dl class="stat-strip" aria-label="当前源码口径的规模">
         <div class="stat">
           <dt><span lang="zh">已接入源</span><span lang="en">Sources</span></dt>
-          <dd><span data-stat="sources">—</span><span class="stat-of">/ <span data-stat="maxSources">—</span></span></dd>
+          <dd><span data-stat="sources">—</span></dd>
         </div>
         <div class="stat">
           <dt><span lang="zh">可调用工具</span><span lang="en">MCP tools</span></dt>
-          <dd><span data-stat="tools">—</span><span class="stat-of">/ <span data-stat="maxTools">—</span></span></dd>
+          <dd><span data-stat="tools">—</span></dd>
         </div>
         <div class="stat">
           <dt><span lang="zh">源等级</span><span lang="en">Source tiers</span></dt>
@@ -171,8 +181,8 @@
       </dl>
 
       <p class="strip-note">
-        <span lang="zh">统计自当前源码构建，<b>非已发布包</b>；斜杠后是<b>预算上限</b>（源 ≤ 20、工具 ≤ 40），不是比例</span>
-        <span lang="en">Counted from the current source build, <b>not the published package</b>; the number after the slash is the <b>budget cap</b> (≤ 20 sources, ≤ 40 tools), not a ratio</span>
+        <span lang="zh">统计自当前源码构建，<b>非已发布包</b>。全库只报数、<b>不设上限</b>；上限只在「一次订阅装多少」——<b>订阅集 ≤ 80 是硬阈值</b>，默认推荐集 ≤ 40 是软建议（超出只警示）。</span>
+        <span lang="en">Counted from the current source build, <b>not the published package</b>. The library is counted, not capped; the only limit is what one subscription loads — <b>≤ 80 tools is the hard cap</b>, and ≤ 40 for the default set is a soft suggestion (warn only).</span>
       </p>
 
       <p class="snapshot" id="snapshot-note">

@@ -1,0 +1,13 @@
+{
+  "note": "示例期望：**不含任何真实题面或真实期望值**，只用来证明公开判分器能独立跑起来。 真实题集与期望在私有 eval/ 目录，不随公开仓发布。",
+  "tasksSha256": "EXAMPLE-TASKS-SHA-NOT-REAL",
+  "cases": [
+    {
+      "id": "E1",
+      "question": "示例题（非真实题面）",
+      "state": "A",
+      "mustGiveTools": ["demo_seed_lookup"],
+      "maxTotalBytes": 4096
+    }
+  ]
+}

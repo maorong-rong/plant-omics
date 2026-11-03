@@ -34,7 +34,10 @@ import { tools as scodTools } from './scod/tools.js';
 import { validateProbe as validateScodProbe } from './scod/probe.js';
 import { manifest as ensemblPlantsManifest } from './ensemblplants/manifest.js';
 import { tools as ensemblPlantsTools } from './ensemblplants/tools.js';
+import { manifest as stringManifest } from './string/manifest.js';
+import { tools as stringTools } from './string/tools.js';
 import { createHubTools } from '../retrieval/index.js';
+import { assertSubsetBudget } from '../service/budget.js';
 
 const bundles: SourceBundle[] = [
   { manifest: wheatomicsManifest, tools: wheatomicsTools },
@@ -48,6 +51,9 @@ const bundles: SourceBundle[] = [
   // 批量 `POST /lookup/id` 未接——公共层目前只发 GET，需要先开非 GET 的口子，
   // 详见 manifest.caveats 与「已知缺口」。
   { manifest: ensemblPlantsManifest, tools: ensemblPlantsTools },
+  // STRING：T1，probe 用 /json/version；只接 resolve_ids 与 interaction_partners 两个入口。
+  // 未接 interactions（/api/json/interactions 只处理 1 个标识符、1 个物种），见 manifest.caveats。
+  { manifest: stringManifest, tools: stringTools },
 ];
 
 export interface RegistryOptions {
@@ -82,6 +88,18 @@ export function createRegistry(options: RegistryOptions = {}): ToolRegistry {
   // 计入工具预算、不计入源数。装配点放这里，是因为 `src/sources/index.ts`
   // 是"有哪些源"的唯一清单，元工具由它统一挂上，避免两处都能注册。
   for (const tool of createHubTools(registry)) registry.registerMetaTool(tool);
+  /**
+   * v2.3 唯一硬阈值：**单次订阅集 ≤ 80 工具**，在这里做、而且只在这里做。
+   *
+   * 为什么在 createRegistry 而不是各个入口：订阅集有两条入口——环境变量
+   * `PLANTOMICS_SOURCES`（MCP / DSH 出口）与请求头 `x-plantomics-sources`（HTTP 出口）。
+   * 之前只有请求头那条调 assertSubsetBudget，于是**同一个 81 工具的集合**，
+   * 走环境变量能起、走请求头被 400 拒绝——同一件事两条路两种结果，用户只会以为是个别入口的问题。
+   * 摆在这个共同汇合点以后，两条入口对称生效；加断言钉住"同一组源、两条入口结果一致"。
+   *
+   * 未指定 enabled（用全库默认集）时不经过这里：默认集是软建议 ≤40，只警示不拦截。
+   */
+  if (enabled) assertSubsetBudget(registry.listTools().length);
   return registry;
 }
 

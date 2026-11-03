@@ -34,12 +34,33 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
-/** 与当前工程预算一致；改这里必须同时改 `src/service/budget.ts` 与 `src/client/catalog.ts`，`--check` 会核。 */
-export const MAX_SOURCES = 20;
-export const MAX_TOOLS = 40;
-/** 仅用于情景估算；不是每源最低/最高数量校验。能力较窄可少于 4，须另经审查。 */
-export const ASSUMED_TOOLS_LOW = 4;
-export const ASSUMED_TOOLS_HIGH = 8;
+/**
+ * 预算口径（v2.3「源市场」制，2026-10-31 本涛确认；沿革见 AGENTS.md §10.4）。
+ *
+ * **硬阈值只有一个：单次订阅集 ≤ 80 工具。** 全库源数、全库工具数、每源工具数都不设硬上限。
+ * 为什么：上下文成本由「用户这次装了哪些源」决定，不由库房总量决定——
+ * 按全库 40 拦会逼着把源做粗，与「按需装」的产品形态冲突。
+ *
+ * 常量命名按职责分开，别再让一个名字背两种含义（名字错比数字错更难查）：
+ * - `MAX_SUBSCRIPTION_TOOLS`（80）：唯一硬阈值，订阅集超过它才拒绝；
+ * - `DEFAULT_SET_TOOLS_SOFT_MAX`（40）：默认推荐集，超过只警示；
+ * - `HISTORICAL_SOURCE_LIMIT` / `HISTORICAL_TOOL_LIMIT`（20 / 40）：旧口径的历史参考，**只展示、不判定**；
+ * - `MAX_SOURCES` / `MAX_TOOLS`：为了不破坏已有导入保留的**兼容别名**，值与上面的职责常量相同。
+ */
+export const MAX_SUBSCRIPTION_TOOLS = 80;
+export const DEFAULT_SET_TOOLS_SOFT_MAX = 40;
+export const HISTORICAL_SOURCE_LIMIT = 20;
+export const HISTORICAL_TOOL_LIMIT = 40;
+
+/** @deprecated 用 `HISTORICAL_SOURCE_LIMIT`（只展示）；保留别名仅为兼容既有导入。 */
+export const MAX_SOURCES = HISTORICAL_SOURCE_LIMIT;
+/** @deprecated 用 `DEFAULT_SET_TOOLS_SOFT_MAX`（默认集软建议）；保留别名仅为兼容既有导入。 */
+export const MAX_TOOLS = DEFAULT_SET_TOOLS_SOFT_MAX;
+/**
+ * 每工具约多少 token：由实测 37 工具 10,274 token 折算（§10.2 影响声明）。
+ * 只用于把「工具数」换算成上下文代价给人看，不是精确计量；换基准要同时改 AGENTS §10.2。
+ */
+export const TOKENS_PER_TOOL = 280;
 
 /** 产物结构版本；改字段形状时 +1（site/ 与市场生成器据此判断）。 */
 export const COUNTS_SCHEMA_VERSION = 1;
@@ -100,63 +121,98 @@ export function collectCounts(registry, options = {}) {
   };
 }
 
-/** 预算判定（原 stats.mjs 的逻辑原样搬过来，字段名不变，别处有测试盯着）。 */
-export function buildBudgetReport(counts) {
-  const toolRoom = Math.max(0, MAX_TOOLS - counts.tools);
-  const sourceRoom = Math.max(0, MAX_SOURCES - counts.sources);
-  const sourcesByToolsMin = Math.floor(toolRoom / ASSUMED_TOOLS_HIGH);
-  const sourcesByToolsMax = Math.floor(toolRoom / ASSUMED_TOOLS_LOW);
+/**
+ * 预算判定（v2.3 源市场口径）。
+ *
+ * **全库只报数、不拦截**；唯一的失败条件是**订阅集**超过 `MAX_SUBSCRIPTION_TOOLS`。
+ * 订阅集从哪来：调用方传入（`stats.mjs` 用与运行时同一个 `PLANTOMICS_SOURCES` 解析）。
+ * 不传就是「没指定订阅集」——此时只算默认集，**绝不因为全库大而失败**。
+ *
+ * @param {object} counts `collectCounts()` 的结果
+ * @param {{ requested: string[], sources: number, tools: number }} [subscription]
+ */
+export function buildBudgetReport(counts, subscription) {
+  const subscriptionTools = subscription ? subscription.tools : undefined;
+  const overSubscription = subscriptionTools !== undefined && subscriptionTools > MAX_SUBSCRIPTION_TOOLS;
+  const tokenEstimate = counts.tools * TOKENS_PER_TOOL;
 
   return {
     sources: counts.sources,
-    maxSources: MAX_SOURCES,
     tools: counts.tools,
-    maxTools: MAX_TOOLS,
-    toolRoom,
-    sourceRoom,
-    sourcesByToolsMin,
-    sourcesByToolsMax,
-    /** 40 以内可以全量暴露；超过就必须先做检索层（§10.2） */
-    needsRetrievalLayer: counts.tools > MAX_TOOLS,
-    /** 保留既有字段；其判定只在每源 8 工具假设下成立，不是硬门禁。 */
-    bindingConstraint: toolRoom / ASSUMED_TOOLS_HIGH < sourceRoom ? 'tools' : 'sources',
-    capacityEstimateAssumption: {
-      toolsPerSourceLow: ASSUMED_TOOLS_LOW,
-      toolsPerSourceHigh: ASSUMED_TOOLS_HIGH,
-      isMinimumRequirement: false,
-      bindingConstraintToolsPerSource: ASSUMED_TOOLS_HIGH,
-    },
+    metaTools: counts.metaTools,
     perSource: counts.perSource,
-    overBudget: counts.sources > MAX_SOURCES || counts.tools > MAX_TOOLS,
+    /** 历史阶段参考（旧口径 20 源），只显示、不判定 */
+    legacyMaxSources: MAX_SOURCES,
+    /** 默认推荐集软建议；超过只警示 */
+    maxDefaultSetTools: MAX_TOOLS,
+    maxSubscriptionTools: MAX_SUBSCRIPTION_TOOLS,
+    tokensPerTool: TOKENS_PER_TOOL,
+    tokenEstimate,
+    subscriptionTokens: subscriptionTools === undefined ? undefined : subscriptionTools * TOKENS_PER_TOOL,
+    subscription: subscription ?? null,
+    overDefaultSuggestion: counts.tools > MAX_TOOLS,
+    /** 唯一硬阈值：**指定的订阅集**超 80 才为真。全库再大也不会置真 */
+    overBudget: overSubscription,
+    /** 数字取自哪个构建产物（含 `-dirty` 标记）；`stats` 会把它打在首行 */
+    buildInfo: counts.buildInfo ?? null,
   };
 }
 
 export function renderStatsText(report) {
+  /**
+   * 先报「这份数字是从哪个 dist 读的」。
+   *
+   * 2026-11-01 真实踩过：有人为了让截图有干净身份把 `dist/` 换成旧提交的归档构建，
+   * 另一个人随后用 `stats` 核对，得出「注册表 37」的错误结论——实际工作区注册表是 39。
+   * `dist/` 是可变的共享产物，所以数字旁边必须写清它的身份（含 `-dirty`），
+   * 让人一眼看到「这是工作区构建，不是发布口径」。
+   */
+  const build = report.buildInfo ?? null;
+  const rev = build && typeof build.sourceRev === 'string' ? build.sourceRev : '未知';
+  const dirty = typeof rev === 'string' && rev.endsWith('-dirty');
   const lines = [
-    `源：${report.sources} / ${report.maxSources}`,
-    `工具：${report.tools} / ${report.maxTools}`,
+    `构建：${rev}${dirty ? ' ——工作区构建（含未提交改动），非发布口径' : ''}`
+      + (build && build.builtAt ? ` · ${build.builtAt}` : ''),
+    `全库：${report.sources} 源 / ${report.tools} 工具（源工具 ${report.tools - report.metaTools} + 元工具 ${report.metaTools}）`
+      + ' —— 只报数，不拦截（v2.3 §10.2.3）',
+    `      源数 20 是旧口径的历史参考（当前 ${report.sources}），不作失败条件。`,
     '',
     '| 源 | 等级 | 工具数 |',
     '|---|---|---|',
     ...report.perSource.map((source) => `| ${source.id} | ${source.tier} | ${source.tools} |`),
     '',
+    `默认推荐集（不选源时加载）：${report.tools} 工具，软建议 ≤ ${report.maxDefaultSetTools}`
+      + (report.overDefaultSuggestion ? ' ⚠️ 已超建议，32K 级上下文会明显拥挤（仅警示，不失败）' : ' ✅'),
   ];
 
-  if (report.sources > report.maxSources) {
-    lines.push(`❌ 源数超上限（${report.sources} > ${report.maxSources}）：按当前工程预算 不许再加。`);
-  }
-  if (report.needsRetrievalLayer) {
-    lines.push(`⚠️ 工具数 ${report.tools} > ${report.maxTools}：**必须先实现检索层**再继续加源（§10.2）。`);
+  if (report.subscription) {
+    lines.push(
+      `订阅集（PLANTOMICS_SOURCES=${report.subscription.requested.join(',')}）：`
+        + `${report.subscription.tools} 工具 / 硬上限 ${report.maxSubscriptionTools}`
+        + (report.overBudget ? ' ❌ 超限' : ' ✅'),
+    );
+  } else {
+    lines.push(
+      `订阅集：本次未指定（未设 PLANTOMICS_SOURCES）→ 只报默认集；` +
+        `硬上限 ${report.maxSubscriptionTools} 工具只对**指定了订阅集**的请求生效`,
+    );
   }
 
-  if (!report.overBudget && !report.needsRetrievalLayer) {
+  // 语义要说准：有订阅集时报订阅集，没有时报默认集。两个数混用会让"当前集"变成假的。
+  // 百分比不在脚本里另算一套——占比口径的唯一真相是 AGENTS §10.2，脚本只报 token 数。
+  const scopeLabel = report.subscription ? '订阅集' : '默认集';
+  const scopeTokens = report.subscription ? report.subscriptionTokens : report.tokenEstimate;
+  lines.push(
+    `token 估算：每工具约 ${report.tokensPerTool}（实测 37 工具 10,274 token 折算）；`
+      + `${scopeLabel}约 ${scopeTokens} token；`
+      + `${report.maxSubscriptionTools} 工具约 ${report.maxSubscriptionTools * report.tokensPerTool} token。`
+      + '上下文占比口径见 AGENTS §10.2（脚本不另算百分比）',
+  );
+
+  if (report.overBudget) {
     lines.push(
-      `✅ 第 1 阶段（全量暴露）。实际工具余量 ${report.toolRoom} 个，实际源余量 ${report.sourceRoom} 个。`,
-    );
-    lines.push(
-      `   情景估算：仅假设新增源各有4–8工具，工具余量可容纳约 ${report.sourcesByToolsMin}–${report.sourcesByToolsMax} 个源（另受源余量限制）。`,
-      `   4不是每源最低工具数；较窄能力可少于4个，须说明理由并独立审查，不凑数。`,
-      `   按每源8工具假设的紧约束：${report.bindingConstraint === 'tools' ? '工具额度' : '源额度'}；接入门禁只按实际源≤20、工具≤40检查。`,
+      `❌ 订阅集 ${report.subscription.tools} 工具 > 上限 ${report.maxSubscriptionTools}：`
+        + '拒绝或强警示（§10.2.1）。减源、改用更小的订阅集，或先把源合并为更少的意图级工具。',
     );
   }
 
@@ -199,9 +255,10 @@ export function inlineNumberRules(counts) {
       render: `"sources":${counts.sources},"tools":${counts.tools}${metaField}`,
     },
     {
-      label: '「全量常驻」句里的工具数与规则上限',
-      pattern: /当前源码的\s*\d+\s*个工具仍全量常驻（规则允许到\s*\d+\s*个）/g,
-      render: `当前源码的 ${counts.tools} 个工具仍全量常驻（规则允许到 ${MAX_TOOLS} 个）`,
+      label: '「默认全部加载」句里的工具数与订阅集上限',
+      // 兼容旧措辞「仍全量常驻（规则允许到 N 个）」，否则旧 README 永远改不成新口径
+      pattern: /当前源码的\s*\d+\s*个工具(?:仍全量常驻（规则允许到|默认全部加载（订阅集上限)\s*\d+\s*个）/g,
+      render: `当前源码的 ${counts.tools} 个工具默认全部加载（订阅集上限 ${MAX_SUBSCRIPTION_TOOLS} 个）`,
     },
   ];
 }
@@ -295,30 +352,163 @@ export function checkReadmeTable(readme, counts) {
   return problems;
 }
 
-/** 预算常量三处副本必须一致（counts → 运行时 budget.ts → 客户端 catalog.ts）。 */
+/**
+ * 预算口径检查（v2.3 源市场制）。
+ *
+ * 分两层，缺一层都可能是「换个名字继续用旧口径」：
+ *
+ * ① **常量一致性**：新阈值必须三处同值——
+ *    `MAX_SUBSCRIPTION_TOOLS`（counts）↔ `SUBSET_TOOLS_HARD_MAX`（budget.ts）= 80；
+ *    `MAX_TOOLS`（counts，已改义为默认集软建议）↔ `DEFAULT_SET_TOOLS_SOFT_MAX`（budget.ts）= 40。
+ *    历史常量（20 源 / 40 工具）只允许作为**展示**存在，且必须与 budget.ts 的 HISTORICAL_* 对齐。
+ *    `stats.mjs` 不再自带数字：它只调 counts 的判定函数。
+ *
+ * ② **行为断言**：光比常量名和数字，等于「把旧常量换个名字」。这里直接喂构造数据给
+ *    `buildBudgetReport()`，看它到底拦不拦：81 必须红、80 不红、默认集 41 只警示、
+ *    全库 200 源 200 工具不红。**行为不对，名字对也没用。**
+ */
 export function checkBudgetConstants(root = ROOT) {
   const problems = [];
-  const files = [
-    path.join(root, 'scripts', 'counts.mjs'),
-    path.join(root, 'src', 'service', 'budget.ts'),
-    path.join(root, 'src', 'client', 'catalog.ts'),
+
+  const read = (rel) => readFileSync(path.join(root, rel), 'utf8');
+
+  // 常量被删时直接引用会抛 ReferenceError，脚本看起来像崩了。
+  // `typeof` 对未声明标识符是安全的，用它先探一次：缺了就用自己的话报错，并跳过行为断言。
+  const CAP = typeof MAX_SUBSCRIPTION_TOOLS === 'number' ? MAX_SUBSCRIPTION_TOOLS : null;
+  const SOFT = typeof DEFAULT_SET_TOOLS_SOFT_MAX === 'number' ? DEFAULT_SET_TOOLS_SOFT_MAX : null;
+  if (CAP === null) problems.push('scripts/counts.mjs 缺少常量 MAX_SUBSCRIPTION_TOOLS（订阅集硬上限），预算判定无法进行');
+  if (SOFT === null) problems.push('scripts/counts.mjs 缺少常量 DEFAULT_SET_TOOLS_SOFT_MAX（默认集软建议），预算判定无法进行');
+
+  /** 从源码里取 `const NAME = 数字;`（缺失时报自己的话，不让脚本崩成 ReferenceError） */
+  const constantOf = (rel, name) => {
+    const source = read(rel);
+    const match = new RegExp(`const ${name} = (\\d+);`).exec(source);
+    if (!match?.[1]) {
+      problems.push(`${rel} 里找不到常量 ${name}（阈值定义缺失，不是脚本崩溃）`);
+      return null;
+    }
+    return Number(match[1]);
+  };
+
+  /**
+   * ⓪ **字面锚定**：规则写死 80 / 40，代码里也必须是这两个数。
+   *
+   * 为什么光比「counts ↔ budget 相等」不够（审查实测过）：三处一起改成 81/41 仍然全绿，
+   * 那保护的是「改的时候记得一起改」，不是「数字等于规则」。这里钉死字面值，
+   * 规则真要改（AGENTS §10.2）就必须**同时**改代码，改不动就红——这是故意的。
+   */
+  const anchors = [
+    { name: 'MAX_SUBSCRIPTION_TOOLS', expected: 80, rule: 'AGENTS.md §10.2 订阅集硬上限' },
+    { name: 'DEFAULT_SET_TOOLS_SOFT_MAX', expected: 40, rule: 'AGENTS.md §10.2 默认推荐集软建议' },
   ];
-  for (const name of ['MAX_SOURCES', 'MAX_TOOLS']) {
-    const expected = name === 'MAX_SOURCES' ? MAX_SOURCES : MAX_TOOLS;
-    for (const file of files) {
-      const source = readFileSync(file, 'utf8');
-      const match = new RegExp(`const ${name} = (\\d+);`).exec(source);
-      if (!match?.[1]) {
-        problems.push(`${path.relative(root, file)} 里找不到常量 ${name}`);
-        continue;
-      }
-      if (Number(match[1]) !== expected) {
-        problems.push(
-          `${path.relative(root, file)} 的 ${name}=${match[1]}，与 scripts/counts.mjs 的 ${expected} 不一致`,
-        );
-      }
+  for (const anchor of anchors) {
+    const actual = constantOf(path.join('scripts', 'counts.mjs'), anchor.name);
+    if (actual !== null && actual !== anchor.expected) {
+      problems.push(
+        `${anchor.name}=${actual}，但规则是 ${anchor.expected}（${anchor.rule}）：改阈值必须先改规则，再改这里`,
+      );
     }
   }
+
+  // 规则文档存在性：§10.2 里仍写着「≤ 80」。只做存在性判断，不解析结构，排版变了不会误报。
+  const agentsPath = path.join(root, 'AGENTS.md');
+  try {
+    const agents = readFileSync(agentsPath, 'utf8');
+    if (!/≤\s*80/.test(agents)) {
+      problems.push('AGENTS.md 里找不到「≤ 80」：规则被改了而代码没跟，或规则段落被删——先对规则');
+    }
+  } catch {
+    problems.push('读不到 AGENTS.md，无法核对规则里的 80 阈值');
+  }
+
+  // ① 常量一致性：新阈值两处同值；历史常量只作展示，也要对齐
+  const pairs = [
+    { countsName: 'MAX_SUBSCRIPTION_TOOLS', budgetName: 'SUBSET_TOOLS_HARD_MAX', label: '订阅集硬上限' },
+    { countsName: 'DEFAULT_SET_TOOLS_SOFT_MAX', budgetName: 'DEFAULT_SET_TOOLS_SOFT_MAX', label: '默认集软建议' },
+    { countsName: 'HISTORICAL_SOURCE_LIMIT', budgetName: 'HISTORICAL_SOURCE_LIMIT', label: '历史源数上限（只展示）' },
+    { countsName: 'HISTORICAL_TOOL_LIMIT', budgetName: 'HISTORICAL_TOOL_LIMIT', label: '历史工具上限（只展示）' },
+  ];
+  for (const pair of pairs) {
+    const inCounts = constantOf(path.join('scripts', 'counts.mjs'), pair.countsName);
+    const inBudget = constantOf(path.join('src', 'service', 'budget.ts'), pair.budgetName);
+    if (inCounts !== null && inBudget !== null && inCounts !== inBudget) {
+      problems.push(`${pair.label}不一致：counts.${pair.countsName}=${inCounts}，budget.${pair.budgetName}=${inBudget}`);
+    }
+  }
+
+  // 兼容别名不许漂：MAX_TOOLS 必须等于默认集软建议，MAX_SOURCES 必须等于历史源上限
+  const aliasChecks = [
+    { alias: 'MAX_TOOLS', target: 'DEFAULT_SET_TOOLS_SOFT_MAX' },
+    { alias: 'MAX_SOURCES', target: 'HISTORICAL_SOURCE_LIMIT' },
+  ];
+  for (const alias of aliasChecks) {
+    const aliasSource = read(path.join('scripts', 'counts.mjs'));
+    const defined = new RegExp(`const ${alias.alias} = ${alias.target};`).test(aliasSource);
+    if (!defined) {
+      problems.push(`scripts/counts.mjs 的兼容别名 ${alias.alias} 必须定义成 = ${alias.target}（别让别名自己漂）`);
+    }
+  }
+
+  // stats.mjs 不许自带阈值数字：它必须用 counts 的判定
+  const statsSource = read(path.join('scripts', 'stats.mjs'));
+  const ownConstant = /const\s+(MAX_[A-Z_]+|SUBSET_[A-Z_]+|DEFAULT_SET_[A-Z_]+|HISTORICAL_[A-Z_]+)\s*=\s*\d+;/.exec(statsSource);
+  if (ownConstant) {
+    problems.push(`scripts/stats.mjs 自带阈值常量 ${ownConstant[0]}：判定必须走 scripts/counts.mjs，不许两套数`);
+  }
+  if (!/from '\.\/counts\.mjs'/.test(statsSource)) {
+    problems.push("scripts/stats.mjs 没有从 './counts.mjs' 引入判定函数");
+  }
+
+  // ② 行为断言：拿构造数据直接喂判定函数，看它拦不拦
+  const fakeCounts = (sources, tools) => ({
+    schemaVersion: COUNTS_SCHEMA_VERSION,
+    scope: 'source',
+    sources,
+    sourceTools: tools,
+    metaTools: 0,
+    metaToolNames: [],
+    tools,
+    perSource: [],
+    buildInfo: {},
+  });
+
+  // 常量缺失时跳过行为断言（前面已报过「缺少常量」，这里不再拿 undefined 去算）
+  const behaviorCases = CAP === null || SOFT === null ? [] : [
+    {
+      label: `订阅集 ${CAP + 1} 工具必须判为超硬上限`,
+      run: () => buildBudgetReport(fakeCounts(8, 37), { requested: ['x'], sources: 8, tools: CAP + 1 }),
+      expect: (r) => r.overBudget === true,
+    },
+    {
+      label: `订阅集 ${CAP} 工具不应判超限`,
+      run: () => buildBudgetReport(fakeCounts(8, 37), { requested: ['x'], sources: 8, tools: CAP }),
+      expect: (r) => r.overBudget === false,
+    },
+    {
+      label: `默认集 ${SOFT + 1} 工具只警示、不判超限`,
+      run: () => buildBudgetReport(fakeCounts(8, SOFT + 1)),
+      expect: (r) => r.overDefaultSuggestion === true && r.overBudget === false,
+    },
+    {
+      label: '全库 200 源 / 200 工具不因全库数字判失败',
+      run: () => buildBudgetReport(fakeCounts(200, 200)),
+      expect: (r) => r.overBudget === false,
+    },
+  ];
+  for (const testCase of behaviorCases) {
+    let report;
+    try {
+      report = testCase.run();
+    } catch (error) {
+      // 常量被删时判定函数会抛 ReferenceError：这里翻译成校验失败，而不是让脚本崩掉
+      problems.push(`预算行为无法判定（${testCase.label}）：${error.message}——多半是阈值常量被删或改名`);
+      continue;
+    }
+    if (!testCase.expect(report)) {
+      problems.push(`预算行为不对：${testCase.label}`);
+    }
+  }
+
   return problems;
 }
 
@@ -454,15 +644,25 @@ export function checkSourceIcons({ counts, root = ROOT }) {
   return problems;
 }
 
-/** 离线校验：README 标记块 + 逐源表格 + 内联数量 + 预算常量 + 置顶顺序 + 源图标。 */
+/** 离线校验：预算口径 + README 标记块 + 逐源表格 + 内联数量 + 置顶顺序 + 源图标。 */
 export function checkSourceScope({ counts, readme = readReadme(), root = ROOT, catalog }) {
+  // 每道检查单独兜底：某一项因为常量被删/改名而抛异常时，报「哪一项、缺什么」，
+  // 而不是让整条命令崩成一句 `X is not defined`（那看起来像脚本坏了，其实是校验失败）。
+  const safely = (label, run) => {
+    try {
+      return run();
+    } catch (error) {
+      return [`${label} 执行失败：${error.message}——多半是阈值常量被删或改名，先看 scripts/counts.mjs 顶部的常量定义`];
+    }
+  };
+
   return [
-    ...checkReadmeBlock(readme, counts),
-    ...checkReadmeTable(readme, counts),
-    ...checkInlineNumbers(readme, counts),
-    ...checkBudgetConstants(root),
-    ...checkPinnedSources({ counts, root, catalog }),
-    ...checkSourceIcons({ counts, root }),
+    ...safely('预算口径检查', () => checkBudgetConstants(root)),
+    ...safely('README 标记块', () => checkReadmeBlock(readme, counts)),
+    ...safely('README 逐源表格', () => checkReadmeTable(readme, counts)),
+    ...safely('README 内联数量', () => checkInlineNumbers(readme, counts)),
+    ...safely('置顶顺序', () => checkPinnedSources({ counts, root, catalog })),
+    ...safely('源图标', () => checkSourceIcons({ counts, root })),
   ];
 }
 
@@ -676,7 +876,7 @@ async function main(argv) {
       return;
     }
     process.stdout.write(
-      `✅ 数量校验通过：README 标记块与逐源表格、三处预算常量、置顶顺序、源图标都与 dist 一致`
+      `✅ 数量校验通过：README 标记块与逐源表格、预算口径（订阅集硬上限 ${MAX_SUBSCRIPTION_TOOLS} / 默认集软建议 ${MAX_TOOLS}，含 4 条行为断言）、置顶顺序、源图标都与 dist 一致`
         + `（${counts.sources} 源 / ${counts.tools} 工具，置顶 ${catalog?.pinned.join(', ') ?? '-'}）\n`,
     );
     return;

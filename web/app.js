@@ -22,6 +22,9 @@
     tools: null,
     toolsError: null,
     token: readToken(),
+    // 订阅集：从 ?sources=icg,scod 读（市场页「开始使用」带过来的）。空数组 = 不带头 = 全集，合法。
+    subset: readSubset(),
+    handshaken: false,
     busy: false,
     result: null
   };
@@ -44,6 +47,21 @@
       if (value) sessionStorage.setItem(TOKEN_KEY, value);
       else sessionStorage.removeItem(TOKEN_KEY);
     } catch (e) { /* 隐私模式下 sessionStorage 可能不可用：那就只在内存里 */ }
+  }
+
+  /**
+   * 订阅集来自 URL `?sources=icg,scod`（市场页「开始使用」带过来）。
+   * 源 id 不是凭据，可以进 URL；这里只做去空与去重，不校验 id 是否存在——
+   * 未知 id 由服务端返回 400 并点名，页面把它原样显示出来，比前端猜更可信。
+   */
+  function readSubset() {
+    var raw = new URLSearchParams(location.search).get('sources') || '';
+    var seen = {};
+    return raw.split(',').map(function (id) { return id.trim(); }).filter(function (id) {
+      if (!id || seen[id]) return false;
+      seen[id] = true;
+      return true;
+    });
   }
 
   function serviceBase() {
@@ -94,6 +112,26 @@
     $('#svc-text').textContent = text;
   }
 
+  /**
+   * 顶栏状态。**带订阅集时必须写清「本页只装几个」**：
+   * 只写「8 源 / 37 工具」会让用户以为这页能用 37 个工具，实际只有 6 个（含 hub_*），
+   * 这正是「数字对不上来源」那类错误。
+   */
+  function refreshStatus() {
+    var health = state.health;
+    if (!health) return;
+    var served = state.tools ? state.tools.length : null;
+    if (state.subset.length > 0) {
+      var metaCount = (catalog.metaTools || []).length;
+      setStatus('warn',
+        '订阅集 ' + state.subset.join(',') + ' · 本页只装 ' + (served == null ? '?' : served) + ' 个工具' +
+        (served == null ? '' : '（含 ' + metaCount + ' 个 hub_*）') +
+        '；服务端全集 ' + health.sources + ' 源 / ' + health.tools + ' 工具');
+      return;
+    }
+    setStatus('ok', '服务正常 · ' + health.sources + ' 源 / ' + health.tools + ' 工具');
+  }
+
   function probeHealth() {
     var started = Date.now();
     return fetch(serviceBase() + '/healthz', { headers: { accept: 'application/json' } })
@@ -104,7 +142,7 @@
       .then(function (json) {
         state.health = json;
         state.healthError = null;
-        setStatus('ok', '服务正常 · ' + json.sources + ' 源 / ' + json.tools + ' 工具 · ' + (Date.now() - started) + ' ms');
+        refreshStatus();
         compareHealth();
       })
       .catch(function (error) {
@@ -134,7 +172,7 @@
       state.toolsError = 'no-token';
       return Promise.resolve();
     }
-    return rpc('tools/list', {}).then(function (json) {
+    return ensureHandshake().then(function () { return rpc('tools/list', {}); }).then(function (json) {
       if (json.error) {
         state.tools = null;
         state.toolsError = 'rpc:' + json.error.message;
@@ -145,6 +183,7 @@
       }
       state.tools = json.result.tools || [];
       state.toolsError = null;
+      refreshStatus();
       compareTools();
     }).catch(function (error) {
       state.tools = null;
@@ -163,32 +202,56 @@
 
   function compareTools() {
     if (!state.tools) return;
-    var snapNames = snapshotToolNames().map(function (x) { return x.name; });
+    // 带了订阅集时，服务端只返回选中源的工具——拿全集快照去比会「报缺 31 个」，
+    // 那是预期行为不是漂移。所以比较的基准也要跟着订阅集缩小，只比选中源 + 元工具。
+    var expected = snapshotToolNames().filter(function (entry) {
+      if (state.subset.length === 0) return true;
+      return entry.source === 'meta' || state.subset.indexOf(entry.source) !== -1;
+    }).map(function (x) { return x.name; });
     var svcNames = state.tools.map(function (x) { return x.name; });
-    var added = svcNames.filter(function (n) { return snapNames.indexOf(n) === -1; });
-    var removed = snapNames.filter(function (n) { return svcNames.indexOf(n) === -1; });
+    var added = svcNames.filter(function (n) { return expected.indexOf(n) === -1; });
+    var removed = expected.filter(function (n) { return svcNames.indexOf(n) === -1; });
     if (added.length === 0 && removed.length === 0) return;
     var parts = [];
     if (added.length) parts.push('服务端多 ' + added.length + ' 个（' + added.slice(0, 4).join('、') + (added.length > 4 ? '…' : '') + '）');
     if (removed.length) parts.push('服务端少 ' + removed.length + ' 个（' + removed.slice(0, 4).join('、') + (removed.length > 4 ? '…' : '') + '）');
+    var scope = state.subset.length > 0 ? '订阅集（' + state.subset.join(',') + '）' : '全集';
     showBanner('warn', '工具清单与快照不一致',
-      parts.join('；') + '。快照来自构建期，服务端才是此刻真相——按服务端的来，页面只提示不隐瞒。');
+      scope + '：' + parts.join('；') + '。快照来自构建期，服务端才是此刻真相——按服务端的来，页面只提示不隐瞒。');
   }
 
   /* ── JSON-RPC ─────────────────────────────────────────────────────── */
+  /**
+   * 一次 MCP 请求。要点（都是 E22 实测对齐过的）：
+   * - 带 `x-plantomics-sources` 时服务端只装这些源；不带是合法行为 = 全集 37 个工具，不是错误。
+   * - 400 的 body 里有 `detail`（未知源 id 会点名并列出已登记的源），**不能吞成「HTTP 400」**。
+   */
   function rpc(method, params) {
     var headers = {
       'content-type': 'application/json',
       accept: 'application/json, text/event-stream'
     };
     if (state.token) headers.authorization = 'Bearer ' + state.token;
+    if (state.subset.length > 0) headers['x-plantomics-sources'] = state.subset.join(',');
     return fetch(serviceBase() + '/mcp', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: method, params: params })
     }).then(function (res) {
       if (res.status === 401) throw new Error('401 unauthorized');
       if (res.status === 403) throw new Error('403 forbidden origin');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        // 400 等服务端错误：把 detail 原样带到界面上
+        return res.text().then(function (text) {
+          var detail = '';
+          try {
+            var body = JSON.parse(text);
+            detail = body && (body.detail || body.error) ? String(body.detail || body.error) : '';
+          } catch (e) {
+            detail = text.slice(0, 200);
+          }
+          throw new Error('HTTP ' + res.status + (detail ? '：' + detail : ''));
+        });
+      }
       var type = res.headers.get('content-type') || '';
       if (type.indexOf('event-stream') !== -1) {
         return res.text().then(function (text) {
@@ -197,6 +260,35 @@
         });
       }
       return res.json();
+    });
+  }
+
+  /**
+   * 请求预览里的子集行。带订阅集时必须显示出来——否则用户以为「什么都没选」，
+   * 而实际请求带了 x-plantomics-sources，预览就变成了假话。
+   */
+  function subsetHeaderLine() {
+    return state.subset.length > 0 ? 'x-plantomics-sources: ' + state.subset.join(',') + '\n' : '';
+  }
+
+  /**
+   * MCP 握手。服务端是**无状态** streamable HTTP，跳过握手现在也能拿到结果，
+   * 但协议要求先 `initialize` 再 `notifications/initialized`；不握手属于不合规，
+   * 而且后端 E22 的证据是走完握手的——页面走同一条路才可复现。
+   * 结果缓存：一次会话只握一次手。
+   */
+  function ensureHandshake() {
+    if (state.handshaken) return Promise.resolve();
+    return rpc('initialize', {
+      protocolVersion: '2025-06-18',
+      capabilities: {},
+      clientInfo: { name: 'plantomics-web', version: '0.1.0' }
+    }).then(function (json) {
+      if (json.error) throw new Error('initialize 失败：' + json.error.message);
+      // initialized 是通知（无 id），服务端回 202
+      return rpc('notifications/initialized', {}).catch(function () { /* 通知失败不阻塞后续 */ });
+    }).then(function () {
+      state.handshaken = true;
     });
   }
 
@@ -456,10 +548,16 @@
   var DEFAULT_TOOL = 'wheatomics_search_known_genes';
 
   function allToolNames() {
+    // 连上服务后以服务端清单为准：带订阅集时服务端只给 6 个工具，
+    // 下拉里就不该还列着 37 个——否则用户能选到一个「这一组根本没装」的工具，点下去必然报错。
+    if (state.tools) return state.tools.map(function (tool) { return tool.name; });
     var names = [];
     (catalog.sources || []).forEach(function (source) {
       (source.tools || []).forEach(function (tool) { names.push(tool.name); });
     });
+    // 元工具也要进下拉：服务端 tools/list 里它们一直存在（带子集也在），
+    // 少列两个会让「试调」下拉选不到 hub_find_sources / hub_status。
+    (catalog.metaTools || []).forEach(function (tool) { names.push(tool.name); });
     return names;
   }
 
@@ -557,7 +655,8 @@
           '没有服务端 inputSchema，无法生成表单。' + (state.token ? '先点右上「连接」取一次工具清单。' : '先在右上填 token 并连接。')));
         preview.textContent = 'POST ' + serviceBase() + '/mcp\n' +
           'content-type: application/json\n' +
-          'authorization: Bearer <token>\n\n' +
+          'authorization: Bearer <token>\n' +
+          subsetHeaderLine() + '\n' +
           JSON.stringify({
             jsonrpc: '2.0', id: 1, method: 'tools/call',
             params: { name: toolName, arguments: {} }
@@ -621,7 +720,8 @@
     function updatePreview() {
       preview.textContent = 'POST ' + serviceBase() + '/mcp\n' +
         'content-type: application/json\n' +
-        'authorization: Bearer <token>\n\n' +
+        'authorization: Bearer <token>\n' +
+        subsetHeaderLine() + '\n' +
         JSON.stringify({
           jsonrpc: '2.0', id: 1, method: 'tools/call',
           params: { name: toolName, arguments: readArgs() }
@@ -654,7 +754,9 @@
       prov.hidden = true;
       var started = Date.now();
 
-      rpc('tools/call', { name: toolName, arguments: args }).then(function (json) {
+      ensureHandshake().then(function () {
+        return rpc('tools/call', { name: toolName, arguments: args });
+      }).then(function (json) {
         var ms = Date.now() - started;
         if (json.error) {
           status.className = 'result-status err';
@@ -708,19 +810,26 @@
     if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
 
     if (catalog) {
-      $('#foot-snap').textContent = 'commit ' + (catalog.gitCommit || '—') +
+      // 只补 commit / 时间 / build，不重复「构建期快照」——那句已经在 index.html 的标签里。
+      var footText = 'commit ' + (catalog.gitCommit || '—') +
         ' · ' + timeText(catalog.generatedAt) +
         (catalog.build && catalog.build.sourceRev ? ' · build ' + catalog.build.sourceRev : '');
+      if (state.subset.length > 0) {
+        footText += ' ｜ 当前订阅集 ' + state.subset.join(',') + '，工具清单以服务端 tools/list 为准';
+      }
+      $('#foot-snap').textContent = footText;
     }
     var tokenInput = $('#token');
     if (state.token) tokenInput.value = state.token;
     tokenInput.addEventListener('input', function () {
+      // 只记 token 并回到「未连接」，**不**在每次按键时握手+拉清单：
+      // 那样会连发 initialize/tools/list（实测一次输入能打出 6 个请求），也会在用户还没填完时反复 401。
       state.token = tokenInput.value;
       saveToken(state.token);
       state.tools = null;
-      state.toolsError = null;
-      if (canCall()) render();
-      else { loadTools().then(render); }
+      state.toolsError = state.token ? 'pending-connect' : 'no-token';
+      state.handshaken = false;
+      render();
     });
 
     $('#connect').addEventListener('click', function () {

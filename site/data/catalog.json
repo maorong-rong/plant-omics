@@ -1,21 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-31T08:36:09.434Z",
-  "gitCommit": "a7de1ff",
+  "generatedAt": "2026-11-01T08:52:37.453Z",
+  "gitCommit": "54ef8dd",
   "package": {
     "name": "plantomics-hub",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "build": {
-    "sourceRev": "f19d4e7-dirty",
-    "builtAt": "2026-10-31T16:23:39+08:00",
+    "sourceRev": "54ef8dd",
+    "builtAt": "2026-11-01T16:42:35+08:00",
     "packageVersion": "0.1.0"
   },
   "budget": {
     "sources": 8,
-    "maxSources": 20,
-    "tools": 37,
-    "maxTools": 40
+    "tools": 37
   },
   "tiers": {
     "T1": 7,

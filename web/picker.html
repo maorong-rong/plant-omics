@@ -32,7 +32,7 @@
       <h1>按需选源</h1>
       <p class="lede">
         同一份服务、同一套工具，你把哪些源勾上，模型就只看到哪些工具。
-        下面的工具数与 token 都是<b>实时算的</b>，不是写死的——挑多了会直接说「装不下」。
+        下面的工具数与 token 都是<b>实时算的</b>，不是写死的——超过 40 个工具会警示，超过 80 个会直接拒绝并说明怎么改。
       </p>
     </section>
 
@@ -41,13 +41,13 @@
         <div class="pn"><span class="pn-v" id="n-sources">—</span><span class="pn-k">已选源</span></div>
         <div class="pn"><span class="pn-v" id="n-tools">—</span><span class="pn-k">工具（含 2 个元工具）</span></div>
         <div class="pn"><span class="pn-v" id="n-tokens">—</span><span class="pn-k">预估上下文 token</span></div>
-        <div class="pn"><span class="pn-v" id="n-cap">—</span><span class="pn-k">工具上限</span></div>
+        <div class="pn"><span class="pn-v" id="n-cap">—</span><span class="pn-k">订阅集硬上限</span></div>
       </div>
       <div class="budget" aria-hidden="true"><span id="budget-bar"></span></div>
       <p class="picked-note" id="picked-note">每工具按 280 token 估（实测口径）；工具总数按服务端预算计，含 <code>hub_*</code> 两个元工具。</p>
     </section>
 
-    <div id="warn" class="banner bad" hidden><div><span class="kind">装不下</span><span class="msg" id="warn-msg"></span></div></div>
+    <div id="warn" class="banner bad" hidden><div><span class="kind" id="warn-kind">装不下</span><span class="msg" id="warn-msg"></span></div></div>
 
     <section class="filters" aria-label="按作物筛选">
       <span class="filters-label">作物</span>

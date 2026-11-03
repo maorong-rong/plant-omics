@@ -1,0 +1,31 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://string-db.org/api/json/get_string_ids?identifiers=AT1G65480&species=999999&limit=3",
+    "status": 400,
+    "contentType": "text/json; charset=utf-8",
+    "sourceBytes": 206,
+    "sourceSha256": "259F6C4FB4B85BCE29D2100608A9AD3178F58806F87EF2C426B24D3E5457719C",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via node execFileSync，单次 GET，未加超时伪装",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T03:39:18.973Z",
+    "captureTimeNote": "本文件由脚本一次抓取即写盘，capturedAt 为脚本记录的 UTC 时刻（抓取与记录同一动作内完成）。",
+    "durationMs": 1014,
+    "purpose": "STR-B：resolve 端点自己的 400 unknown organism 原件（此前只有 partners 侧）",
+    "cropping": "verbatim; 未删字段（ErrorMessage 的 HTML 由工具清洗，不改 fixture）",
+    "rawBodyNote": "rawBody 是 2026-11-01 重取所得的上游原体逐字副本：其字节 sha256 与 sourceSha256 相等。**这只能说明\"与给定基线（sourceSha256）逐字节一致\"，不证明历史采集发生过**——当初那次抓取是否真的发生、何时发生，本文件无法证明（captureTimeStatus=\"未知\"的件尤其如此）。**不得据此把 captureTimeStatus 从\"未知\"改成\"确证\"。** payload 是同一 JSON 的重排版（derived），离线可用 JSON.parse(rawBody) 复算比对。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T04:04:39.888Z",
+    "canonicalSha256": "591EA06E0D1A47EC9A11175128E4D0700A1B73867E8CB748FB0EB1FFE3E53308",
+    "canonicalSha256OfRawBody": "591EA06E0D1A47EC9A11175128E4D0700A1B73867E8CB748FB0EB1FFE3E53308",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256（与 test 里 canonicalJson 同算法）；非 JSON 原体（HTML 桩）按原文 UTF-8 直接哈希。sourceSha256 只对给定基线验一致性，不证明历史采集动作；**canonicalSha256 表示\"本次比较的这两份内容一致\"，不保证未来抓取仍相同**——它不预设上游的序列化行为会一直不变。"
+  },
+  "payload": [
+    {
+      "Error": "unknown organism",
+      "ErrorMessage": "Sorry, STRING does not know an organism named '999999'.<br/>Note that the database only contains organisms with fully sequenced and published genomes."
+    }
+  ],
+  "rawBody": "[{ \"Error\" : \"unknown organism\", \"ErrorMessage\" : \"Sorry, STRING does not know an organism named '999999'.<br/>Note that the database only contains organisms with fully sequenced and published genomes.\"  }]"
+}

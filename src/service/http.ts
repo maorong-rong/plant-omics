@@ -28,6 +28,8 @@ import { serviceVersion, readBuildRev } from './version.js';
 import { assertBudget, type BudgetReport } from './budget.js';
 import type { ServiceConfig } from './config.js';
 import { resolveSubset, SOURCE_SUBSET_HEADER } from './subset.js';
+import { buildCatalog } from './catalog.js';
+import { createHash } from 'node:crypto';
 
 export interface ServiceLogEntry {
   readonly at: string;
@@ -337,6 +339,40 @@ export function createService(options: ServiceOptions): {
           }
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
             .end(JSON.stringify({ status: 'ok', version: servedVersion, package: SERVER_INFO.version, sources: budget.sources, tools: budget.tools, metaTools: budget.metaTools }));
+          finish(200);
+          return;
+        }
+
+        /**
+         * `GET /catalog`：市场首屏与订阅集计数的运行时数据源（契约见 docs/catalog契约.md）。
+         *
+         * 与 /healthz 同级——**免鉴权、不做 Host/Origin 校验、不看 x-plantomics-sources**：
+         * 源清单本就是公开信息（README 已有工具表），而"选了几个源、要装几个工具"必须由
+         * 服务端按**运行中注册表**算，页面自己乘一遍就是两份真相。
+         * 这里刻意用 `registry`（服务端全集）而不是 requestRegistry：带不带订阅头输出必须完全相同。
+         */
+        if (pathname === '/catalog') {
+          if (req.method !== 'GET') {
+            res.writeHead(405, { 'content-type': 'application/json; charset=utf-8', allow: 'GET' })
+              .end(JSON.stringify({ error: 'method not allowed' }));
+            finish(405);
+            return;
+          }
+          const catalog = buildCatalog(registry, { version: servedVersion });
+          const payload = JSON.stringify(catalog);
+          const etag = `"${createHash('sha256').update(payload, 'utf8').digest('hex').slice(0, 32)}"`;
+          const ifNoneMatch = req.headers['if-none-match'];
+          const headers: Record<string, string> = {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'public, max-age=60',
+            etag,
+          };
+          if (typeof ifNoneMatch === 'string' && ifNoneMatch.split(',').some((v) => v.trim() === etag)) {
+            res.writeHead(304, headers).end();
+            finish(304);
+            return;
+          }
+          res.writeHead(200, headers).end(payload);
           finish(200);
           return;
         }

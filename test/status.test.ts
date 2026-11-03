@@ -17,7 +17,7 @@ import { utf8Bytes } from '../src/core/format.js';
 import { InvalidArgumentError } from '../src/core/errors.js';
 import type { Fetcher, ToolDefinition } from '../src/core/types.js';
 import { createRegistry } from '../src/sources/index.js';
-import { MAX_SOURCES, MAX_TOOLS } from '../src/service/budget.js';
+import { DEFAULT_SET_TOOLS_SOFT_MAX, MAX_SOURCES, MAX_TOOLS, SUBSET_TOOLS_HARD_MAX } from '../src/service/budget.js';
 import { INTENTS, SOURCE_SEMANTICS, TOOL_CAPABILITIES } from '../src/retrieval/capability-catalog.js';
 import { buildStatusReport, createStatusTool, type StatusSnapshot } from '../src/retrieval/status.js';
 import { statusSnapshotOf } from '../src/retrieval/index.js';
@@ -60,12 +60,17 @@ describe('hub_status：只读本地目录', () => {
 expect(result.raw.sourceTools).toBe(registry.listTools().filter((t) => !t.name.startsWith('hub_')).length);
   });
 
-  it('预算上限取自 budget 常量，不另写一份数字', async () => {
+  it('预算口径取自 budget 常量：历史 20/40 仍导出但只作兼容，正文只报 v2.3 事实', async () => {
     const result = await statusTool().run({}, { http: forbiddenHttp });
+    // v2.3 废止了"全库 20 源 / 40 工具"的阈值：raw.budget 保留只为兼容既有前端与断言，
+    // 不参与任何判定；**正文不再出现这两个数字作为分母或"额度"**（见文件末尾的防回退断言）。
     expect(result.raw.budget.maxSources).toBe(MAX_SOURCES);
     expect(result.raw.budget.maxTools).toBe(MAX_TOOLS);
-    expect(result.text).toContain(`${MAX_SOURCES}`);
-    expect(result.text).toContain(`${MAX_TOOLS}`);
+    // 展示口径的唯一事实来源是 raw.market，且必须等于 budget.ts 的常量
+    expect(result.raw.market.subsetToolsHardMax).toBe(SUBSET_TOOLS_HARD_MAX);
+    expect(result.raw.market.defaultSetSoftMax).toBe(DEFAULT_SET_TOOLS_SOFT_MAX);
+    expect(result.raw.market.librarySources).toBe(result.raw.sources);
+    expect(result.raw.market.libraryTools).toBe(result.raw.totalTools);
   });
 
   it('raw.sourceList 逐源摊平，字段与注册表一致，且与文本表格同一份口径', async () => {
@@ -120,24 +125,49 @@ expect(result.raw.sourceTools).toBe(registry.listTools().filter((t) => !t.name.s
     expect(report.text).toContain(`＋元工具 ${report.raw.metaTools}＝${report.raw.totalTools}`);
   });
 
-  it('注入元工具后总数增加、仍不超预算时给出剩余额度', async () => {
+  it('注入元工具后总数增加，按默认集软建议对照（只警示、不拒绝）', async () => {
     const base = realSnapshot();
     const withMeta: StatusSnapshot = { ...base, metaToolNames: ['hub_find_sources', 'hub_status'] };
     const report = buildStatusReport(withMeta, '2026-10-29T00:00:00.000Z');
     expect(report.raw.totalTools).toBe(report.raw.sourceTools + 2);
-    expect(report.text).toContain('剩余工具额度');
-    expect(report.text).not.toContain('已超预算');
+    // v2.3：全库没有"额度"这回事，只有"默认集软建议 ≤40"这条对照；
+    // 不再出现 20/40 这类像上限的分母（防回退断言在文件末尾单独钉一条）。
+    expect(report.text).toMatch(/软建议 ≤ 40|已超软建议 40/);
+    expect(report.text).not.toMatch(/剩余.{0,6}额度/);
   });
 
-  it('超预算时如实标异常，绝不静默放行', () => {
+  it('默认集超过软建议 40 只警示，不判异常、不拒绝（v2.3 全库不设上限）', () => {
     const base = realSnapshot();
     const overflow: StatusSnapshot = {
       ...base,
-      metaToolNames: Array.from({ length: MAX_TOOLS }, (_, i) => `hub_fake_${i}`),
+      metaToolNames: Array.from({ length: DEFAULT_SET_TOOLS_SOFT_MAX + 5 }, (_, i) => `hub_fake_${i}`),
     };
     const report = buildStatusReport(overflow, '2026-10-29T00:00:00.000Z');
-    expect(report.raw.totalTools).toBeGreaterThan(MAX_TOOLS);
-    expect(report.text).toContain('已超预算');
+    expect(report.raw.totalTools).toBeGreaterThan(DEFAULT_SET_TOOLS_SOFT_MAX);
+    expect(report.raw.market.defaultSetOverSoftMax).toBe(true);
+    expect(report.text).toContain('已超软建议');
+    // 「已超预算」是旧口径的词：v2.3 下超软建议不构成异常状态
+    expect(report.text).not.toContain('已超预算');
+    expect(report.text).not.toMatch(/剩余.{0,6}额度/);
+  });
+
+  /**
+   * 防回退（2026-11-01 后端负责人要求）：这类"展示"最容易在下次改动里被顺手改回旧口径。
+   *
+   * 断言用**禁止模式**而非只核新文案存在——换种同义表述不该假红，
+   * 但只要「剩余额度 / 已超预算 / 源 x/20 / 工具 x/40」回来一条就红。
+   */
+  it('防回退：正文不得再现"剩余额度 / 已超预算 / 源 x/20 / 工具 x/40"', async () => {
+    const result = await statusTool().run({}, { http: forbiddenHttp });
+    const text = result.text;
+    expect(text).not.toMatch(/剩余.{0,6}额度/);
+    expect(text).not.toContain('已超预算');
+    expect(text).not.toMatch(/(?:源|工具)\s*\d+\s*\/\s*\d+/);
+    // 新口径三件必须都在
+    expect(text).toMatch(/全库[^\n]*不设上限/);
+    expect(text).toMatch(/硬阈值[^\n]*80/);
+    expect(text).toMatch(/软建议[^\n]*40/);
+    expect(text).toContain('22,400');
   });
 });
 

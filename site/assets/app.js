@@ -90,9 +90,7 @@
   }
 
   fillStat('sources', budget.sources);
-  fillStat('maxSources', budget.maxSources);
   fillStat('tools', budget.tools);
-  fillStat('maxTools', budget.maxTools);
   fillStat('t1', tiers.T1 == null ? 0 : tiers.T1);
   fillStat('t2', tiers.T2 == null ? 0 : tiers.T2);
 
@@ -108,6 +106,18 @@
   // 两个时间要分开写：读数据的时刻（generatedAt）与产物来自哪次构建（sourceRev / builtAt）。
   var buildText = build && build.sourceRev ? 'build ' + build.sourceRev : 'build 未知';
   if (snapMeta) snapMeta.textContent = 'commit ' + commit + ' · ' + stampText + ' · ' + buildText + ' · v' + version;
+
+  /* 脏构建防线：build-data.mjs 默认拒绝在 -dirty 构建上生成；走 --allow-dirty 逃生口时
+     数据里会写 build.dirty，页面必须自己说出来——不能让一份看着正常的快照冒充发布口径。 */
+  if (build && build.dirty) {
+    var dirtyBox = document.getElementById('build-dirty');
+    if (dirtyBox) {
+      dirtyBox.hidden = false;
+      dirtyBox.querySelectorAll('[data-build-rev]').forEach(function (node) {
+        node.textContent = build.sourceRev || '—';
+      });
+    }
+  }
 
   document.querySelectorAll('[data-version]').forEach(function (node) {
     node.textContent = version;
@@ -153,7 +163,7 @@
   if (footerSnap) {
     footerSnap.textContent =
       '数据快照 commit ' + commit + ' · ' + stampText + ' · package ' + version +
-      ' · 源 ' + budget.sources + '/' + budget.maxSources + ' · 工具 ' + budget.tools + '/' + budget.maxTools;
+      ' · 源 ' + budget.sources + ' · 工具 ' + budget.tools + '（全库不设上限）';
   }
 
   /* ── 源卡片 ───────────────────────────────────────────────────────── */

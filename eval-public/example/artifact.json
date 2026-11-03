@@ -1,0 +1,27 @@
+{
+  "note": "示例产物：合成数据，工具名与源都是 demo_*，不是真实源；仅用于证明公开判分器可独立运行。真实产物由私有 runner 生成。",
+  "phase": "r1b",
+  "tasksSha256": "EXAMPLE-TASKS-SHA-NOT-REAL",
+  "scriptSha256": "EXAMPLE-RUNNER-SHA-NOT-REAL",
+  "base": "file:///example/dist/",
+  "toolUniverse": [
+    "demo_seed_lookup"
+  ],
+  "dist": {},
+  "rows": [
+    {
+      "id": "E1",
+      "question": "示例题（非真实题面）",
+      "state": "A",
+      "candidates": [
+        {
+          "sourceId": "demo",
+          "tools": [
+            "demo_seed_lookup"
+          ]
+        }
+      ],
+      "text": "① demo｜示例源（合成数据）\n- demo_seed_lookup：示例用途说明\n——\n源：demo｜GET https://example.invalid/x｜HTTP 200｜1 ms｜查询时刻 2026-01-01T00:00:00.000Z"
+    }
+  ]
+}

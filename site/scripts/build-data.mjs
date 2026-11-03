@@ -26,9 +26,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
 const OUT_DIR = join(ROOT, 'site', 'data');
 
-/** 与 scripts/stats.mjs 同一口径（页面只做展示，不参与门禁判定）。 */
-const MAX_SOURCES = 20;
-const MAX_TOOLS = 40;
+/**
+ * v2.3 源市场制：**全库不设上限**，页面只报数、不判定。
+ * 以前这里的 20 / 40 是旧口径的全库硬上限，会在页面上画成「/20」「/40」——
+ * 那等于告诉用户「你只剩几个额度」，而规则里根本没有这个额度，所以整块删掉。
+ * 唯一硬阈值（订阅集 ≤ 80）由服务端与市场页负责，落地页不重复定义。
+ */
 
 /**
  * 置顶顺序的**唯一来源**：`src/core/pinned-sources.json`（构建时被复制到 `dist/core/`）。
@@ -49,6 +52,19 @@ const PINNED_FILE = join(ROOT, 'dist', 'core', 'pinned-sources.json');
 const ICONS_FILE = join(ROOT, 'dist', 'core', 'source-icons.json');
 
 const DIST_ENTRY = join(ROOT, 'dist', 'sources', 'index.js');
+
+/**
+ * 脏构建防线（2026-11-01 加，起因：落地页 37 vs 39 那次）。
+ *
+ * `dist/` 是可变共享目录：谁跑一次 `npm run build`，`build-info.json` 里的 `sourceRev` 就变一次。
+ * 它带 `-dirty` 后缀就说明这份产物来自**未提交的工作区**，里面可能有未过审的源。
+ * 以前这里只读 `sourceRev`、不判 dirty——于是任何人跑一次生成，就会把未过审的源写进
+ * 公开页面的数字里，而**页面上完全看不出来**。靠人记得「别在 dirty 下生成」是靠不住的。
+ *
+ * 所以默认拒绝生成；确要生成必须显式 `--allow-dirty`，此时数据里打 `build.dirty: true`，
+ * 页面会显示「工作区构建，非发布口径」——不许静静地产出一份看着正常的快照。
+ */
+const ALLOW_DIRTY = process.argv.includes('--allow-dirty');
 
 function fail(message) {
   console.error(`✗ ${message}`);
@@ -134,19 +150,35 @@ function gitCommit() {
   }
 }
 
-/** 跑 stats 拿「源：8 / 20　工具：37 / 40」这一行，作为交叉核对，不解析整张表。 */
+/**
+ * 与 `npm run stats` 交叉核对。
+ *
+ * v2.3 之后 stats 的输出变成「全库：8 源 / 37 工具（…）」这种自然语言，**解析它会跟着文案一起碎**
+ * （实测：改版当天这里就红了）。所以改读 `scripts/counts.mjs --json`——那是机器可读产物，
+ * 本来就是给 site/ 与市场取数用的稳定接口。
+ */
 function statsCounts() {
-  const text = execFileSync(process.execPath, [join(ROOT, 'scripts', 'stats.mjs')], {
+  const raw = execFileSync(process.execPath, [join(ROOT, 'scripts', 'counts.mjs'), '--json'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
-  const sources = /源：\s*(\d+)\s*\/\s*(\d+)/.exec(text);
-  const tools = /工具：\s*(\d+)\s*\/\s*(\d+)/.exec(text);
-  if (!sources || !tools) fail('stats.mjs 输出里找不到「源：N / M」「工具：N / M」，脚本格式可能变了');
-  return { sources: Number(sources[1]), tools: Number(tools[1]) };
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    fail(`scripts/counts.mjs --json 输出不是 JSON：${error.message}`);
+  }
+  if (typeof parsed.sources !== 'number' || typeof parsed.tools !== 'number') {
+    fail('scripts/counts.mjs --json 里没有 sources / tools，接口变了？');
+  }
+  return { sources: parsed.sources, tools: parsed.tools };
 }
 
 async function main() {
+  // 第一件事：确认这份 `dist/` 能代表「已提交的注册表」，再谈生成。
+  // 顺序很关键——脏构建要在**写任何文件之前**被拦住，不能先写一半再报错。
+  const buildInfo = assertBuildIdentity();
+
   const { createRegistry } = await import(`file://${DIST_ENTRY.replaceAll('\\', '/')}`);
   const registry = createRegistry();
   const bundles = registry.listSources();
@@ -229,9 +261,7 @@ async function main() {
   if (sources.length !== expected.sources) {
     fail(`源数对不上：注册表算得 ${sources.length}，npm run stats 报 ${expected.sources}`);
   }
-  if (sources.length > MAX_SOURCES || toolCount > MAX_TOOLS) {
-    fail(`超出预算：源 ${sources.length}/${MAX_SOURCES}、工具 ${toolCount}/${MAX_TOOLS}`);
-  }
+  // v2.3：全库不设上限，这里不做任何预算判定（唯一硬阈值在订阅集，由服务端与市场页负责）
 
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 
@@ -240,8 +270,8 @@ async function main() {
     generatedAt: new Date().toISOString(),
     gitCommit: gitCommit(),
     package: { name: pkg.name, version: pkg.version },
-    build: readBuildInfo(),
-    budget: { sources: sources.length, maxSources: MAX_SOURCES, tools: toolCount, maxTools: MAX_TOOLS },
+    build: buildInfo,
+    budget: { sources: sources.length, tools: toolCount },
     tiers: countTiers(sources),
     published: readPublishedScope(sources),
     sources,
@@ -273,9 +303,12 @@ async function main() {
   copyFileSync(join(ROOT, 'site', 'favicon.svg'), join(ROOT, 'web', 'favicon.svg'));
 
   console.log(`✓ 已生成 site/data/catalog.{json,js}`);
-  console.log(`  源 ${sources.length}/${MAX_SOURCES}，工具 ${toolCount}/${MAX_TOOLS}（含元工具 ${metaTools.length} 个）`);
+  console.log(`  源 ${sources.length}，工具 ${toolCount}（含元工具 ${metaTools.length} 个；全库不设上限）`);
   console.log(`  等级 T1 ${catalog.tiers.T1} / T2 ${catalog.tiers.T2} / T3 ${catalog.tiers.T3}`);
   console.log(`  快照 ${catalog.gitCommit ?? '（无 git）'} · ${catalog.generatedAt} · 包版本 ${pkg.version}`);
+  if (buildInfo?.dirty) {
+    console.log('  ⚠ 本次是工作区（-dirty）构建，页面会标「工作区构建，非发布口径」——不要拿它当发布口径。');
+  }
 }
 
 function summarize(description) {
@@ -285,20 +318,64 @@ function summarize(description) {
 /**
  * 构建信息（`dist/service/build-info.json`）：`sourceRev` 标记这份产物来自哪次源码构建。
  * 页面上的快照必须同时写「读到数据的时刻」和「产物来自哪次构建」，否则没人能判断这页新不新。
+ *
+ * `dirty` 是**算出来的**（`sourceRev` 以 `-dirty` 结尾），不是新字段——build-info.json 的
+ * 生产者没有这个键，也不该由这里去改它的格式。
+ *
+ * 返回 `{ build, reason }`：`reason` 非空表示**身份读不出来**（文件缺失 / 不是 JSON / 没有 sourceRev）。
+ * 身份未知和 `-dirty` 一样不能放行——「不知道这份 dist 从哪来」比「知道它脏」更没底。
  */
 function readBuildInfo() {
   const path = join(ROOT, 'dist', 'service', 'build-info.json');
-  if (!existsSync(path)) return null;
+  if (!existsSync(path)) return { build: null, reason: `找不到 ${path}` };
   try {
     const info = JSON.parse(readFileSync(path, 'utf8'));
+    const sourceRev = info.sourceRev ?? null;
     return {
-      sourceRev: info.sourceRev ?? null,
-      builtAt: info.builtAt ?? null,
-      packageVersion: info.packageVersion ?? null,
+      build: {
+        sourceRev,
+        builtAt: info.builtAt ?? null,
+        packageVersion: info.packageVersion ?? null,
+        dirty: typeof sourceRev === 'string' && sourceRev.endsWith('-dirty'),
+      },
+      reason: typeof sourceRev === 'string' && sourceRev.length > 0 ? null : 'build-info.json 里没有 sourceRev',
     };
-  } catch {
-    return null;
+  } catch (error) {
+    return { build: null, reason: `build-info.json 不是合法 JSON：${error.message}` };
   }
+}
+
+/**
+ * 脏构建拦截：默认拒绝生成，`--allow-dirty` 才放行（放行时页面必须自曝）。
+ * 返回这次要写进数据的 build 对象，避免读两遍、也避免「判的是 A 写的是 B」。
+ *
+ * 两种拦法同一出口：`-dirty`（知道它脏）与身份未知（不知道它从哪来）。
+ */
+function assertBuildIdentity() {
+  const { build, reason } = readBuildInfo();
+  const unknownIdentity = !build || Boolean(reason);
+  const flagged = unknownIdentity || build.dirty;
+  if (!flagged) return build;
+
+  const label = unknownIdentity ? `身份未知（${reason}）` : `工作区构建（${build.sourceRev}）`;
+  const why = unknownIdentity
+    ? '读不出这份 dist 来自哪次源码构建，无法证明它对应已提交的注册表。'
+    : '它来自未提交的工作区，可能含未过审或未提交的源，会污染落地页口径。';
+
+  if (!ALLOW_DIRTY) {
+    fail(
+      `dist/ ${label}：${why}\n` +
+        '  先用干净 HEAD 构建（`git archive HEAD` 导出树，再 `npm run build`），然后跑本脚本。\n' +
+        '  确实要在脏构建上生成（只供本地看渲染）：加 --allow-dirty，页面会显示「工作区构建，非发布口径」。',
+    );
+  }
+
+  console.warn(
+    `⚠ dist/ ${label}：已按 --allow-dirty 放行，` +
+      '数据里会写 build.dirty=true，页面会标「工作区构建，非发布口径」。',
+  );
+  // 身份未知时也要写出一份**能自曝**的 build 对象：sourceRev 为 null，页面显示「—」+ 脏构建横幅。
+  return build ?? { sourceRev: null, builtAt: null, packageVersion: null, dirty: true, identityUnknown: reason };
 }
 
 /**

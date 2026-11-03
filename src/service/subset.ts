@@ -62,5 +62,8 @@ export function resolveSubset(
     );
   }
 
-  return { registry: createRegistry({ enabled: requested }), requested };
+  // 预算校验**不在这里做**：createRegistry({ enabled }) 内部已经是唯一校验点，
+  // 环境变量与请求头两条入口共用它。这里再调一次会变成两处阈值、两条路径。
+  const subsetRegistry = createRegistry({ enabled: requested });
+  return { registry: subsetRegistry, requested };
 }

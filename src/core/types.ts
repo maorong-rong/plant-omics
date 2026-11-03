@@ -95,6 +95,17 @@ export interface HttpResult<T = unknown> {
   attempts: number;
   /** 实际响应类型；可选以兼容已有fixture和自定义Fetcher。 */
   contentType?: string;
+  /**
+   * 上游响应头（**白名单**：只保留 `x-*` 自定义头，键为小写）。
+   *
+   * 为什么要它：总量、分页游标、版本号常放在自定义头里（UniProt 的
+   * `x-total-results`、EBI 的游标）。此前 HttpResult 根本不传头，源层只能看 `data`，
+   * 于是"真 0 条"和"上游没给计数"无法区分——**一个值、两个语义**。
+   *
+   * **缺头 ≠ 0**：字段缺失表示上游没给，值为 `'0'` 才是"给了 0"。源层不许用 `?? 0` 兜底。
+   * 可选字段：已有 fixture 与自定义 Fetcher 不必提供。
+   */
+  headers?: Readonly<Record<string, string>>;
   /** empty仅指读取后零长度正文；json表示解析成功。缺字段表示未知，不等于empty。 */
   bodyKind?: 'empty' | 'json';
 }

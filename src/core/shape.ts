@@ -62,7 +62,8 @@ export function optionalIntArg(
   max: number,
 ): number {
   const raw = args[key];
-  if (raw === undefined || raw === null || raw === '') return fallback;
+  // 纯空白也算「没给」：`Number('   ') === 0`，不挡会静默变成 0（2026-11-01）
+  if (raw === undefined || raw === null || (typeof raw === 'string' && raw.trim() === '')) return fallback;
   if (typeof raw === 'object') {
     throw new InvalidArgumentError(`参数 ${key} 必须是数字，收到${typeName(raw)}`);
   }
@@ -148,4 +149,46 @@ export function optionalArrayField(
 /** 把 unknown 数组里的对象挑出来（上游偶尔混进 null）。 */
 export function objectsOf(rows: unknown[]): Array<Record<string, unknown>> {
   return rows.filter((row): row is Record<string, unknown> => row !== null && typeof row === 'object' && !Array.isArray(row));
+}
+
+/**
+ * 解析「外部数值令牌」，先分**没给 / 给了空 / 给错 / 给了**四态（AGENTS §16，2026-11-01）。
+ *
+ * 为什么要有这个函数：`Number('')` 是 0，`Number(null)` 也是 0——**"没有"会被悄悄变成"零"**。
+ * 这个错我们已经犯了三次（STRING `score: null`、分通道、UniProt `x-total-results: ""`）。
+ * 所以把"空/缺失/非数字"的判定**只写一次**，范围与档位取舍留给源层：
+ *   - score 把 `empty` 归进 `absent`；
+ *   - 计数头把 `empty` 单列（"上游给了头却没给数"与"根本没这个头"是两件事）。
+ *
+ * @param raw   外部值（可能是 undefined / null / 字符串 / 数字 / 别的类型）
+ * @param kind  'integer' 只接受纯数字整数；'decimal' 接受小数
+ * @returns     `absent`（没有该值）/ `empty`（有值但是空串或纯空白）/ `invalid`（给了但不是数字）/ `value`
+ */
+export type NumericToken =
+  | { kind: 'value'; value: number }
+  | { kind: 'absent' }
+  | { kind: 'empty' }
+  | { kind: 'invalid' };
+
+export function parseNumericToken(raw: unknown, kind: 'integer' | 'decimal' = 'decimal'): NumericToken {
+  if (raw === undefined || raw === null) return { kind: 'absent' };
+  if (typeof raw === 'string') {
+    const text = raw.trim();
+    if (text === '') return { kind: 'empty' };
+    if (kind === 'integer' && !/^-?\d+$/.test(text)) return { kind: 'invalid' };
+    const n = Number(text);
+    if (!Number.isFinite(n)) return { kind: 'invalid' };
+    // 整数档必须再判安全整数：'999999999999999999999' 能过正则、Number() 得 1e+21、
+    // isFinite(1e21) 是 true——不挡就会报"命中 1e21 条"（2026-11-01 源层踩过）。
+    if (kind === 'integer' && !Number.isSafeInteger(n)) return { kind: 'invalid' };
+    return { kind: 'value', value: n };
+  }
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw)) return { kind: 'invalid' };
+    // 数字分支同理：Number.isInteger(1e21) 也是 true，一样会漏
+    if (kind === 'integer' && !Number.isSafeInteger(raw)) return { kind: 'invalid' };
+    return { kind: 'value', value: raw };
+  }
+  // 布尔 / 数组 / 对象：给了东西但不是数 → 坏值，不是缺席
+  return { kind: 'invalid' };
 }

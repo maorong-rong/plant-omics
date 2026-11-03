@@ -73,6 +73,13 @@ async function query(ctx: ToolContext, url: string, presentation: Record<string,
 }
 
 function num(value: unknown, digits = 3): string {
+  /**
+   * 缺值不许变成 0（2026-11-01）：`Number(null) === 0`、`Number('') === 0`，
+   * 直接转会把"上游没给"渲染成"0"，用户会当成"确实为零"——与 STRING 的 `score:null→0` 同一条纪律。
+   * 这里只做展示，但展示出来的假 0 同样会让人做错判断。
+   */
+  if (value === null || value === undefined || value === '') return '未提供';
+  if (typeof value === 'object') return '未提供';
   const n = Number(value);
   if (!Number.isFinite(n)) return '-';
   return Number(n.toFixed(digits)).toString();
@@ -1076,7 +1083,15 @@ const variantQuery: ToolDefinition = {
     + '**0 条不等于该区间没有变异**：数据集与坐标体系可能不匹配，请先用 wheatomics_variant_datasets 确认 genome_concordant=true。'
     + '**区间参数非法会被上游以 400 拒绝，那不是"没有变异"**，本仓在本地先做该校验。'
     + '**本仓不暴露按变异 ID 查询**：上游该路径是全表扫描（实测约 19 s，超出本仓上游超时预算），能力面差异归本仓、不是上游缺陷；本工具只按区间查。'
-    + '**本仓不提供 offset**：上游支持分页，本仓未暴露分页参数；上游标记"还有更多"时请缩小 region 后重查，不要指望翻页。',
+    /**
+     * ⚠️ **破坏性变更（本仓策略变更，须升 minor）**：原句是
+     * 「本仓不提供 offset……请缩小 region 后重查，不要指望翻页」。
+     * 加了 `offset` 之后那句话**成了过时指引**——缩小区间不再是唯一出路，
+     * 留着会让模型继续只推"缩区间"，而这正是密集命中时走不通的那条路。
+     */
+    + '**分页**：`has_more=true` 时用 `offset` 翻页——把 `offset` 设成本次已取回的条数，从那里继续；'
+    + '命中密集、缩小区间也缩不下去时，**翻页比缩区间更有效**。'
+    + '上游 `offset` 默认 0；`limit` 上游默认 200、上限 5000，本仓限 1–100——**这两个范围是本仓策略，不是上游限制**。',
     parameters: {
       type: 'object',
       properties: {
@@ -1086,14 +1101,28 @@ const variantQuery: ToolDefinition = {
         },
         region: {
           type: 'string',
-          description: '染色体区间，单个字符串 chrom:start-end，闭区间两端都含（start 与 end 都包含；这是端点包含性实测，不涉及 1-based/0-based 命名），例如 chr1A:1-200000。起点与终点不能相同（上游会返回 400）；查单位点请给 pos-1-pos+1。**本工具只支持按区间查**（未暴露 offset，也不按变异 ID 查）',
+          description: '染色体区间，单个字符串 chrom:start-end，闭区间两端都含（start 与 end 都包含；这是端点包含性实测，不涉及 1-based/0-based 命名），例如 chr1A:1-200000。起点与终点不能相同（上游会返回 400）；查单位点请给 pos-1-pos+1。**本工具只支持按区间查**（不按变异 ID 查）',
         },
       limit: {
         type: 'integer',
-        description: '本次最多取回多少条（1–100，默认 20）。**入参范围与已发布契约一致，本仓不收缩**；体积由**输出侧预算统一裁剪**（不在这里承诺具体字节数），被裁时正文分层报「命中 / 本次取回 / 正文展示 / 本页另有未展示 / 另有未取回」，并给出缩小区间或减小 limit 的重查指引',
+        description: '本页最多取回多少条（1–100，默认 20）。**入参范围与已发布契约一致，本仓不收缩**；体积由**输出侧预算统一裁剪**（不在这里承诺具体字节数），被裁时正文分层报「命中 / 本次取回 / 正文展示 / 本页另有未展示 / 另有未取回」，并给出翻页或减小 limit 的重查指引',
         default: 20,
         minimum: 1,
         maximum: 100,
+      },
+      /**
+       * 新增（破坏性变更）：`offset` 上游实测支持（默认 0、≥0），此前本仓未暴露，
+       * 导致 `has_more=true` 时用户只能"缩小区间"——密集命中时缩不下去。
+       * 上限取 499900（配合 limit 上限 100，可覆盖上游 limit 上限 5000 × 100 页）；
+       * **这是本仓策略上的安全上限，不是上游硬限制**。
+       */
+      offset: {
+        type: 'integer',
+        description: '跳过前多少条（≥0，默认 0）。**翻页时填"本次已取回的条数"**：若上次 `has_more=true`、本次取回 N 条，下一次传 `offset=上次offset+N`。'
+          + '上限 499900 是本仓策略（配合 limit 最多 100，覆盖 5000×100 页），不是上游硬限制',
+        default: 0,
+        minimum: 0,
+        maximum: 499900,
       },
     },
     required: ['dataset', 'region'],
@@ -1103,12 +1132,18 @@ const variantQuery: ToolDefinition = {
     const dataset = requireStringArg(args, 'dataset', 100);
     const region = regionArg(args.region);
     const limit = optionalIntArg(args, 'limit', 20, 1, 100);
+    /**
+     * 新增参数（破坏性变更）：`offset` 上游实测支持（默认 0、≥0）。
+     * 上限 499900 是本仓策略：配合 limit 上限 100 可覆盖上游 5000×100 页。
+     */
+    const offset = optionalIntArg(args, 'offset', 0, 0, 499900);
 
     // 区间按用户输入原样发送；等端点已在解析阶段本地拒绝，不会走到这里
-    const url = endpoint('/VariantHub/query', { dataset, region: region.text, limit });
+    const url = endpoint('/VariantHub/query', { dataset, region: region.text, limit, offset });
     let fetched: Awaited<ReturnType<typeof query>>;
     try {
-      fetched = await query(ctx, url, { limit });
+      // offset 也必须进 presentation：出处尾注要能复现这次查询
+      fetched = await query(ctx, url, { limit, offset });
     } catch (error) {
       // 400 分流：区间非法 / 数据集不支持，是两种不同的用户动作，不能都给一句"HTTP 400"
       throw classifyVariant400(error, url);
@@ -1190,10 +1225,14 @@ const variantQuery: ToolDefinition = {
       `dataset=${dataset}｜`
       + (echoedReference ? `reference=${echoedReference}｜` : 'reference=(上游未给)｜')
       + `区间 ${region.text}｜`
+      + (offset > 0 ? `offset=${offset}｜` : '')
       + (nSamples !== undefined ? `n_samples=${nSamples}｜` : '')
       // 三个计数必须分开：命中（上游判定）/ 本次取回（本页）/ 正文展示（真正进了正文的行）
       + `命中 ${total} 条；本次取回 ${records.length} 条；正文展示 ${shownCount} 条`
-      + (hasMore === true ? '｜上游标记还有更多（has_more=true，本仓未暴露 offset）' : '')
+      + (hasMore === true
+        // 破坏性变更：原句只推"缩小区间"，加了 offset 后要给翻页这条更有效的路
+        ? `｜上游标记还有更多（has_more=true）——**用 offset=${offset + records.length} 翻到下一页**`
+        : '')
     );
 
     if (records.length === 0) {
@@ -1215,7 +1254,7 @@ const variantQuery: ToolDefinition = {
         + '请先用 wheatomics_variant_datasets 确认数据集一致性，或换一个 genome_concordant=true 的数据集再查。',
         res,
         // 空结果也走白名单（审查 WHT3-03）：绝不把整包 data（含 samples/genotypes/info_raw）带进 raw。
-        { dataset, reference: echoedReference, region: region.text, n_samples: nSamples, total, total_shown: totalShown, has_more: hasMore, records: [] },
+        { dataset, reference: echoedReference, region: region.text, limit, offset, n_samples: nSamples, total, total_shown: totalShown, has_more: hasMore, records: [] },
         'total=0',
       );
     }
@@ -1429,10 +1468,14 @@ const variantQuery: ToolDefinition = {
       dataset,
       reference: echoedReference,
       region: region.text,
+      limit,
+      offset,
       n_samples: nSamples,
       total,
       total_shown: totalShown,
       has_more: hasMore,
+      // 翻页提示：next_offset 仅在 has_more 时给出，避免用户误以为还有下一页
+      ...(hasMore === true ? { next_offset: offset + records.length } : {}),
       records: projected,
     }, `total=${total}`);
   },

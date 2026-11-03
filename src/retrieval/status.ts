@@ -23,7 +23,9 @@
 import { DEFAULT_MAX_BYTES, truncateToBytes, utf8Bytes } from '../core/format.js';
 import { InvalidArgumentError } from '../core/errors.js';
 import { validateArgs } from '../core/invoke.js';
-import { MAX_SOURCES, MAX_TOOLS } from '../service/budget.js';
+// v2.3「源市场制」：**全库不设上限**，唯一硬阈值是单次订阅集 ≤80，默认集 ≤40 只是软建议。
+// 旧的 MAX_SOURCES/MAX_TOOLS（20/40）只为 `raw.budget` 兼容字段仍在导出，**不参与任何判定**。
+import { DEFAULT_SET_TOOLS_SOFT_MAX, MAX_SOURCES, MAX_TOOLS, SUBSET_TOOLS_HARD_MAX } from '../service/budget.js';
 import type { ToolDefinition, ToolResult } from '../core/types.js';
 import {
   INTENT_BY_ID,
@@ -36,6 +38,13 @@ import {
 
 /** 正文被截断时追加的标记；属于不可截部分，预算里已扣除。 */
 const TRUNCATE_MARKER = '\n…（正文已按预算截断；来源与免责行见下）';
+
+/**
+ * 每工具 token 折算（AGENTS.md v2.3 §10.2）：实测 37 工具 10,274 token ⇒ 约 280/工具。
+ *
+ * 只用于**估算并展示代价**，不是测量值；订阅集硬上限 80 工具的代价由此算出 ≈ 22,400 token。
+ */
+const EST_TOKENS_PER_TOOL = 280;
 
 /** 每个源在表格里最多展示的物种数（manifest 物种数一般 ≤4，这里防异常长列表）。 */
 const MAX_SPECIES_PER_ROW = 6;
@@ -100,7 +109,25 @@ export interface StatusReport {
     sourceTools: number;
     metaTools: number;
     totalTools: number;
+    /**
+     * **v2.3 历史字段**：全库不再设上限后，`maxSources`/`maxTools`（20/40）已废止，
+     * **不参与任何判定**，也不再进正文。保留字段只为兼容既有前端与断言，勿据此展示"额度"。
+     */
     budget: { sources: number; maxSources: number; tools: number; maxTools: number };
+    /**
+     * v2.3「源市场制」事实——**展示口径只读这里**：
+     * 全库只统计不设限；唯一硬阈值是单次订阅集 ≤80 工具；默认推荐集 ≤40 只是软建议。
+     */
+    market: {
+      librarySources: number;
+      libraryTools: number;
+      defaultSetTools: number;
+      defaultSetSoftMax: number;
+      defaultSetOverSoftMax: boolean;
+      subsetToolsHardMax: number;
+      estTokensPerTool: number;
+      subsetToolsHardMaxTokens: number;
+    };
     intents: Array<{ id: IntentId; label: string; toolCount: number }>;
     uncoveredSpecies: string[];
     /** 被快照过滤掉的目录条目数（有目录、但该源当前没启用） */
@@ -158,13 +185,21 @@ export function buildStatusReport(snapshot: StatusSnapshot, at: string): StatusR
   const lines: string[] = [];
   lines.push(`服务端版本：${snapshot.version}`);
   lines.push('');
-  lines.push(`规模：源 ${budget.sources}/${budget.maxSources}；工具 ${sourceTools}＋元工具 ${metaTools}＝${totalTools}/${budget.maxTools}`);
-  if (budget.sources > budget.maxSources || budget.tools > budget.maxTools) {
-    // 不在这里"放行"：超限是启动门禁的事，这里只如实标出来
-    lines.push('⚠️ 已超预算：服务启动期门禁应已拒绝监听，此进程属异常状态。');
-  } else {
-    lines.push(`剩余工具额度：${budget.maxTools - budget.tools}（元工具也占额度）`);
-  }
+  /**
+   * 展示口径按 v2.3「源市场制」（2026-10-31 本涛确认）：
+   *   - **全库只报统计，不带 "/20" "/40" 这类像上限的分母**——全库本来就没有上限；
+   *   - 唯一硬阈值是**单次订阅集 ≤80 工具**，并给出 token 代价；
+   *   - 默认推荐集 ≤40 是**软建议**，超了只警示；
+   *   - **不再出现"剩余额度 N"**——那是旧口径的产物，会让人以为"再铺就到顶了"。
+   */
+  const overSoftMax = totalTools > DEFAULT_SET_TOOLS_SOFT_MAX;
+  const defaultSetGap = totalTools - DEFAULT_SET_TOOLS_SOFT_MAX;
+  lines.push(`规模（全库，不设上限）：源 ${snapshot.sources.length}；工具 ${sourceTools}＋元工具 ${metaTools}＝${totalTools}`);
+  lines.push(overSoftMax
+    ? `默认推荐集：${totalTools} 个工具，已超软建议 ${DEFAULT_SET_TOOLS_SOFT_MAX} 共 ${defaultSetGap} 个（只警示、不拒绝；32K 上下文会明显拥挤，建议按需订阅）`
+    : `默认推荐集：${totalTools} 个工具，软建议 ≤ ${DEFAULT_SET_TOOLS_SOFT_MAX}（超出只警示、不拒绝）；当前在软建议内`);
+  lines.push(`订阅集（唯一硬阈值）：单次 ≤ ${SUBSET_TOOLS_HARD_MAX} 个工具 ≈ ${(SUBSET_TOOLS_HARD_MAX * EST_TOKENS_PER_TOOL).toLocaleString('en-US')} token`
+    + `（按约 ${EST_TOKENS_PER_TOOL} token/工具折算；128K 上下文约 17%，32K 上下文约 70%）；按需订阅，全库多大都不影响单次上下文`);
 
   lines.push('');
   // 逐源事实只在这里算一次：文本表格与 raw.sourceList 共用，杜绝两套口径
@@ -256,6 +291,16 @@ export function buildStatusReport(snapshot: StatusSnapshot, at: string): StatusR
       metaTools,
       totalTools,
       budget,
+      market: {
+        librarySources: snapshot.sources.length,
+        libraryTools: totalTools,
+        defaultSetTools: totalTools,
+        defaultSetSoftMax: DEFAULT_SET_TOOLS_SOFT_MAX,
+        defaultSetOverSoftMax: overSoftMax,
+        subsetToolsHardMax: SUBSET_TOOLS_HARD_MAX,
+        estTokensPerTool: EST_TOKENS_PER_TOOL,
+        subsetToolsHardMaxTokens: SUBSET_TOOLS_HARD_MAX * EST_TOKENS_PER_TOOL,
+      },
       intents: counts,
       uncoveredSpecies: uncovered,
       catalogEntriesNotEnabled: notEnabled,

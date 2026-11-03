@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { utf8Bytes } from '../src/core/format.js';
-import { UpstreamError } from '../src/core/errors.js';
+import { InvalidArgumentError, UpstreamError } from '../src/core/errors.js';
 import type { Fetcher, ToolContext } from '../src/core/types.js';
 import { tools } from '../src/sources/wheatomics/tools.js';
 
@@ -295,6 +295,24 @@ function replayStatus(name: string, status: number): { ctx: ToolContext; urls: s
   }) as Fetcher;
   return { ctx: { http }, urls };
 }
+
+describe('缺值不许显示成 0（2026-11-01，与 STRING 的 score:null 同一纪律）', () => {
+  it('头部计数字段为 null 时显示「未提供」，不是 0', async () => {
+    // 旧实现 num(null) → Number(null) === 0 → 头部写成"找到基因 0 个"，
+    // 与"上游没给这个数"语义相反（0 是确证为零，null 是未知）。
+    const payload = JSON.parse(readFileSync(join(FIXTURE_DIR, 'expression-query.json'), 'utf8')) as {
+      data: Record<string, unknown>;
+    };
+    payload.data.genes_found = null;
+    const http = (async (url: string) => ({ data: payload, url, status: 200, durationMs: 7, attempts: 1 })) as Fetcher;
+
+    const out = await tool('wheatomics_expression_query').run(
+      { gene_ids: 'TraesCS5A02G391700', project: 'PRJEB5314_paired_tbl', top: 3 }, { http },
+    );
+    expect(out.text).toMatch(/找到基因\s*未提供/);
+    expect(out.text).not.toMatch(/找到基因\s*0\s*个/);
+  });
+});
 
 describe('wheatomics_cross_species_homologs', () => {
   it('正例：1 次请求、按物种分组、max_targets 写清是每物种上限', async () => {
@@ -945,11 +963,26 @@ describe('wheatomics_variant_query', () => {
     expect(Object.keys(def.parameters.properties ?? {})).not.toContain('variant_id');
   });
 
-  it('本仓不暴露 offset：has_more 时正文给「缩小区间」这条可执行路径，不留悬空承诺', async () => {
+  /**
+   * ⚠️ **破坏性变更（offset 新增）**：原断言是
+   *   `not.toContain('offset')` / 描述含「不提供 offset」 / 正文含「未暴露 offset」
+   * 加 offset 之后这三条**全部作废并反转**。这批旧断言正好演示了一件事：
+   * 钉住"本仓不做某事"的断言，会在做那件事时挡住变更——所以它们必须随契约一起改。
+   */
+  it('offset 已暴露：参数表有 offset、描述与正文都给翻页指引（不再是「缩小区间」唯一出路）', async () => {
     const def = tool('wheatomics_variant_query');
-    expect(Object.keys(def.parameters.properties ?? {})).not.toContain('offset');
-    expect(def.description).toContain('不提供 offset');
+    const props = Object.keys(def.parameters.properties ?? {});
+    expect(props).toContain('offset');
+    expect(def.parameters.properties!.offset!.type).toBe('integer');
+    expect(def.parameters.properties!.offset!.minimum).toBe(0);
+    expect(def.parameters.properties!.offset!.maximum).toBe(499900);
+    expect(def.parameters.properties!.offset!.default).toBe(0);
+    // 描述里不许再出现「不提供 offset」这种已撤销的说法
+    expect(def.description).not.toContain('不提供 offset');
+    expect(def.description).toContain('用 `offset` 翻页');
+    // limit 范围不因加 offset 而变
     expect(def.parameters.properties!.limit!.maximum).toBe(100);
+    expect(def.parameters.properties!.limit!.default).toBe(20);
 
     // 真实形态：total 远大于本次取回，且上游标记 has_more
     const { ctx } = replay('variant-query.json', {
@@ -965,10 +998,66 @@ describe('wheatomics_variant_query', () => {
       ctx,
     );
     expect(result.text).toContain('还有更多');
-    expect(result.text).toContain('未暴露 offset');
-    // 只写"还有更多"就是悬空承诺；必须给出现在就能走的路
-    expect(result.text).toMatch(/另有 426 条未取回/);
-    expect(result.text).toMatch(/可调大 limit（本仓上限 100）或缩小区间后重查/);
+    // 不许再写「未暴露 offset」——那是已撤销的旧口径
+    expect(result.text).not.toContain('未暴露 offset');
+    // 必须给**翻页**这条现在就能走的路，并算好下一页的 offset
+    expect(result.text).toMatch(/用 offset=\d+ 翻到下一页/);
+    const raw = result.raw as { offset: number; next_offset?: number };
+    expect(raw.offset).toBe(0);
+    expect(raw.next_offset).toBe(1);   // offset + 本次取回条数
+  });
+
+  it('offset 会真的发给上游，并出现在出处里', async () => {
+    const { ctx } = replay('variant-query.json', {
+      mutate: (payload) => {
+        const data = payload.data as Record<string, unknown>;
+        data.total = 427; data.total_shown = 1; data.has_more = true;
+      },
+    });
+    const result = await tool('wheatomics_variant_query').run(
+      { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', offset: 40, limit: 20 },
+      ctx,
+    );
+    // 出处必须能复现这次查询（含 offset）
+    expect(result.text).toContain('offset=40');
+    const raw = result.raw as { offset: number; next_offset?: number };
+    expect(raw.offset).toBe(40);
+    expect(raw.next_offset).toBe(41);
+  });
+
+  /**
+   * `optionalIntArg`（`src/core/shape.ts`）的既有行为是**钳制到范围内**，不是拒绝越界：
+   *   -1 → 0、499901 → 499900、1.5 → 1（Math.trunc）
+   * 非数字则抛 `InvalidArgumentError`。
+   *
+   * 这是公共层行为，本批**不改它**（改它会波及所有源的参数处理）。
+   * 所以这条断言按**实际语义**写：越界被钳制、非数字被拒。
+   * ⚠️ 用户传 `offset=-1` 会静默变成 0——这是已知行为，不是本批引入的问题。
+   */
+  it('offset 越界被钳制到范围内、非数字被拒（公共层 optionalIntArg 的既有语义）', async () => {
+    const cases: Array<[unknown, number]> = [[-1, 0], [499901, 499900], [1.5, 1]];
+    for (const [input, expected] of cases) {
+      const { ctx } = replay('variant-query.json', {
+        mutate: (payload) => {
+          const data = payload.data as Record<string, unknown>;
+          data.total = 427; data.total_shown = 1; data.has_more = true;
+        },
+      });
+      const result = await tool('wheatomics_variant_query').run(
+        { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', offset: input }, ctx);
+      expect((result.raw as { offset: number }).offset, `offset=${String(input)}`)
+        .toBe(expected);
+    }
+    // 非数字必须拒（用 try/catch 收住同步与异步两种抛出，避免 unhandled rejection）
+    for (const bad of ['abc', {}, []]) {
+      const { ctx } = replay('variant-query.json');
+      let err: unknown = null;
+      try {
+        await tool('wheatomics_variant_query').run(
+          { dataset: 'whealbi_minocc10', region: 'chr1A:1-200000', offset: bad }, ctx);
+      } catch (e) { err = e; }
+      expect(err, `offset=${String(bad)} 应被拒`).toBeInstanceOf(InvalidArgumentError);
+    }
   });
 
   it('上游自相矛盾（has_more=true 但本次取回已等于命中）→ 抛错，不猜"还有多少"', async () => {

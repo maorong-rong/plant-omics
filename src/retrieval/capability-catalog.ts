@@ -14,6 +14,7 @@ export type IntentId =
   | 'gene-search' | 'gene-detail' | 'expression' | 'variant' | 'homolog'
   | 'sequence' | 'annotation' | 'tf' | 'synteny' | 'literature'
   | 'taxonomy' | 'assembly' | 'sample' | 'id-convert' | 'reference-gene'
+  | 'interaction'
   | 'catalog' | 'circrna' | 'lncrna';
 
 export interface IntentSpec {
@@ -41,6 +42,19 @@ export const INTENTS: readonly IntentSpec[] = [
   { id: 'id-convert', label: 'ID 转换', keywords: ['id转换', '转换id', '映射', '同义id', 'convert', 'id convert'] },
   { id: 'reference-gene', label: '内参基因', keywords: ['内参', '管家基因', '引物', 'primer', 'reference gene'] },
   { id: 'catalog', label: '目录/发现', keywords: ['目录', '有哪些', '数据集', '概览', '列表', 'browse', 'catalog', 'dataset'] },
+  /**
+   * 蛋白互作：**只指"实验或预测的蛋白-蛋白互作伙伴"**（STRING 的 interaction_partners 那种）。
+   *
+   * 不算互作的三类，必须另找意图，别并进来：
+   *   - 同源/直系旁系 → homolog（同源 ≠ 互作，这是两类完全不同的生物学关系）；
+   *   - 通路上下游、共表达 → 各自意图，STRING 这个端点不给通路方向；
+   *   - 转录因子调控 → tf。
+   *
+   * 新意图上线时最容易出的事：别的源描述里恰好有"互作/相互作用"字样，被误判成能接。
+   * 所以配套断言（test/interaction-intent.test.ts）要求：**只有 STRING 声明这个意图**，
+   * 且其它源的工具描述/盲区里不出现这些命中词。
+   */
+  { id: 'interaction', label: '蛋白互作', keywords: ['互作', '相互作用', '蛋白互作', '互作网络', 'ppi', 'interaction', 'partner'] },
   { id: 'circrna', label: 'circRNA', keywords: ['circrna', '环状rna'] },
   { id: 'lncrna', label: 'lncRNA', keywords: ['lncrna', '长链非编码'] },
 ];
@@ -74,6 +88,8 @@ export const SOURCE_SEMANTICS: Readonly<Record<string, SourceSemantics>> = {
   // 实测口径：四物种（拟南芥 TAIR10 / 水稻 IRGSP-1.0 / 小麦 IWGSC / 玉米 NAM-5.0）的
   // lookup/id 均 200（release 116）。只承诺这四物种，不按"267 物种目录"声称覆盖。
   ensemblplants: { semantics: '实测', policy: 'coverage' },
+  // STRING：实测拟南芥（3702）与水稻（39947 / 4530）两组，其余物种未测，不按目录声称覆盖。
+  string: { semantics: '实测', policy: 'coverage' },
 };
 
 /**
@@ -138,6 +154,8 @@ export const SOURCE_NAME_ALIASES: Readonly<Record<string, readonly string[]>> = 
   gramene: ['gramene'],
   scod: ['scod'],
   ensemblplants: ['ensemblplants', 'ensembl plants'],
+  // 裸 'string' 是常见英文词，会把 'a string of' 之类误判成源名，所以只认带连字符/中文的写法。
+  string: ['string-db', 'string db', 'string数据库', 'string 数据库'],
 };
 
 /**
@@ -207,7 +225,7 @@ const ICG_BLIND = ['实为物种目录（约 540 物种），仅实测玉米；�
 const GWH_BLIND = ['按精确 ID 查，不提供物种或关键词检索；不保证该 ID 有记录'];
 const STRAW_BLIND = ['表达仅已证实的草莓数据集；TF 仅 Fragaria；共线仅已证实装配'];
 
-/** 30 个源工具的能力登记。每个工具至少 1 个意图。 */
+/** 32 个源工具的能力登记。每个工具至少 1 个意图。 */
 export const TOOL_CAPABILITIES: readonly ToolCapability[] = [
   // ---- wheatomics（小麦族）----
   { tool: 'wheatomics_search_known_genes', sourceId: 'wheatomics', intents: ['gene-search'], speciesScope: { query: ['小麦族'] }, blindSpots: WHEAT_BLIND },
@@ -239,6 +257,27 @@ export const TOOL_CAPABILITIES: readonly ToolCapability[] = [
     speciesScope: { query: ['小麦族'] },
     hardExcludes: [{ rule: '按基因组区间取序列', blocks: ['sequence'], when: /区间|interval|坐标|chr\w*\s*[:：]\s*\d+\s*[-–~]\s*\d+/i }],
     blindSpots: ['只支持按基因 ID 取序列', '上游可能重复返回同名序列，已去重并注明'],
+  },
+
+  // ---- string（蛋白互作；实测拟南芥 + 水稻）----
+  {
+    tool: 'string_resolve_ids',
+    sourceId: 'string',
+    intents: ['id-convert', 'gene-detail'],
+    speciesScope: { query: ['水稻', '拟南芥'] },
+    hardExcludes: [{ rule: '按基因名/性状检索', blocks: ['gene-search'], when: /按基因名|按基因名称|按名称|按性状|模糊/ }],
+    blindSpots: ['只把标识符解析成 STRING ID，不做注释或表达查询', '不传 species 时上游会跨物种乱解析，本工具强制要求 species'],
+  },
+  {
+    tool: 'string_interaction_partners',
+    sourceId: 'string',
+    intents: ['interaction'],
+    speciesScope: { query: ['水稻', '拟南芥'] },
+    blindSpots: [
+      '只给"实验或预测的蛋白互作伙伴"；**不含**同源家族成员、通路上下游方向、共表达关系与转录因子调控',
+      'score 缺失显示"未提供"，不倒成 0',
+      '不接 /api/json/interactions（只处理单标识符单物种）',
+    ],
   },
 
   // ---- strawberry（草莓及相关病原）----

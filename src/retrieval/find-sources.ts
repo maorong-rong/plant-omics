@@ -98,8 +98,41 @@ const COMPUTATION_RULES: ReadonlyArray<{ rule: string; test: RegExp }> = [
   { rule: '差异表达分析', test: /差异表达分析|差异分析/ },
 ];
 
-export function detectComputation(normalized: string): string | undefined {
-  return COMPUTATION_RULES.find((entry) => entry.test.test(normalized))?.rule;
+/**
+ * 分句级「动作 + 对象」兜底：**动作在前、对象在后、相距不超过 20 字**。
+ *
+ * 为什么需要它：上面第一版正则只给 6 字窗口，真实问法
+ * 「帮我设计一下水稻的抗旱基因 PCR 引物」里"设计"到"引物"隔了 12 字，
+ * 于是 S-B5 没被拦住，`detectIntents` 按"引物"给出 `reference-gene`，
+ * 用户问"设计引物"会被导向内参基因源——真实语料里已经发生过。
+ *
+ * 为什么是"动作在前"而不是双向：`引物设计`（对象+动作）由上面第一条规则覆盖；
+ * 而「引物的设计文献」这类是查文献、不是让本服务设计，动作在后就不该判成计算任务。
+ */
+const COMPUTATION_ACTION_OBJECT: ReadonlyArray<{ rule: string; action: RegExp; object: RegExp }> = [
+  { rule: '设计/生成引物', action: /(设计|生成|开发)/, object: /引物|primer/i },
+  { rule: '绘制热图', action: /(画|绘制|做|出)/, object: /热图|heat\s*map/i },
+  { rule: '富集分析', action: /(做|跑|开展)/, object: /富集分析|go\s*富集|kegg/i },
+  { rule: '三维结构预测', action: /(预测|建模|构建)/, object: /三维结构|3d\s*结构|蛋白结构/i },
+  { rule: '差异表达分析', action: /(做|跑|开展)/, object: /差异表达分析|差异分析/i },
+];
+
+export function detectComputation(text: string): string | undefined {
+  const flat = normalize(text);
+  const direct = COMPUTATION_RULES.find((entry) => entry.test.test(flat));
+  if (direct) return direct.rule;
+  // 分句级兜底：normalize() 会把标点抹成空格，所以这里用**保标点**的轻量归一化再切分。
+  const clauses = text
+    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .toLowerCase()
+    .split(/[，。；;！？!?,\n]/);
+  for (const clause of clauses) {
+    for (const entry of COMPUTATION_ACTION_OBJECT) {
+      const pattern = new RegExp(`(?:${entry.action.source})[^，。；;]{0,20}(?:${entry.object.source})`, 'i');
+      if (pattern.test(clause)) return entry.rule;
+    }
+  }
+  return undefined;
 }
 
 interface Recognized {
@@ -203,9 +236,18 @@ function splitClauses(raw: string): Clause[] {
   return clauses;
 }
 
-function recognize(question: string): Recognized {
+function recognize(question: string, analysisTask = false): Recognized {
   const normalized = normalize(question);
-  const intents = detectIntents(normalized);
+  /**
+   * 题级判定为"分析/计算"时**不做意图识别**（2026-11-01 后端负责人裁定）。
+   *
+   * 「帮我设计 PCR 引物」里有"引物"，`detectIntents` 会把它认成 `reference-gene`
+   * （内参基因），映射层据此把用户导向内参基因源——这不是假设，真实语料里已经发生
+   * （R1-13「帮我设计 PCR 引物」、S-B5「帮我设计一下水稻的抗旱基因 PCR 引物」）。
+   * 所以硬排除不能靠"拒答文案"，必须**在意图识别之前**拦，且让 `recognized.intents` 为空：
+   * 结构里留着错误意图，下游照样会误路由。
+   */
+  const intents = analysisTask ? [] : detectIntents(normalized);
   /**
    * 意图兜底：整句一个意图词都没命中、但明确提到「基因」时按 gene-search 处理。
    *
@@ -214,13 +256,14 @@ function recognize(question: string): Recognized {
    * 把真正的原因（点名的 gramene 不覆盖小麦）盖掉了。
    * 只在**零命中**时兜底，不动已识别出更具体意图的问法（同源/内参/变异照旧）。
    */
-  if (intents.length === 0 && normalized.includes('基因')) intents.push('gene-search');
+  if (!analysisTask && intents.length === 0 && normalized.includes('基因')) intents.push('gene-search');
   return {
     raw: question,
     species: detectSpecies(stripSourceNames(normalized)).map((hit) => hit.species),
     intents,
     sources: detectSourceNames(normalized),
-    clauses: splitClauses(question),
+    // 分句绑定本来就是"猜意图与物种的对应关系"，题级已判成非查询时不必猜
+    clauses: analysisTask ? [] : splitClauses(question),
     normalized,
   };
 }
@@ -807,6 +850,14 @@ export interface FindSourcesOutput {
      * 自测按它做物种集合比较——判据读结构化字段，不去解析正文猜。
      */
     readonly speciesVerdicts: SpeciesVerdict[];
+    /**
+     * 题级硬排除命中的规则名（如「设计/生成引物」「绘制热图」）。
+     *
+     * 命中时：`state='B'`、`candidates=[]`、`recognized.intents=[]`——
+     * **意图识别根本没跑**，所以下游任何"按意图映射到源"的逻辑都不会被误导。
+     * 未命中时该字段不出现。
+     */
+    readonly computation?: string;
   };
 }
 
@@ -836,8 +887,51 @@ export function findSources(input: FindSourcesInput, context: {
     );
   }
 
+  /**
+   * 题级硬门 ①：分析/计算类任务不是查询——**必须在意图识别之前判**。
+   *
+   * 为什么在题级挡，而不是登记成某个工具的 hardExclude：
+   * 「设计引物」「画热图」「做富集分析」不是"某个源恰好不做"，而是**本服务整体不做**。
+   * 登记到工具上就变成了"这个源不覆盖"，用户会以为换个源就能做。
+   *
+   * 为什么必须**先于**意图识别：`设计引物` 里含 `引物`（内参基因意图的关键词），
+   * 先识别意图就会得到 `reference-gene`，映射层据此导向内参基因源——
+   * R1-13 与 S-B5 两条真实问法已经踩到。拒答之后 `recognized.intents` 也必须是空数组，
+   * 否则错误意图留在结构化字段里，下游照样误路由（所以 `recognize(question, true)`）。
+   */
+  const computation = detectComputation(question);
+  const found = recognize(question, computation !== undefined);
+  const now = context.now ?? new Date();
+  const tail = [
+    '——',
+    `源：plantomics-hub 本地目录｜hub_find_sources(${echo})｜无上游请求`,
+    `目录快照：服务版本 ${context.version}｜源 ${context.sourceCount}/工具 ${context.toolCount}｜查询时刻 ${now.toISOString()}`,
+  ].join('\n');
+
+  if (computation) {
+    const lines = [
+      `不是数据查询：${summarize(question)}`,
+      `- 判定：这条是「${computation}」，属于分析/计算任务，不是"把已有数据问出来"`,
+      '- 本服务只做查询（把上游已有的记录取回来），不做分析与绘图，因此不提供任何工具',
+      '- 说明：这是「本服务不支持该任务」，不是没有覆盖，也不是数据不存在',
+      '- 这一类问题在意图识别**之前**就被拦下，不会按关键词（如"引物"）导向任何数据源',
+      '- 可以先调查询工具拿到原始数据，再放到自己的分析流程里做这一步',
+    ];
+    return finish(lines.join('\n'), tail, {
+      recognized: found,
+      candidates: [],
+      gaps: [],
+      clues: [],
+      state: 'B',
+      // 题级就判成"不是查询"，没走到覆盖判定——如实记 out-of-scope，
+      // 不假称"该物种没有覆盖"（那是另一个事实）。
+      speciesVerdicts: accountSpecies(found, [], context.enabledTools)
+        .map((verdict) => ({ ...verdict, status: 'out-of-scope' as const, sources: [] })),
+      computation,
+    });
+  }
+
   // 合并显式 hint：hint 优先，question 兜底
-  const found = recognize(question);
   if (speciesHintText) {
     const extra = detectSpecies(normalize(speciesHintText)).map((hit) => hit.species);
     for (const sp of extra) if (!found.species.includes(sp)) found.species.push(sp);
@@ -856,49 +950,11 @@ export function findSources(input: FindSourcesInput, context: {
   const grouped = groupBySource(picked);
   /** 逐物种交代：识别到的每个物种都必须有一条判定，结果同时进正文与 raw。 */
   const verdicts = accountSpecies(found, picked, context.enabledTools);
-  const now = context.now ?? new Date();
-  const tail = [
-    '——',
-    `源：plantomics-hub 本地目录｜hub_find_sources(${echo})｜无上游请求`,
-    `目录快照：服务版本 ${context.version}｜源 ${context.sourceCount}/工具 ${context.toolCount}｜查询时刻 ${now.toISOString()}`,
-  ].join('\n');
 
   const speciesText = found.species.length ? found.species.join('、') : '未识别出物种';
   const intentText = found.intents.length
     ? found.intents.map((id) => INTENT_BY_ID.get(id)?.label ?? id).join('、')
     : '未识别出意图';
-
-  /**
-   * 题级硬门 ①：分析/计算类任务不是查询。
-   *
-   * 为什么要在**题级**挡，而不是登记成某个工具的 hardExclude：
-   * 「设计引物」「画热图」「做富集分析」不是"某个源恰好不做"，而是**本服务整体不做**。
-   * 登记到工具上就变成了"这个源不覆盖"，用户会以为换个源就能做。
-   *
-   * 也不靠意图识别兜底：`设计引物` 里含 `引物`（内参基因意图的关键词），
-   * 不挡就会拿 ICG 的内参引物工具去答"帮我设计引物"——ICG 只给已验证的内参引物，
-   * 不负责设计。命中关键词不等于该问答得了。
-   */
-  const computation = detectComputation(found.normalized);
-  if (computation) {
-    const lines = [
-      `不是数据查询：${summarize(question)}`,
-      `- 判定：这条是「${computation}」，属于分析/计算任务，不是"把已有数据问出来"`,
-      '- 本服务只做查询（把上游已有的记录取回来），不做分析与绘图，因此不提供任何工具',
-      '- 说明：这是「本服务不支持该任务」，不是没有覆盖，也不是数据不存在',
-      '- 可以先调查询工具拿到原始数据，再放到自己的分析流程里做这一步',
-    ];
-    return finish(lines.join('\n'), tail, {
-      recognized: found,
-      candidates: [],
-      gaps: [],
-      clues: [],
-      state: 'B',
-      // 题级就判成"不是查询"，没走到覆盖判定——如实记 out-of-scope，
-      // 不假称"该物种没有覆盖"（那是另一个事实）。
-      speciesVerdicts: verdicts.map((verdict) => ({ ...verdict, status: 'out-of-scope' as const, sources: [] })),
-    });
-  }
 
   /**
    * 题级硬门 ②：物种未识别时**不许回落全库**。

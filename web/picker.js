@@ -3,18 +3,20 @@
  *
  * 三条口径都写在代码里，改之前先读：
  * 1. **数都从 `data/catalog.js` 来**（由 `site/scripts/build-data.mjs` 生成的那份快照），页面不写死任何数字。
- * 2. **工具上限 40、每工具 280 token 是口径参数**，不是估算随便写的：40 来自仓规 §十，280 是实测口径。
- * 3. **超限要说清后果**：不是「建议少选」，而是「装不下——工具全量常驻进不了上下文，需要检索层或砍源」。
+ * 2. **阈值按仓规 v2.3（2026-10-31 源市场口径）**：单次订阅集 **> 80 拒绝**（唯一硬阈值），**> 40 只警示**
+ *    （默认推荐集）；全库工具数不拦截。每工具 280 token 的出处见下面注释，不写成「某人的口径」。
+ * 3. **超限要说清后果**：不是「建议少选」，而是「装不下——工具声明全量常驻，进不了上下文，得砍源或分会话」。
  *
  * 本页**不发任何网络请求**：它是「选择器长什么样、选完会怎样」的静态版。
  */
 (function () {
   'use strict';
 
-  var TOOL_CAP = 40;        // 仓规 §十：工具总数上限（含元工具）
+  var TOOL_CAP = 80;        // 仓规 v2.3 §10.2：订阅集硬阈值（>80 拒绝）
+  var TOOL_WARN = 40;       // 默认推荐集：>40 警示，不拒绝
   /**
    * 每工具约 280 token 的**出处**（别写成「某人的口径」）：
-   * 论文侧用 cl100k_base 实测「全量 tools/list」合计 10 253 token，除以 37 个工具 ≈ 277，
+   * 论文侧用 cl100k_base 实测「全量 tools/list」合计 10,274 token（当前构建 `2af6639`），除以 37 个工具 ≈ 278，
    * 取整到 280 作为估算基数。测量对象是整个工具声明（名字 + 描述 + inputSchema），
    * 不是单次调用结果；换 tokenizer 或改工具描述，这个数就变，所以只作估算。
    */
@@ -90,23 +92,35 @@
     var parent = bar.parentElement;
     var ratio = Math.min(1, t.tools / TOOL_CAP);
     bar.style.width = (ratio * 100).toFixed(1) + '%';
-    parent.className = 'budget' + (t.tools > TOOL_CAP ? ' over' : (t.tools >= TOOL_CAP - 4 ? ' tight' : ''));
+    // 三档：>80 拒绝（红）、>40 警示（黄）、其余正常
+    parent.className = 'budget' + (t.tools > TOOL_CAP ? ' over' : (t.tools > TOOL_WARN ? ' tight' : ''));
 
     var warn = $('#warn');
+    var kind = $('#warn-kind');
     if (t.tools > TOOL_CAP) {
       warn.hidden = false;
+      warn.className = 'banner bad';
+      if (kind) kind.textContent = '超过硬上限 · 拒绝';
       $('#warn-msg').textContent =
-        '已选 ' + t.tools + ' 个工具，超过上限 ' + TOOL_CAP + ' 个（多 ' + (t.tools - TOOL_CAP) + ' 个）。' +
-        '后果不是「慢一点」而是装不下：工具声明要全量常驻上下文，超了就得先有检索层，或者少勾几个源。' +
-        '当前估算 ≈ ' + fmt(t.tokens) + ' token。';
+        '已选 ' + t.tools + ' 个工具，超过订阅集上限 ' + TOOL_CAP + '（多 ' + (t.tools - TOOL_CAP) + ' 个）——这一组**不能用**。' +
+        '后果不是「慢一点」：工具声明要全量常驻上下文，' + t.tools + ' 个约 ' + fmt(t.tokens) + ' token，' +
+        '128K 上下文吃掉 ' + Math.round((t.tokens / 128000) * 100) + '%。' +
+        '可操作的做法：砍掉用不上的源（至少再减 ' + (t.tools - TOOL_CAP) + ' 个工具），或分成两次会话各订一部分。';
+    } else if (t.tools > TOOL_WARN) {
+      warn.hidden = false;
+      warn.className = 'banner warn';
+      if (kind) kind.textContent = '超过推荐集 · 警示';
+      $('#warn-msg').textContent =
+        '已选 ' + t.tools + ' 个工具，超过默认推荐集 ' + TOOL_WARN + '（未超过硬上限 ' + TOOL_CAP + '）。' +
+        '仍可用，但上下文会更紧：约 ' + fmt(t.tokens) + ' token，32K 上下文下约占 ' + Math.round((t.tokens / 32000) * 100) + '%。' +
+        '不是错，只是要知道代价。';
     } else {
       warn.hidden = true;
     }
 
     $('#picked-note').textContent =
-      'token 估算：全量 tools/list 实测 10 253 ÷ 37 ≈ 277（cl100k_base，取整 280/工具）；' +
-      '工具总数含 ' + metaToolCount() + ' 个 hub_* 元工具。' +
-      (t.tools === TOOL_CAP ? ' 正好用满上限。' : (t.tools > TOOL_CAP - 4 && t.tools <= TOOL_CAP ? ' 接近上限，再加一个源可能就超。' : ''));
+      'token 估算：全量 tools/list 实测 10,274 ÷ 37 ≈ 278（cl100k_base，取整 280/工具；当前构建 2af6639）；' +
+      '工具总数含 ' + metaToolCount() + ' 个 hub_* 元工具。阈值：> ' + TOOL_WARN + ' 警示，> ' + TOOL_CAP + ' 拒绝。';
 
     document.querySelectorAll('.card').forEach(function (card) {
       var id = card.getAttribute('data-id');

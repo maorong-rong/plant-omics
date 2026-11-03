@@ -112,6 +112,97 @@ describe('createFetcher', () => {
   });
 });
 
+describe('响应头透出（白名单 x-*，2026-11-01 后端负责人裁定）', () => {
+  it('x-* 头被透出；缺头与「头值为 0」必须能分开', async () => {
+    // 这两条是同一个字段的两种状态，源层靠它区分"真 0 条"与"上游没给计数"
+    const withZero = (async () => response(200, '{"results":[]}', { 'x-total-results': '0' })) as unknown as typeof fetch;
+    const without = (async () => response(200, '{"results":[]}')) as unknown as typeof fetch;
+
+    const a = await createFetcher({ timeoutMs: 500, retries: 0 }, withZero)('https://example.org/x');
+    const b = await createFetcher({ timeoutMs: 500, retries: 0 }, without)('https://example.org/x');
+
+    expect(a.headers?.['x-total-results']).toBe('0');     // 给了 0
+    expect(b.headers?.['x-total-results']).toBeUndefined(); // 没给 —— 不许被读成 0
+    expect(b.headers).toBeUndefined();
+  });
+
+  it('非 x-* 头不外泄（set-cookie / authorization 之类不许进工具输出）', async () => {
+    const fetchImpl = (async () => response(200, '{"ok":true}', {
+      'set-cookie': 'session=SECRET',
+      authorization: 'Bearer SECRET',
+      'content-type': 'application/json',
+      'x-uniprot-release': '2026_03',
+    })) as unknown as typeof fetch;
+    const result = await createFetcher({ timeoutMs: 500, retries: 0 }, fetchImpl)('https://example.org/x');
+    expect(result.headers).toEqual({ 'x-uniprot-release': '2026_03' });
+    expect(JSON.stringify(result.headers)).not.toContain('SECRET');
+  });
+
+  it('凭据类 x-* 头一律不透出（x-api-key / x-auth-token 也是 x-*）', async () => {
+    // 泛收 x-* 的致命处：x-api-key、x-auth-token、x-access-token 全是 x-* 且全是凭据。
+    const fetchImpl = (async () => response(200, '{}', {
+      'x-api-key': 'SECRET-KEY',
+      'x-auth-token': 'SECRET-TOKEN',
+      'x-access-token': 'SECRET-ACCESS',
+      'x-total-results': '1',
+    })) as unknown as typeof fetch;
+    const result = await createFetcher({ timeoutMs: 500, retries: 0 }, fetchImpl)('https://example.org/x');
+    expect(result.headers).toEqual({ 'x-total-results': '1' });
+    expect(JSON.stringify(result.headers)).not.toContain('SECRET');
+  });
+
+  it('白名单外的 x-* 头不透出（泛收会把上游任意自定义头带进模型上下文）', async () => {
+    const fetchImpl = (async () => response(200, '{}', { 'x-session-trace': 'abc', 'x-total-results': '3' })) as unknown as typeof fetch;
+    const result = await createFetcher({ timeoutMs: 500, retries: 0 }, fetchImpl)('https://example.org/x');
+    expect(result.headers).toEqual({ 'x-total-results': '3' });
+  });
+
+  it('头名统一小写，取值原样保留（不去空格、不解析数字）', async () => {
+    const fetchImpl = (async () => response(200, '{}', { 'X-Total-Results': '  12 ' })) as unknown as typeof fetch;
+    const result = await createFetcher({ timeoutMs: 500, retries: 0 }, fetchImpl)('https://example.org/x');
+    expect(result.headers?.['x-total-results']).toBe('12'); // Headers 会 trim，此处只验证键名小写
+  });
+});
+
+describe('白名单与源层读取项必须对齐（2026-11-01 后端负责人）', () => {
+  it('源码里读到的每个响应头名，都必须出现在 RESPONSE_HEADER_ALLOWLIST 里', async () => {
+    // 防的是：源层要读 x-uniprot-release，白名单里没它 → 能力白加，且没人发现。
+    // 做法：扫 src/sources 下所有 .ts，找 header(res, 'x-…') 与 headers['x-…'] 两种写法。
+    const { readdirSync, readFileSync: rf, statSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { join } = await import('node:path');
+    const { RESPONSE_HEADER_ALLOWLIST } = await import('../src/core/http.js');
+
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (full.endsWith('.ts')) files.push(full);
+      }
+    };
+    // 用 fileURLToPath：pathname 不解码，中文路径会变成 %E4%BD%99… 导致 scandir 失败
+    walk(fileURLToPath(new URL('../src/sources', import.meta.url)));
+
+    const used = new Map<string, string[]>();
+    for (const file of files) {
+      const text = rf(file, 'utf8');
+      for (const m of text.matchAll(/(?:header\([^,]+,\s*|headers\??\[\s*)'([a-z0-9-]+)'/gi)) {
+        const name = m[1].toLowerCase();
+        if (!name.startsWith('x-')) continue;
+        used.set(name, [...(used.get(name) ?? []), file.replace(/.*src[\\/]sources[\\/]/, '')]);
+      }
+    }
+    expect(used.size, '至少应扫到 UniProt 读的计数头/版本头；扫不到说明正则或目录错了').toBeGreaterThan(0);
+    const missing = [...used.keys()].filter((name) => !RESPONSE_HEADER_ALLOWLIST.has(name));
+    // 反向：白名单里没有读取者的项 = 死条目（声明了没用，以后没人会删）。
+    // 没有这条，x-uniprot-release-date 能白挂一辈子而测试一直绿（后端负责人 2026-11-01）。
+    const dead = [...RESPONSE_HEADER_ALLOWLIST].filter((name) => !used.has(name));
+    expect(dead, `这些头在白名单里但没有任何源读取（死条目）：${dead.join(', ')}`).toEqual([]);
+    expect(missing, `这些头被源层读取但不在白名单里（读到的永远是 undefined）：${missing.join(', ')}`).toEqual([]);
+  });
+});
+
 describe('正文分类（均为模拟响应，非真实上游证据）', () => {
   it('零长度正文与空对象可区分，保持原有data兼容行为', async () => {
     const empty = await createFetcher({}, (async () => response(200, '')) as typeof fetch)('https://example.org/x');

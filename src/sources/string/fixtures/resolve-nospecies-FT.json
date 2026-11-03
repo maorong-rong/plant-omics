@@ -1,0 +1,36 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://string-db.org/api/json/get_string_ids?identifiers=FT&limit=3",
+    "status": 200,
+    "contentType": "text/json; charset=utf-8",
+    "sourceBytes": 559,
+    "sourceSha256": "03A84C8BE99D0613B42D2BE0D92D50D9F2D9BFC3919BFAEED383F498E0946A1E",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T03:48:39.518Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "durationMs": 953,
+    "purpose": "species 必填的证据：不传 species 时同一 \"FT\" 被解析成 10090.ENSMUSP00000112375（小鼠），不是拟南芥",
+    "cropping": "verbatim; 未删字段",
+    "rawBodyNote": "rawBody 是 2026-11-01 重取所得的上游原体逐字副本：其字节 sha256 与 sourceSha256 相等。**这只能说明\"与给定基线（sourceSha256）逐字节一致\"，不证明历史采集发生过**——当初那次抓取是否真的发生、何时发生，本文件无法证明（captureTimeStatus=\"未知\"的件尤其如此）。**不得据此把 captureTimeStatus 从\"未知\"改成\"确证\"。** payload 是同一 JSON 的重排版（derived），离线可用 JSON.parse(rawBody) 复算比对。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T04:04:36.867Z",
+    "canonicalSha256": "B8DDE4B7E56218D18AB45F8731130783D3BE6E60EFAC87B5B600B7627462981A",
+    "canonicalSha256OfRawBody": "B8DDE4B7E56218D18AB45F8731130783D3BE6E60EFAC87B5B600B7627462981A",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256（与 test 里 canonicalJson 同算法）；非 JSON 原体（HTML 桩）按原文 UTF-8 直接哈希。sourceSha256 只对给定基线验一致性，不证明历史采集动作；**canonicalSha256 表示\"本次比较的这两份内容一致\"，不保证未来抓取仍相同**——它不预设上游的序列化行为会一直不变。"
+  },
+  "payload": [
+    {
+      "queryIndex": 0,
+      "queryItem": "FT",
+      "stringId": "10090.ENSMUSP00000112375",
+      "ncbiTaxonId": 10090,
+      "taxonName": "Mus musculus",
+      "preferredName": "Aktip",
+      "annotation": "AKT-interacting protein; Component of the FTS/Hook/FHIP complex (FHF complex). The FHF complex may function to promote vesicle trafficking and/or fusion via the homotypic vesicular protein sorting complex (the HOPS complex). Regulates apoptosis by enhancing phosphorylation and activation of AKT1. Increases release of TNFSF6 via the AKT1/GSK3B/NFATC1 signaling cascade (By similarity)."
+    }
+  ],
+  "rawBody": "[{\"queryIndex\": 0, \"queryItem\": \"FT\", \"stringId\": \"10090.ENSMUSP00000112375\", \"ncbiTaxonId\": 10090, \"taxonName\": \"Mus musculus\", \"preferredName\": \"Aktip\", \"annotation\": \"AKT-interacting protein; Component of the FTS/Hook/FHIP complex (FHF complex). The FHF complex may function to promote vesicle trafficking and/or fusion via the homotypic vesicular protein sorting complex (the HOPS complex). Regulates apoptosis by enhancing phosphorylation and activation of AKT1. Increases release of TNFSF6 via the AKT1/GSK3B/NFATC1 signaling cascade (By similarity).\"}]"
+}
