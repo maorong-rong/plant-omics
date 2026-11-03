@@ -15,9 +15,9 @@ export const SERVICE_REVISION = 7;
 
 /** 声明值：当前服务端应有的规模（改工具集时必须同步） */
 export const SERVICE_IDENTITY = {
-  // svc.7：接上第 9 个源 STRING（2 工具：resolve_ids / interaction_partners），源 8→9、工具 37→39。
-  sources: 9,
-  tools: 39,
+  // svc.8：接上第 10 个源 UniProt（2 工具：search_proteins / get_entry），源 9→10、工具 39→41。
+  sources: 10,
+  tools: 41,
 } as const;
 
 /**

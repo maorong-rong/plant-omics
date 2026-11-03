@@ -370,7 +370,16 @@ export function createService(options: ServiceOptions): {
           }
           const catalog = buildCatalog(registry, { version: servedVersion });
           const payload = JSON.stringify(catalog);
-          const etag = `"${createHash('sha256').update(payload, 'utf8').digest('hex').slice(0, 32)}"`;
+          /**
+           * ETag 必须是**内容哈希**（契约 §二）：注册表不变、不带订阅头时，两次请求必须得到同一个 ETag，
+           * 带 If-None-Match 才能命中 304。
+           *
+           * 关键在于 `generatedAt`——它是"本次响应生成的时刻"，每请求都不同。直接哈希整个 payload 会让
+           * ETag 每次都变、304 永远不发生（2026-11-03 检索负责人实测的 M2 缺陷）。所以哈希时把它排除，
+           * 响应体里仍保留它（契约 §六 #7 要求 Date 与 generatedAt 相差 < 2s）。
+           */
+          const cacheable = JSON.stringify(catalog, (key, value) => (key === 'generatedAt' ? undefined : value));
+          const etag = `"${createHash('sha256').update(cacheable, 'utf8').digest('hex').slice(0, 32)}"`;
           const ifNoneMatch = req.headers['if-none-match'];
           const headers: Record<string, string> = {
             'content-type': 'application/json; charset=utf-8',

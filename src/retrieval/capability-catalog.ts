@@ -90,6 +90,8 @@ export const SOURCE_SEMANTICS: Readonly<Record<string, SourceSemantics>> = {
   ensemblplants: { semantics: '实测', policy: 'coverage' },
   // STRING：实测拟南芥（3702）与水稻（39947 / 4530）两组，其余物种未测，不按目录声称覆盖。
   string: { semantics: '实测', policy: 'coverage' },
+  // uniprot：实测四物种、按物种覆盖（policy 只用 'coverage'、semantics 只用 '实测'，两枚举已核）
+  uniprot: { semantics: '实测', policy: 'coverage' },
 };
 
 /**
@@ -369,6 +371,26 @@ export const TOOL_CAPABILITIES: readonly ToolCapability[] = [
     intents: ['id-convert'],
     speciesScope: { query: ['拟南芥', '水稻', '小麦', '玉米'] },
     blindSpots: [...ENSEMBL_BLIND, '映射接口既无物种也无组装字段，靠前置 lookup 核验；不按数据库过滤，不保证某库一定有条目'],
+  },
+
+  // ---- uniprot（实测四物种；口径 2026-11-03 由 plantomics后端负责人定，检索负责人转达）----
+  // 注意：`speciesScope` 用 `speciesSatisfies` 认得的**中文规范名**（同 ensemblplants），
+  // 不要抄 `manifest.species` 里的拉丁串（Arabidopsis thaliana / …），否则正好造成"物种口径漂移"。
+  // 不新增意图 id：按名找=gene-search、按 ID 取=gene-detail、注释=annotation；
+  // **不声明 interaction**——互作只属 STRING（`test/interaction-intent.test.ts` 会拦）。
+  {
+    tool: 'uniprot_search_proteins',
+    sourceId: 'uniprot',
+    intents: ['gene-search'],
+    speciesScope: { query: ['拟南芥', '小麦', '水稻', '玉米'] },
+    blindSpots: ['只按蛋白名/基因名与关键词全文检索', '不按基因组区间、不按物种全库浏览', '命中数受上游分页限制'],
+  },
+  {
+    tool: 'uniprot_get_entry',
+    sourceId: 'uniprot',
+    intents: ['gene-detail', 'annotation'],
+    speciesScope: { query: ['拟南芥', '小麦', '水稻', '玉米'] },
+    blindSpots: ['按 accession 精确取，不做模糊匹配', '注释以 UniProt 条目为准，不与源库注释合并'],
   },
 ];
 

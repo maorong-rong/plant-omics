@@ -90,6 +90,21 @@ export function readBuildInfo(buildInfoPath = path.join(ROOT, 'dist', 'service',
  * @param {{ listSources: Function, listTools: Function, listMetaTools: Function }} registry
  * @param {{ scope?: string, buildInfo?: object|null, buildInfoPath?: string }} [options]
  */
+/**
+ * 默认推荐集的源清单：**直接读 src/service/budget.ts 的 DEFAULT_SET_SOURCES**。
+ *
+ * 为什么不在这里再抄一份：抄一份就等于有两个真相，改一边忘一边时，
+ * 算出来的「默认推荐集」和运行时下发的集合会悄悄不一致。这里只解析源码里的数组字面量。
+ */
+function readDefaultSetSources() {
+  const source = readFileSync(path.join(ROOT, 'src', 'service', 'budget.ts'), 'utf8');
+  const match = /DEFAULT_SET_SOURCES[^=]*=\s*\[([\s\S]*?)\]/.exec(source);
+  if (!match) throw new Error('读不到 src/service/budget.ts 的 DEFAULT_SET_SOURCES：默认集口径无法确定');
+  return [...match[1].matchAll(/'([a-z0-9-]+)'/g)].map((hit) => hit[1]);
+}
+
+const DEFAULT_SET_SOURCES = readDefaultSetSources();
+
 export function collectCounts(registry, options = {}) {
   const built = registry.listSources().map((bundle) => ({
     id: bundle.manifest.id,
@@ -100,6 +115,9 @@ export function collectCounts(registry, options = {}) {
   const metaToolNames = registry.listMetaTools().map((tool) => tool.name);
   const tools = registry.listTools().length;
   const sourceTools = built.reduce((sum, source) => sum + source.tools, 0);
+  // 默认推荐集按清单算：清单外的源（scod / string / uniprot …）不自动进来
+  const defaultSetTools = built.filter((source) => DEFAULT_SET_SOURCES.includes(source.id))
+    .reduce((sum, source) => sum + source.tools, 0) + metaToolNames.length;
 
   // 注册表自己的口径必须自洽：否则后面所有数字都不可信，这里直接抛。
   if (tools !== sourceTools + metaToolNames.length) {
@@ -115,6 +133,8 @@ export function collectCounts(registry, options = {}) {
     sourceTools,
     metaTools: metaToolNames.length,
     metaToolNames,
+    defaultSetSources: DEFAULT_SET_SOURCES,
+    defaultSetTools,
     tools,
     perSource: built,
     buildInfo: options.buildInfo !== undefined ? options.buildInfo : readBuildInfo(options.buildInfoPath),
@@ -140,6 +160,8 @@ export function buildBudgetReport(counts, subscription) {
     sources: counts.sources,
     tools: counts.tools,
     metaTools: counts.metaTools,
+    defaultSetSources: counts.defaultSetSources,
+    defaultSetTools: counts.defaultSetTools,
     perSource: counts.perSource,
     /** 历史阶段参考（旧口径 20 源），只显示、不判定 */
     legacyMaxSources: MAX_SOURCES,
@@ -150,7 +172,7 @@ export function buildBudgetReport(counts, subscription) {
     tokenEstimate,
     subscriptionTokens: subscriptionTools === undefined ? undefined : subscriptionTools * TOKENS_PER_TOOL,
     subscription: subscription ?? null,
-    overDefaultSuggestion: counts.tools > MAX_TOOLS,
+    overDefaultSuggestion: counts.defaultSetTools > MAX_TOOLS,
     /** 唯一硬阈值：**指定的订阅集**超 80 才为真。全库再大也不会置真 */
     overBudget: overSubscription,
     /** 数字取自哪个构建产物（含 `-dirty` 标记）；`stats` 会把它打在首行 */
@@ -181,7 +203,7 @@ export function renderStatsText(report) {
     '|---|---|---|',
     ...report.perSource.map((source) => `| ${source.id} | ${source.tier} | ${source.tools} |`),
     '',
-    `默认推荐集（不选源时加载）：${report.tools} 工具，软建议 ≤ ${report.maxDefaultSetTools}`
+    `默认推荐集（清单 ${report.defaultSetSources.join(', ')}）：${report.defaultSetTools} 工具，软建议 ≤ ${report.maxDefaultSetTools}`
       + (report.overDefaultSuggestion ? ' ⚠️ 已超建议，32K 级上下文会明显拥挤（仅警示，不失败）' : ' ✅'),
   ];
 
@@ -255,10 +277,19 @@ export function inlineNumberRules(counts) {
       render: `"sources":${counts.sources},"tools":${counts.tools}${metaField}`,
     },
     {
-      label: '「默认全部加载」句里的工具数与订阅集上限',
-      // 兼容旧措辞「仍全量常驻（规则允许到 N 个）」，否则旧 README 永远改不成新口径
-      pattern: /当前源码的\s*\d+\s*个工具(?:仍全量常驻（规则允许到|默认全部加载（订阅集上限)\s*\d+\s*个）/g,
-      render: `当前源码的 ${counts.tools} 个工具默认全部加载（订阅集上限 ${MAX_SUBSCRIPTION_TOOLS} 个）`,
+      label: '「默认加载清单」句里的源清单与工具数',
+      // 兼容旧措辞（「当前源码的 N 个工具默认全部加载（订阅集上限 M 个）」），
+      // 否则旧 README 永远改不成新口径。新措辞必须**列出完整清单**：
+      // render 里带 DEFAULT_SET_SOURCES，所以清单变了而 README 没改，这条就会红——
+      // 锁的是"清单与代码一致"，不是"那句话的措辞好看"。
+      // 三种形态都要认：
+      //   ① 旧旧措辞「当前源码的 N 个工具仍全量常驻（规则允许到 M 个）」
+      //   ② 旧措辞「当前源码的 N 个工具默认全部加载（订阅集上限 M 个）」
+      //   ③ 新措辞「默认加载清单 … （订阅集上限 M 个）」
+      pattern: /(?:当前源码的\s*\d+\s*个工具(?:仍全量常驻（规则允许到|默认全部加载（订阅集上限)\s*\d+\s*个）|默认加载清单[^\n]*?（订阅集上限\s*\d+\s*个）)/g,
+      render: `默认加载清单 ${counts.defaultSetSources.length} 个源、${counts.defaultSetTools} 个工具（`
+        + `${counts.defaultSetSources.join('、')}）；清单外的源用 \`x-plantomics-sources\` 或 \`PLANTOMICS_SOURCES\` 自取`
+        + `（订阅集上限 ${MAX_SUBSCRIPTION_TOOLS} 个）`,
     },
   ];
 }
@@ -593,6 +624,9 @@ export function checkBudgetConstants(root = ROOT) {
     metaTools: 0,
     metaToolNames: [],
     tools,
+    // 行为断言里为了构造「超大库」，默认集就当全库算；默认可单独覆盖
+    defaultSetSources: [],
+    defaultSetTools: tools,
     perSource: [],
     buildInfo: {},
   });

@@ -1,0 +1,267 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://rest.uniprot.org/uniprotkb/search?query=gene:FT%20AND%20organism_id:3702&format=json&size=20&fields=accession,gene_names,protein_name,length,organism_name,reviewed",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 2787,
+    "sourceSha256": "689E6EEDEAD5B6DB3381B72A8E441EA7BC82B3456A3FC5DECA67479E92C92CE3",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T06:35:17.459Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "provenanceTier": "内部自洽 + 可复现（本次实抓）；**不等于已证明历史采集**",
+    "xTotalResults": 2,
+    "xUniprotRelease": "2026_03",
+    "purpose": "检索正例：gene:FT + organism_id:3702 → 2 条（Q9SXZ2 reviewed + A0A1P8AMK0 unreviewed），fields 裁剪后 2,787 B",
+    "cropping": "verbatim; 未删字段（保持上游原样，便于核对体积与结构）",
+    "canonicalSha256": "DDCF5044F61AF3A52BEC72AF44BAA32D98B488C42AB6A1BE3038688F28F7CC58",
+    "canonicalSha256OfRawBody": "DDCF5044F61AF3A52BEC72AF44BAA32D98B488C42AB6A1BE3038688F28F7CC58",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256。sourceSha256 只对给定基线验一致性（**不证明历史采集动作**）；canonical 只对所比较的这两份内容成立，不保证未来跨次永不变。",
+    "rawBodyNote": "rawBody 为上游原体逐字副本（与 sourceSha256 对应，可离线校验）。它是 2026-11-01 抓取的，**不得据此推断更早的采集时刻**。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T06:35:17.459Z"
+  },
+  "rawBody": "{\"results\":[{\"entryType\":\"UniProtKB reviewed (Swiss-Prot)\",\"primaryAccession\":\"Q9SXZ2\",\"organism\":{\"scientificName\":\"Arabidopsis thaliana\",\"commonName\":\"Mouse-ear cress\",\"taxonId\":3702,\"lineage\":[\"Eukaryota\",\"Viridiplantae\",\"Streptophyta\",\"Embryophyta\",\"Tracheophyta\",\"Spermatophyta\",\"Magnoliopsida\",\"eudicotyledons\",\"Gunneridae\",\"Pentapetalae\",\"rosids\",\"malvids\",\"Brassicales\",\"Brassicaceae\",\"Camelineae\",\"Arabidopsis\"]},\"proteinDescription\":{\"recommendedName\":{\"fullName\":{\"evidences\":[{\"evidenceCode\":\"ECO:0000303\",\"source\":\"PubMed\",\"id\":\"10583960\"}],\"value\":\"Protein FLOWERING LOCUS T\"}}},\"genes\":[{\"geneName\":{\"evidences\":[{\"evidenceCode\":\"ECO:0000303\",\"source\":\"PubMed\",\"id\":\"10583960\"}],\"value\":\"FT\"},\"orderedLocusNames\":[{\"evidences\":[{\"evidenceCode\":\"ECO:0000312\",\"source\":\"Araport\",\"id\":\"AT1G65480\"}],\"value\":\"At1g65480\"}],\"orfNames\":[{\"evidences\":[{\"evidenceCode\":\"ECO:0000312\",\"source\":\"EMBL\",\"id\":\"AAB60904.1\"}],\"value\":\"F5I14.3\"}]}],\"sequence\":{\"length\":175},\"extraAttributes\":{\"uniParcId\":\"UPI0000001793\"}},\n{\"entryType\":\"UniProtKB unreviewed (TrEMBL)\",\"primaryAccession\":\"A0A1P8AMK0\",\"organism\":{\"scientificName\":\"Arabidopsis thaliana\",\"commonName\":\"Mouse-ear cress\",\"taxonId\":3702,\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"},{\"evidenceCode\":\"ECO:0000313\",\"source\":\"Proteomes\",\"id\":\"UP000006548\"}],\"lineage\":[\"Eukaryota\",\"Viridiplantae\",\"Streptophyta\",\"Embryophyta\",\"Tracheophyta\",\"Spermatophyta\",\"Magnoliopsida\",\"eudicotyledons\",\"Gunneridae\",\"Pentapetalae\",\"rosids\",\"malvids\",\"Brassicales\",\"Brassicaceae\",\"Camelineae\",\"Arabidopsis\"]},\"proteinDescription\":{\"submissionNames\":[{\"fullName\":{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"PEBP (Phosphatidylethanolamine-binding protein) family protein\"}}]},\"genes\":[{\"geneName\":{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"},{\"evidenceCode\":\"ECO:0000313\",\"source\":\"TAIR\",\"id\":\"AT1G65480\"}],\"value\":\"FT\"},\"synonyms\":[{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"FLOWERING LOCUS T\"},{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"REDUCED STEM BRANCHING 8\"},{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"RSB8\"}],\"orderedLocusNames\":[{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"Araport\",\"id\":\"AT1G65480\"},{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"At1g65480\"}],\"orfNames\":[{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"F5I14.3\"},{\"evidences\":[{\"evidenceCode\":\"ECO:0000313\",\"source\":\"EMBL\",\"id\":\"ANM57863.1\"}],\"value\":\"F5I14_3\"}]}],\"sequence\":{\"length\":219},\"extraAttributes\":{\"uniParcId\":\"UPI00084852E9\"}}]}",
+  "payload": {
+    "results": [
+      {
+        "entryType": "UniProtKB reviewed (Swiss-Prot)",
+        "primaryAccession": "Q9SXZ2",
+        "organism": {
+          "scientificName": "Arabidopsis thaliana",
+          "commonName": "Mouse-ear cress",
+          "taxonId": 3702,
+          "lineage": [
+            "Eukaryota",
+            "Viridiplantae",
+            "Streptophyta",
+            "Embryophyta",
+            "Tracheophyta",
+            "Spermatophyta",
+            "Magnoliopsida",
+            "eudicotyledons",
+            "Gunneridae",
+            "Pentapetalae",
+            "rosids",
+            "malvids",
+            "Brassicales",
+            "Brassicaceae",
+            "Camelineae",
+            "Arabidopsis"
+          ]
+        },
+        "proteinDescription": {
+          "recommendedName": {
+            "fullName": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000303",
+                  "source": "PubMed",
+                  "id": "10583960"
+                }
+              ],
+              "value": "Protein FLOWERING LOCUS T"
+            }
+          }
+        },
+        "genes": [
+          {
+            "geneName": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000303",
+                  "source": "PubMed",
+                  "id": "10583960"
+                }
+              ],
+              "value": "FT"
+            },
+            "orderedLocusNames": [
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000312",
+                    "source": "Araport",
+                    "id": "AT1G65480"
+                  }
+                ],
+                "value": "At1g65480"
+              }
+            ],
+            "orfNames": [
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000312",
+                    "source": "EMBL",
+                    "id": "AAB60904.1"
+                  }
+                ],
+                "value": "F5I14.3"
+              }
+            ]
+          }
+        ],
+        "sequence": {
+          "length": 175
+        },
+        "extraAttributes": {
+          "uniParcId": "UPI0000001793"
+        }
+      },
+      {
+        "entryType": "UniProtKB unreviewed (TrEMBL)",
+        "primaryAccession": "A0A1P8AMK0",
+        "organism": {
+          "scientificName": "Arabidopsis thaliana",
+          "commonName": "Mouse-ear cress",
+          "taxonId": 3702,
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000313",
+              "source": "EMBL",
+              "id": "ANM57863.1"
+            },
+            {
+              "evidenceCode": "ECO:0000313",
+              "source": "Proteomes",
+              "id": "UP000006548"
+            }
+          ],
+          "lineage": [
+            "Eukaryota",
+            "Viridiplantae",
+            "Streptophyta",
+            "Embryophyta",
+            "Tracheophyta",
+            "Spermatophyta",
+            "Magnoliopsida",
+            "eudicotyledons",
+            "Gunneridae",
+            "Pentapetalae",
+            "rosids",
+            "malvids",
+            "Brassicales",
+            "Brassicaceae",
+            "Camelineae",
+            "Arabidopsis"
+          ]
+        },
+        "proteinDescription": {
+          "submissionNames": [
+            {
+              "fullName": {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "PEBP (Phosphatidylethanolamine-binding protein) family protein"
+              }
+            }
+          ]
+        },
+        "genes": [
+          {
+            "geneName": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000313",
+                  "source": "EMBL",
+                  "id": "ANM57863.1"
+                },
+                {
+                  "evidenceCode": "ECO:0000313",
+                  "source": "TAIR",
+                  "id": "AT1G65480"
+                }
+              ],
+              "value": "FT"
+            },
+            "synonyms": [
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "FLOWERING LOCUS T"
+              },
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "REDUCED STEM BRANCHING 8"
+              },
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "RSB8"
+              }
+            ],
+            "orderedLocusNames": [
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "Araport",
+                    "id": "AT1G65480"
+                  },
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "At1g65480"
+              }
+            ],
+            "orfNames": [
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "F5I14.3"
+              },
+              {
+                "evidences": [
+                  {
+                    "evidenceCode": "ECO:0000313",
+                    "source": "EMBL",
+                    "id": "ANM57863.1"
+                  }
+                ],
+                "value": "F5I14_3"
+              }
+            ]
+          }
+        ],
+        "sequence": {
+          "length": 219
+        },
+        "extraAttributes": {
+          "uniParcId": "UPI00084852E9"
+        }
+      }
+    ]
+  }
+}

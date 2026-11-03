@@ -47,6 +47,9 @@ const counts = {
     { id: 'alpha', displayName: 'Alpha 平台', tier: 'T1', tools: 3 },
     { id: 'beta', displayName: 'Beta 数据库', tier: 'T2', tools: 1 },
   ],
+  // 默认推荐集是清单口径：内联数量规则要把清单写进 README 并逐项核
+  defaultSetSources: ['alpha'],
+  defaultSetTools: 4,
   buildInfo: null,
 };
 
@@ -58,11 +61,12 @@ const table = (alpha = 3, beta = 1, alphaTier = 'T1') =>
 
 const readme = (block = renderReadmeBlock(counts), rows = table()) => `${block}\n${head(rows)}`;
 
-/** README 里另外两处内联数量（`/healthz` 示例与「默认全部加载」句）的规范行。 */
-const inlineLines = (healthz = '"sources":2,"tools":5,"metaTools":1', budget = '当前源码的 5 个工具默认全部加载（订阅集上限 80 个）') =>
+/** README 里另外两处内联数量（`/healthz` 示例与「默认加载清单」句）的规范行。 */
+const DEFAULT_LINE = '默认加载清单 1 个源、4 个工具（alpha）；清单外的源用 `x-plantomics-sources` 或 `PLANTOMICS_SOURCES` 自取（订阅集上限 80 个）';
+const inlineLines = (healthz = '"sources":2,"tools":5,"metaTools":1', budget = DEFAULT_LINE) =>
   `- \`GET /healthz\` 返回 \`{${healthz}}\`\n- ${budget}\n`;
 
-describe('README 内联数量（/healthz 示例与「默认全部加载」句）', () => {
+describe('README 内联数量（/healthz 示例与「默认加载清单」句）', () => {
   it('与 dist 一致时无问题', () => {
     expect(checkInlineNumbers(inlineLines(), counts)).toEqual([]);
   });
@@ -75,9 +79,9 @@ describe('README 内联数量（/healthz 示例与「默认全部加载」句）
   });
 
   it('预算句写旧数字时点名', () => {
-    const problems = checkInlineNumbers(inlineLines(undefined, '当前源码的 34 个工具默认全部加载（订阅集上限 80 个）'), counts);
+    const problems = checkInlineNumbers(inlineLines(undefined, '默认加载清单 1 个源、34 个工具（alpha）；清单外的源用 \`x-plantomics-sources\` 或 \`PLANTOMICS_SOURCES\` 自取（订阅集上限 80 个）'), counts);
     expect(problems.length).toBe(1);
-    expect(problems[0]).toContain('默认全部加载');
+    expect(problems[0]).toContain('默认加载清单');
   });
 
   it('句子被改写到认不出时也判红（改措辞必须同步生成器）', () => {
@@ -87,14 +91,20 @@ describe('README 内联数量（/healthz 示例与「默认全部加载」句）
   });
 
   it('--write 会把旧数字改成规范值，改完即通过', () => {
+    // 旧措辞也要能被 --write 归一：这是 README 从「默认全部加载」迁到「默认加载清单」的关键一步。
+    // 断言写成"写完能过检查器"，而不是把整句话再抄一遍到测试里——
+    // 抄一遍等于两份真相，措辞一改测试就得跟着抄，抄错还会假绿。
     const stale = inlineLines('"sources":6,"tools":25', '当前源码的 34 个工具默认全部加载（订阅集上限 80 个）');
-    expect(rewriteInlineNumbers(stale, counts)).toBe(inlineLines());
-    expect(checkInlineNumbers(rewriteInlineNumbers(stale, counts), counts)).toEqual([]);
+    const rewritten = rewriteInlineNumbers(stale, counts);
+    expect(rewritten).not.toContain('默认全部加载');
+    expect(checkInlineNumbers(rewritten, counts)).toEqual([]);
   });
 
   it('旧口径措辞（「仍全量常驻（规则允许到 N 个）」）能被 --write 迁移到新口径', () => {
     const legacy = inlineLines(undefined, '当前源码的 5 个工具仍全量常驻（规则允许到 40 个）');
-    expect(rewriteInlineNumbers(legacy, counts)).toBe(inlineLines());
+    const migrated = rewriteInlineNumbers(legacy, counts);
+    expect(migrated).not.toContain('仍全量常驻');
+    expect(checkInlineNumbers(migrated, counts)).toEqual([]);
   });
 });
 

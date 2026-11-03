@@ -1,0 +1,31 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://rest.uniprot.org/uniprotkb/NOTANACCESSION!?format=json",
+    "status": 400,
+    "contentType": "application/json",
+    "sourceBytes": 157,
+    "sourceSha256": "4992B2FAB5B47553F0B7AF5A8275B06C5FEDB5889B1BC805816138859CAC87EC",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T06:56:31.801Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "provenanceTier": "内部自洽 + 可复现（本次实抓）；**不等于已证明历史采集**",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T06:56:31.801Z",
+    "purpose": "第②类 400：accession 格式错 157 B —— 与\"检索语法错\"是不同的入参问题，必须分开报",
+    "cropping": "verbatim; 未删字段",
+    "canonicalSha256": "3ECF4DEAF2AFDD714CCDBA02AD9DED274AA8BD1EDA1715FB210E37B2E399DAEB",
+    "canonicalSha256OfRawBody": "3ECF4DEAF2AFDD714CCDBA02AD9DED274AA8BD1EDA1715FB210E37B2E399DAEB",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256。sourceSha256 只对给定基线验一致性（**不证明历史采集动作**）；canonical 只对所比较的这两份内容成立，不保证未来跨次永不变。",
+    "rawBodyNote": "rawBody 为上游原体逐字副本（与 sourceSha256 对应，可离线校验）。它是 2026-11-01 抓取的，**不得据此推断更早的采集时刻**。"
+  },
+  "rawBody": "{\"url\":\"http://rest.uniprot.org/uniprotkb/NOTANACCESSION!\",\"messages\":[\"The 'accession' value has invalid format. It should be a valid UniProtKB accession\"]}",
+  "payload": {
+    "url": "http://rest.uniprot.org/uniprotkb/NOTANACCESSION!",
+    "messages": [
+      "The 'accession' value has invalid format. It should be a valid UniProtKB accession"
+    ]
+  }
+}

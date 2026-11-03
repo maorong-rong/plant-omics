@@ -18,6 +18,21 @@ import { registry } from '../src/sources/index.js';
 
 const INTERACTION_KEYWORDS = ['互作', '相互作用', '蛋白互作', '互作网络', 'ppi', 'interaction', 'partner'];
 
+/**
+ * 关键词命中位置：中文按子串，**ASCII 词按词边界**。
+ *
+ * 为什么必须分两种（2026-11-03 实测误报）：`ppi` 按子串会命中 `idmapping` 里的 `ppi`
+ * （i-d-m-a-pp-i-ng），把「不做 ID 批量映射」这句无关说明判成互作声明。
+ * 中文没有词边界概念，只能按子串；ASCII 必须用 \b，否则一个字母串能命中任何含它的单词。
+ */
+function indexOfKeyword(sentence: string, keyword: string): number {
+  if (!/[a-z]/i.test(keyword)) return sentence.toLowerCase().indexOf(keyword.toLowerCase());
+  // 英文要认复数：审查者反例「supports protein interactions」「returns partners」都算肯定声明，`\binteraction\b` 抓不到。
+  const pattern = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:s|es)?\\b`, 'i');
+  const match = pattern.exec(sentence);
+  return match ? match.index : -1;
+}
+
 const NEGATIONS = ['不做', '不含', '不支持', '不是', '不算', '不提供', '不涉及', '没有', '无', '非', '不能', '不返回', '不给', '未见'];
 
 /**
@@ -37,7 +52,7 @@ function positiveInteractionClaim(text: string): string | undefined {
     for (const sentence of segment.split(/[。！？；\n]/).map((s) => s.trim()).filter(Boolean)) {
       const lowered = sentence.toLowerCase();
       for (const word of INTERACTION_KEYWORDS) {
-        const at = lowered.indexOf(word.toLowerCase());
+        const at = indexOfKeyword(lowered, word);
         if (at < 0) continue;
         const before = sentence.slice(Math.max(0, at - 8), at);
         if (NEGATIONS.some((neg) => before.includes(neg))) continue;
@@ -55,6 +70,9 @@ describe('interaction 意图：定义与独占性', () => {
     expect(positiveInteractionClaim('本工具不做互作')).toBeUndefined();
     expect(positiveInteractionClaim('不含互作伙伴数据')).toBeUndefined();
     expect(positiveInteractionClaim('不支持 ppi 查询')).toBeUndefined();
+    // 审查者反例：英文复数/肯定式必须抓到
+    expect(positiveInteractionClaim('supports protein interactions')).toBe('interaction');
+    expect(positiveInteractionClaim('returns partners')).toBe('partner');
     // 同一段里"否定一句 + 肯定一句"仍要抓到肯定的那句
     expect(positiveInteractionClaim('不提供同源信息。本工具提供蛋白互作排名')).toBe('互作');
     // 审查者反例：同句有"不"，但否定的是别的东西，互作仍是正面声明

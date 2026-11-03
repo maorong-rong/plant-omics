@@ -162,13 +162,13 @@ describe('按请求选源：不指定时行为不变', () => {
   it('不带请求头 → 工具清单与服务端注册表逐项相同', async () => {
     const names = await toolNames();
     expect(names).toEqual(defaultRegistry.listTools().map((tool) => tool.name).sort());
-    expect(names).toHaveLength(39);
+    expect(names).toHaveLength(41);
   });
 
   it('只有分隔符/空白 → 当作没指定（退回全集，不是空集）', async () => {
     for (const value of ['', '   ', ',', ' , ; ']) {
       const names = await toolNames({ [SOURCE_SUBSET_HEADER]: value });
-      expect(names).toHaveLength(39);
+      expect(names).toHaveLength(41);
     }
   });
 
@@ -179,15 +179,15 @@ describe('按请求选源：不指定时行为不变', () => {
     });
     expect(health.status).toBe(200);
     const payload = (await health.json()) as { sources: number; tools: number; metaTools: number };
-    expect(payload.sources).toBe(9);
-    expect(payload.tools).toBe(39);
+    expect(payload.sources).toBe(10);
+    expect(payload.tools).toBe(41);
     expect(payload.metaTools).toBe(2);
   });
 
   it('子集请求不会污染默认注册表', async () => {
     await toolNames({ [SOURCE_SUBSET_HEADER]: 'icg' });
-    expect(defaultRegistry.listSources()).toHaveLength(9);
-    expect(defaultRegistry.listTools()).toHaveLength(39);
+    expect(defaultRegistry.listSources()).toHaveLength(10);
+    expect(defaultRegistry.listTools()).toHaveLength(41);
   });
 });
 
@@ -201,7 +201,7 @@ describe('按请求选源：握手 instructions 随子集变化（有意设计�
 
     const fullClient = await connect(instance);
     const fullInstructions = fullClient.getInstructions() ?? '';
-    expect(fullInstructions).toContain('本次请求启用 9 个源、39 个工具');
+    expect(fullInstructions).toContain('本次请求启用 10 个源、41 个工具');
     expect(fullInstructions).not.toContain('只启用了部分源');
   });
 
@@ -211,7 +211,7 @@ describe('按请求选源：握手 instructions 随子集变化（有意设计�
     expect((await subsetClient.listTools()).tools).toHaveLength(4);
 
     const plainClient = await connect(instance);
-    expect((await plainClient.listTools()).tools).toHaveLength(39);
+    expect((await plainClient.listTools()).tools).toHaveLength(41);
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_SET_SOURCES } from '../src/service/budget.js';
 import {
   MAX_SUBSCRIPTION_TOOLS,
   TOKENS_PER_TOOL,
@@ -22,7 +23,8 @@ function fakeRegistry(counts: number[]) {
   return {
     listSources: () =>
       counts.map((tools, index) => ({
-        manifest: { id: `s${index}`, displayName: `S${index}`, tier: 'T1' },
+        // 前几个用默认集清单里的真实 id：默认集工具数按清单算，不按全库算
+        manifest: { id: DEFAULT_SET_SOURCES[index] ?? `s${index}`, displayName: `S${index}`, tier: 'T1' },
         tools: Array.from({ length: tools }),
       })),
     listTools: () => Array.from({ length: counts.reduce((sum, value) => sum + value, 0) }),

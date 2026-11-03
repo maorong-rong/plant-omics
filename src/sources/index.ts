@@ -36,6 +36,8 @@ import { manifest as ensemblPlantsManifest } from './ensemblplants/manifest.js';
 import { tools as ensemblPlantsTools } from './ensemblplants/tools.js';
 import { manifest as stringManifest } from './string/manifest.js';
 import { tools as stringTools } from './string/tools.js';
+import { manifest as uniprotManifest } from './uniprot/manifest.js';
+import { tools as uniprotTools } from './uniprot/tools.js';
 import { createHubTools } from '../retrieval/index.js';
 import { assertSubsetBudget } from '../service/budget.js';
 
@@ -54,6 +56,9 @@ const bundles: SourceBundle[] = [
   // STRING：T1，probe 用 /json/version；只接 resolve_ids 与 interaction_partners 两个入口。
   // 未接 interactions（/api/json/interactions 只处理 1 个标识符、1 个物种），见 manifest.caveats。
   { manifest: stringManifest, tools: stringTools },
+  // UniProt：T1，probe 用 /rest/.../search 的固定查询。首批两个工具
+  // （uniprot_search_proteins / uniprot_get_entry）；R11 审查通过，绑定 tools.ts `0115D15F…`。
+  { manifest: uniprotManifest, tools: uniprotTools },
 ];
 
 export interface RegistryOptions {

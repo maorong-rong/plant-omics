@@ -190,7 +190,8 @@ async function modeJudge() {
 
   const rows = [];
   for (const c of cases.cases ?? cases) {
-    const res = await findTool.run({ question: c.q }, ctx);
+    // 题集可带 `hint`：用于物种提示 A/B 两档（「给了但词表里没有」≠「没给」）
+    const res = await findTool.run(c.hint ? { question: c.q, species_hint: c.hint } : { question: c.q }, ctx);
     const text = res.text ?? '';
     const raw = res.raw ?? {};
     const recognized = raw.recognized ?? { species: [], intents: [], sources: [], clauses: [] };
@@ -219,8 +220,10 @@ async function modeJudge() {
     // 多物种题也不判：方向门与目标端门没建模，「小麦同源基因对应玉米」这种题
     // 按目录重算会把 wheatomics 算成"该给却没给"（缺源 wheatomics），而实现拒绝它是对的
     // （该工具 target 只有水稻/拟南芥）。多物种的方向/target 由题集里两条单向断言覆盖。
+    // **物种为空时也不判**：那时"按目录重算"会退化成"该意图下所有源都算命中"，
+    // 而实现是按规格拒答（物种未知判不了覆盖）——拿这个重算去判，等于用被废止的口径判实现。
     const guardOk = recognized.sources.length === 0 && unknownSpecies.length === 0
-      && (recognized.clauses ?? []).length === 0 && recognized.species.length <= 1;
+      && (recognized.clauses ?? []).length === 0 && recognized.species.length === 1;
     const expectedSources = guardOk
       ? [...new Set(CAPS.filter((cap) => doubleHit(cap.tool, recognized).ok).map((cap) => cap.sourceId))]
       : null;
@@ -374,6 +377,81 @@ async function modeJudge() {
     const missingTool = (expect.tools ?? []).filter((n) => !returnedTools.includes(n));
     const forbiddenTool = (expect.notTools ?? []).filter((n) => returnedTools.includes(n));
 
+    /**
+     * 物种提示分档（2026-11-01，转来的真实缺陷）：**给了但词表里没有 ≠ 没给**。
+     *
+     * 旧实现把两档并成一档，用户给了 `species_hint="棉花"` 却被告知"请补充 species_hint"。
+     * 判据三件事：`raw.speciesGap` 分档正确；B 档**必须回显用户原文**；
+     * B 档**不得再让用户补 species_hint**，且必须写"未覆盖／不是该数据不存在"。
+     */
+    const expectGap = expect.speciesGap ?? null;
+    const actualGap = raw.speciesGap ?? 'none';
+    const asksForHint = /请补充物种|请补充：物种|补充 species_hint/.test(text);
+    const speciesGapCheck = expectGap === null
+      ? 'n/a'
+      : actualGap !== expectGap
+        ? `FAIL 期望分档 ${expectGap}，实为 ${actualGap}`
+        : expectGap === 'hint-unrecognized'
+          ? (!text.includes(c.hint ?? '')
+            ? 'FAIL B 档没回显用户给的 species_hint'
+            : asksForHint
+              ? 'FAIL B 档又让用户补 species_hint（他已经给了）'
+              : !/未覆盖/.test(text) || !/不是「该数据不存在」/.test(text)
+                ? 'FAIL B 档没写"未覆盖／不是数据不存在"'
+                : 'PASS')
+          : 'PASS';
+
+    /**
+     * N1/N2/N3（检索负责人 2026-11-01「物种提示分档」验收 v1.1）。
+     *
+     * 上面那条只验四件事（分档、回显、不再要 hint、写了未覆盖），B 档今天新增的
+     * 「已接物种范围」与「拼写提示」两行**一条都没被验**——那只能靠人眼看，不算判据。
+     */
+    // N1：已接物种范围必须存在，且行内每个标签都要能在**当前注册表启用的工具**里找到来源；
+    //     也不许出现用户给的那个未覆盖写法（否则等于把"未覆盖的物种"写进"已接范围"）。
+    //     残留风险如实记：写死一份拷贝今天照样过，只有注册表变了才红；"现算"由一次性负控演练
+    //     （临时删掉某源的物种声明，该行必须少一项）证明，不进例行断言。
+    const enabledToolNames = new Set(registry.listTools().map((t) => t.name));
+    const enabledScopes = [...new Set(CAPS
+      .filter((cap) => enabledToolNames.has(cap.tool))
+      .flatMap((cap) => cap.speciesScope.query ?? [])
+      .filter((scope) => scope !== '不限物种（按精确 ID）'))];
+    const scopeLine = text.split('\n').find((line) => line.includes('已接物种范围')) ?? '';
+    const scopeLabels = scopeLine === '' ? [] : scopeLine
+      .slice(scopeLine.indexOf('：') + 1)
+      .split('、').map((label) => label.trim()).filter(Boolean);
+    const badScopeLabels = scopeLabels.filter((label) => !enabledScopes.includes(label));
+    const n1 = expectGap !== 'hint-unrecognized'
+      ? 'n/a'
+      : scopeLine === ''
+        ? 'FAIL 缺「已接物种范围」行'
+        : badScopeLabels.length > 0
+          ? `FAIL 含非注册表现算标签 ${badScopeLabels.join('、')}`
+          : 'PASS';
+
+    // N2：拼写提示只准出现在 B 档，且必须指向**已接物种**；同时 B 档文案里**不得**出现
+    //     「未识别出物种」——字段说未覆盖、嘴上说没识别，就是这类缺陷的原形。
+    const tipLine = text.split('\n').find((line) => line.includes('疑似拼写')) ?? '';
+    const tipSpecies = /最接近的已接写法是「([^」]+)」/.exec(tipLine)?.[1];
+    const claimsNotRecognized = /未识别出物种/.test(text);
+    const n2 = expectGap === 'hint-unrecognized'
+      ? (claimsNotRecognized
+        ? 'FAIL B 档文案出现「未识别出物种」（与"未覆盖"自相矛盾）'
+        : tipLine === ''
+          ? '不判（本题 hint 无近似别名，允许无拼写提示）'
+          : tipSpecies === undefined
+            ? 'FAIL 拼写提示没给出「最接近的已接写法」'
+            : !known(tipSpecies)
+              ? `FAIL 提示的「${tipSpecies}」不是已接物种`
+              : 'PASS')
+      : (tipLine === '' ? 'PASS' : 'FAIL 非 B 档出现拼写提示');
+
+    // N3：A 档必须**仍给出**"请补充物种"的指引——只断言 B 档"不得让补"，
+    //     把 A 档指引一起删掉同样能过，那验的是"不要误导"，不是"什么都别说"。
+    const n3 = expectGap === 'not-given'
+      ? (asksForHint ? 'PASS' : 'FAIL A 档丢了「请补充物种（species_hint）」指引')
+      : 'n/a';
+
     const checks = {
       '①-a 候选全部双命中': zero ? 'n/a' : (doubleHitMiss.length === 0 && eachSourceHasTool ? 'PASS' : 'FAIL'),
       // 仅物种命中（物种识别成功、意图为空）→ 必须直接拒答：state=B 且候选 0。
@@ -397,6 +475,10 @@ async function modeJudge() {
           : forbiddenTool.length > 0 ? `FAIL 不该给 ${forbiddenTool.join(',')}` : 'PASS',
       '计算类硬排除（前置于意图识别）': hardExcludeCheck,
       '没接 ≠ 不做（没接侧）': uncoveredCheck,
+      '物种提示分档（A 没给 / B 给了未识别）': speciesGapCheck,
+      'N1 已接物种范围（注册表现算集合）': n1,
+      'N2 拼写提示只在 B 档且指向已接物种': n2,
+      'N3 A 档必须仍给「请补充物种」指引': n3,
       '② 零候选如实说不覆盖': zero ? (saysNoCover ? 'PASS' : 'FAIL 没写没有覆盖') : 'n/a',
       '② 不把能力缺口写成物种没人接': coverageBothKinds ? 'PASS' : 'FAIL 只有物种不覆盖的解释',
       '② 点名源不得与"没能识别出可用意图"并存': contradiction ? 'FAIL' : 'PASS',

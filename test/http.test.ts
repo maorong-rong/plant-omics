@@ -37,6 +37,69 @@ function scanHeaderReads(fileName: string, text: string): HeaderReads {
     }
     return false;
   };
+  /** headers 容器的两种写法：`x.headers` 与 `x["headers"]`。 */
+  const isHeadersContainer = (node: ts.Node | undefined): boolean => {
+    if (!node) return false;
+    return (ts.isPropertyAccessExpression(node) && node.name.getText(sf) === 'headers')
+      || (ts.isElementAccessExpression(node) && literal(node.argumentExpression) === 'headers');
+  };
+
+  /**
+   * **静态可解析的单跳别名**（2026-11-03 后端负责人授权、对抗审查者收紧）：
+   *
+   *   `const h = <表达式>.headers` / `const h = <表达式>["headers"]`  →  之后 `h['x-…']` 仍算读取。
+   *
+   * 但"别名"必须按**变量绑定**成立，而不是"名字叫 h 就行"——审查者的反例证明只比名字会被三件事骗过：
+   *   ① 跨作用域同名遮蔽（外层 h 与内层 h 不是同一个变量）；
+   *   ② 先读后声明（读的时候变量还没绑定）；
+   *   ③ 闭包捕获（h 被带进另一个函数作用域）。
+   * 所以这里要求：该名字在文件里**只声明一次**、**声明位置先于全部使用**、
+   * **使用处与声明处在同一个函数作用域**；任一不满足就**不认它是别名**，所有使用一律记动态。
+   * 宁可拒绝，也不做数据流分析。
+   */
+  const aliasDecl = new Map<string, { pos: number; scope: ts.Node | undefined }>();
+  const shadowed = new Set<string>();
+  const enclosingFunction = (node: ts.Node | undefined): ts.Node | undefined => {
+    for (let cursor = node?.parent; cursor; cursor = cursor.parent) {
+      if (ts.isFunctionLike(cursor)) return cursor;
+    }
+    return undefined;
+  };
+  /** 任何"绑定这个名字"的声明都算（变量/参数/函数/类/解构元素），用来判"这个名字是否唯一"。 */
+  const bindingNameOf = (node: ts.Node): string | null => {
+    if (ts.isVariableDeclaration(node) || ts.isParameter(node)
+      || ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node)
+      || ts.isClassDeclaration(node) || ts.isBindingElement(node)) {
+      const name = (node as { name?: ts.Node }).name;
+      return name && ts.isIdentifier(name) ? name.text : null;
+    }
+    return null;
+  };
+  const bindingCount = new Map<string, number>();
+  const collectAliases = (node: ts.Node): void => {
+    const bound = bindingNameOf(node);
+    if (bound) bindingCount.set(bound, (bindingCount.get(bound) ?? 0) + 1);
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && isHeadersContainer(node.initializer)) {
+      const list = node.parent;
+      if (ts.isVariableDeclarationList(list) && (list.flags & ts.NodeFlags.Const) !== 0) {
+        aliasDecl.set(node.name.text, { pos: node.getStart(sf), scope: enclosingFunction(node) });
+      }
+    }
+    ts.forEachChild(node, collectAliases);
+  };
+  collectAliases(sf);
+  // 同名绑定不止一次（参数遮蔽、重声明、解构出的同名）→ 一律不认作别名
+  for (const [name, count] of bindingCount) if (count > 1) aliasDecl.delete(name);
+  for (const name of shadowed) aliasDecl.delete(name);
+
+  /** 这处使用是不是"合法单跳别名读取"；不是就返回 false（调用方记动态）。 */
+  const isBoundAliasUse = (node: ts.Identifier): boolean => {
+    const decl = aliasDecl.get(node.text);
+    if (!decl) return false;
+    if (node.getStart(sf) < decl.pos) return false;               // 先读后声明
+    if (enclosingFunction(node) !== decl.scope) return false;      // 跨函数（闭包捕获）
+    return true;
+  };
 
   const visit = (node: ts.Node): void => {
     // ① 调用形式：header(res, 'x-…')；第二参不是字面量就记动态——
@@ -50,25 +113,40 @@ function scanHeaderReads(fileName: string, text: string): HeaderReads {
       else noteDynamic(node);
     }
 
-    // ② headers 容器的**任何**用法：只有"字面量下标直接取名"算正常读取，其余一律记动态。
-    //    这一条是"拒绝而不是猜"：别名（const h = res.headers）、对象解构
-    //    （const { 'x-…': v } = res.headers）、遍历（Object.entries(res.headers)）、
-    //    方法调用、当值传出去——全都静态核不了白名单，必须报出来而不是静默漏。
-    //    容器有三种写法：`res.headers`、`res["headers"]`、裸 `headers`（参数或解构所得）。
     if (!inTypeContext(node)) {
-      const isHeadersProperty =
-        ts.isPropertyAccessExpression(node) && node.name.getText(sf) === 'headers';
-      const isHeadersIndex =
-        ts.isElementAccessExpression(node) && literal(node.argumentExpression) === 'headers';
-      const isBareHeaders =
-        ts.isIdentifier(node) && node.text === 'headers'
+      // ② 单跳别名变量：只有「它自己作下标容器 + 字面量键」算读取，其它用法（当值传出、
+      //    重赋值、再转交、方法调用）一律记动态。名字出现在声明处不算用法。
+      if (ts.isIdentifier(node) && aliasDecl.has(node.text)) {
+        const parent = node.parent;
+        const isDeclarationName = ts.isVariableDeclaration(parent) && parent.name === node;
+        if (!isDeclarationName && !isBoundAliasUse(node)) {
+          // 名字叫 h 但绑定不成立（遮蔽 / 先读后声明 / 跨函数捕获）→ 一律记动态
+          noteDynamic(node);
+        } else if (!isDeclarationName) {
+          if (ts.isElementAccessExpression(parent) && parent.expression === node) {
+            const name = literal(parent.argumentExpression);
+            if (name !== null) add(name);
+            else noteDynamic(parent);
+          } else {
+            noteDynamic(node);
+          }
+        }
+      }
+
+      // ③ headers 容器本身：后面直接套字面量下标才算读取；被 const 单跳别名接走不算；
+      //    其余（解构、遍历、方法调用、当值传出）一律记动态。
+      const isHeadersProperty = ts.isPropertyAccessExpression(node) && node.name.getText(sf) === 'headers';
+      const isHeadersIndex = ts.isElementAccessExpression(node) && literal(node.argumentExpression) === 'headers';
+      const isBareHeaders = ts.isIdentifier(node) && node.text === 'headers'
         && !(ts.isPropertyAccessExpression(node.parent) && node.parent.name === node);
 
-      const container = isHeadersProperty || isHeadersIndex || isBareHeaders;
-      if (container) {
+      if (isHeadersProperty || isHeadersIndex || isBareHeaders) {
         const parent = node.parent;
-        // 容器外面再套一个「字面量下标」才是读头：res.headers['x-a']、res["headers"]["x-a"]
-        if (ts.isElementAccessExpression(parent) && parent.expression === node) {
+        const isAliasInitializer = ts.isVariableDeclaration(parent) && parent.initializer === node
+          && ts.isIdentifier(parent.name) && aliasDecl.has(parent.name.text);
+        if (isAliasInitializer) {
+          // 交给单跳别名的声明，别名用法会在上面按"字面量键"逐处核对
+        } else if (ts.isElementAccessExpression(parent) && parent.expression === node) {
           const name = literal(parent.argumentExpression);
           if (name !== null) add(name);
           else noteDynamic(parent);
@@ -245,14 +323,12 @@ describe('响应头透出（白名单 x-*，2026-11-01 后端负责人裁定）'
 describe('白名单与源层读取项必须对齐（2026-11-01 后端负责人）', () => {
   /**
    * 白名单里暂时没有读取者的头：必须**显式登记**，不许靠"反正没人管"放过。
-   * 现在只有 UniProt 一对（R11 未过审、未提交，源没进注册表）。
    *
-   * 登记是有代价的：一个头一旦真有已注册的源在读，它就必须从这里删掉（见 stale 断言）。
-   * 这就是"先声明再接线"的反向闸门——清单不会自己过期。
+   * 2026-11-03 清空：UniProt 经 R11 审查通过并接线，那两个头现在真有已注册的源在读，
+   * 按 stale 断言必须从这里删掉——这正是这张表的设计目的（清单不会自己过期）。
+   * 以后再有"先加头、后接线"的情形，按同一规则临时登记。
    */
   const PENDING_READERS: Readonly<Record<string, string>> = {
-    'x-total-results': 'UniProt（R11 未过审、未提交；接入时从此表删掉）',
-    'x-uniprot-release': '同上：UniProt 的数据版本头',
   };
 
   it('已注册源读到的头必须在白名单里；白名单里也不许有没人读的头', async () => {
@@ -292,11 +368,47 @@ describe('白名单与源层读取项必须对齐（2026-11-01 后端负责人�
       // 走 AST：注释天然不算，可选链也算（R12-C2 实测：正则两个方向都会错）
       const reads = scanHeaderReads(file, rf(file, 'utf8'));
       for (const name of reads.names) used.set(name, [...(used.get(name) ?? []), rel]);
-      for (const snippet of reads.dynamic) dynamic.push(`${rel}: ${snippet}`);
+      for (const snippet of reads.dynamic) dynamic.push(`${rel.replace(/\\/g, '/')}: ${snippet}`);
     }
-    // 头名不是字面量（res.headers[key]）时，静态核对无法保证它在白名单里——
-    // 宁可红，也不许"看起来扫过了"。真需要动态取头时，改成字面量或在这里显式放开。
-    expect(dynamic, `这些地方的头名不是字面量，无法核对白名单：${dynamic.join(' | ')}`).toEqual([]);
+    /**
+     * 头名不是字面量（`res.headers[key]`）时，静态核对无法保证它在白名单里——
+     * 宁可红，也不许"看起来扫过了"。所以**不教扫描器做数据流分析**（R12 边界 + 2026-11-03 收窄版）。
+     *
+     * 唯一出口是下面这张**逐文件声明 + 条数**的表：例外必须被写下来、被审阅，而且两个方向都卡——
+     * 未声明的文件出现动态读取 → 红（防止悄悄绕闸门）；某个文件里的动态条数变了 → 红
+     * （多一条就是新增逃逸，少一条说明登记过期）。
+     */
+    const DECLARED_HEADER_ESCAPES: ReadonlyArray<{ file: string; expect: readonly string[]; reason: string }> = [
+      {
+        file: 'uniprot/tools.ts',
+        // 精确形状，不是条数：'h'×2 与 'h[key]' 就是那个通用读取器的全部动态形态。
+        // 审查者实测过「删一处读取、另加整份 headers 传出」条数仍是 3——按条数会放过，按形状不会。
+        expect: ['h', 'h', 'h[key]'],
+        reason: 'R11 审查通过的冻结实现：源内自定义 header(res, name) 通用读取器必要地取整个 headers 对象并遍历、按计算键取值（`!h`、`Object.keys(h)`、`h[key]` 三处）；所有调用点都传字面量名，由上面的调用分支逐处核对。改这里等于改冻结字节，需重送 R11',
+      },
+    ];
+    const dynamicByFile = new Map<string, string[]>();
+    for (const text of dynamic) {
+      const file = text.slice(0, text.indexOf(': '));
+      dynamicByFile.set(file, [...(dynamicByFile.get(file) ?? []), text]);
+    }
+    const undeclaredFiles = [...dynamicByFile.keys()].filter((file) => !DECLARED_HEADER_ESCAPES.some((entry) => entry.file === file));
+    const undeclared = undeclaredFiles.flatMap((file) => dynamicByFile.get(file) ?? []);
+    /** 精确形状比对：条数相同但内容不同也必须红（审查者反例：删一处读取、另加整份 headers 传出）。 */
+    const sameShape = (expected: readonly string[], actual: readonly string[]): boolean => {
+      const a = [...actual].sort();
+      const b = [...expected].sort();
+      return a.length === b.length && a.every((text, i) => text === b[i]);
+    };
+    const countMismatch = DECLARED_HEADER_ESCAPES.filter((entry) => {
+      const actual = [...(dynamicByFile.get(entry.file) ?? [])].map((text) => text.slice(text.indexOf(': ') + 2));
+      return !sameShape(entry.expect, actual);
+    });
+    expect(undeclared, `这些地方的头名不是字面量且所在文件未登记，无法核对白名单：${undeclared.join(' | ')}`).toEqual([]);
+    expect(
+      countMismatch.map((entry) => `${entry.file}: 登记 ${entry.count} 处，实扫到 ${dynamicByFile.get(entry.file)?.length ?? 0} 处`),
+      '已登记文件里的动态读取条数变了：多一条是新逃逸，少一条是登记过期，都要处理',
+    ).toEqual([]);
 
     const orphans = Object.keys(PENDING_READERS).filter((name) => !RESPONSE_HEADER_ALLOWLIST.has(name));
     const missing = [...used.keys()].filter((name) => !RESPONSE_HEADER_ALLOWLIST.has(name));
@@ -346,14 +458,32 @@ describe('响应头读取扫描：注释不算、可选链要算、动态头名�
     expect(reads.dynamic.length, '动态头名要交给调用方判红').toBe(1);
   });
 
-  // R12 二轮列出的四种"合法但静态核不了"的读法：一律记动态（拒绝），不许静默漏。
+  // 2026-11-03 负责人授权的更窄边界：`const h = x.headers` 这一跳**单跳别名**之后
+  // `h['字面量']` 仍算读取；除此以外一律记动态。下面正向两例 + 负向七例把边界钉住。
+  it.each([
+    ['单跳别名（.headers）', 'const h = res.headers; const v = h["x-qq-probe"];'],
+    ['单跳别名（["headers"]）', 'const h = res["headers"]; const v = h["x-qq-probe"];'],
+  ])('%s → 仍算读取', (_label, code) => {
+    const reads = scanHeaderReads('a1.ts', code);
+    expect(reads.names).toEqual(['x-qq-probe']);
+    expect(reads.dynamic, '单跳别名的目标是确定的，不该记动态').toEqual([]);
+  });
+
+  // 负控一条不减：这些写法仍然必须被拒绝（记动态），一个都不许放过。
   it.each([
     ['header(res, key) 非字面参数', 'const key = "x-qq-probe"; const v = header(res, key);'],
     ['对象解构', 'const { "x-qq-probe": v } = res.headers;'],
     ['遍历 Object.entries', 'const v = Object.entries(res.headers).filter(([k]) => k.startsWith("x-"));'],
-    ['转交别名', 'const h = res.headers; const v = h["x-qq-probe"];'],
-    ['下标形式转交别名', 'const h = res["headers"]; const v = h["x-qq-probe"];'],
     ['下标形式解构', 'const { "x-qq-probe": v } = res["headers"];'],
+    ['非 const 别名（可重赋值）', 'let h = res.headers; const v = h["x-qq-probe"];'],
+    ['两跳转交', 'const h = res.headers; const g = h; const v = g["x-qq-probe"];'],
+    ['别名计算键', 'const h = res.headers; const k = "x-qq-probe"; const v = h[k];'],
+    ['headers 当值传出', 'const v = pass(res.headers);'],
+    ['别名当值传出', 'const h = res.headers; const v = pass(h);'],
+    ['同名参数遮蔽', 'const h = res.headers; function f(h: Record<string, string>) { return h["x-qq-probe"]; }'],
+    ['先读后声明', '{ const v = h0["x-qq-probe"]; const h0 = res.headers; }'],
+    ['闭包捕获', 'const h = res.headers; const f = () => h["x-qq-probe"];'],
+    ['整份 headers 传出（同数替换反例）', 'const h = res.headers; const v = pass(h); const w = pass(h);'],
   ])('%s → 必须记动态', (_label, code) => {
     const reads = scanHeaderReads('e.ts', code);
     expect(reads.names, '这些写法认不出具体头名，names 必须为空').toEqual([]);
@@ -364,6 +494,18 @@ describe('响应头读取扫描：注释不算、可选链要算、动态头名�
     const reads = scanHeaderReads('g.ts', 'const v = res["headers"]["x-qq-probe"];');
     expect(reads.names).toEqual(['x-qq-probe']);
     expect(reads.dynamic).toEqual([]);
+  });
+
+  it('例外表按精确形状比对：条数相同但内容不同必须判为不符', () => {
+    const sameShape = (expected: readonly string[], actual: readonly string[]): boolean => {
+      const a = [...actual].sort();
+      const b = [...expected].sort();
+      return a.length === b.length && a.every((text, i) => text === b[i]);
+    };
+    expect(sameShape(['h', 'h', 'h[key]'], ['h[key]', 'h', 'h'])).toBe(true);
+    // 审查者反例：删掉一处别名读取、另加"整份 headers 传出"，条数仍是 3
+    expect(sameShape(['h', 'h', 'h[key]'], ['h', 'h', 'pass(h)']), '同数替换必须判为不符').toBe(false);
+    expect(sameShape(['h', 'h', 'h[key]'], ['h', 'h']), '少一条必须判为不符').toBe(false);
   });
 
   it('类型注解里的 headers 不算读取（否则每条签名都误报）', () => {

@@ -1,0 +1,26 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://rest.uniprot.org/boguspath?format=json",
+    "status": 404,
+    "contentType": "text/html",
+    "sourceBytes": 153,
+    "sourceSha256": "367E9675C3CA59FEE4D8FAE53422319B324D6E6238748D7424837568F0F23D5E",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T06:56:33.733Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "provenanceTier": "内部自洽 + 可复现（本次实抓）；**不等于已证明历史采集**",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T06:56:33.733Z",
+    "purpose": "404 但正文是 nginx HTML 153 B —— 路径不存在，**绝不许判成\"accession 查无\"**",
+    "cropping": "verbatim; 未删字段",
+    "canonicalSha256": "367E9675C3CA59FEE4D8FAE53422319B324D6E6238748D7424837568F0F23D5E",
+    "canonicalSha256OfRawBody": "367E9675C3CA59FEE4D8FAE53422319B324D6E6238748D7424837568F0F23D5E",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256。sourceSha256 只对给定基线验一致性（**不证明历史采集动作**）；canonical 只对所比较的这两份内容成立，不保证未来跨次永不变。",
+    "rawBodyNote": "rawBody 为上游原体逐字副本（与 sourceSha256 对应，可离线校验）。它是 2026-11-01 抓取的，**不得据此推断更早的采集时刻**。"
+  },
+  "rawBody": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.25.3</center>\r\n</body>\r\n</html>\r\n",
+  "payload": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.25.3</center>\r\n</body>\r\n</html>\r\n"
+}

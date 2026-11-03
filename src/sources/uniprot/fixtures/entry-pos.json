@@ -1,0 +1,425 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://rest.uniprot.org/uniprotkb/P46290?format=json",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 4773,
+    "sourceSha256": "3E01C548CDF07D42D1285993DA33F7EB5C7F456A7B58EA5F675CE6382808BEA3",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T06:35:20.929Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "provenanceTier": "内部自洽 + 可复现（本次实抓）；**不等于已证明历史采集**",
+    "xTotalResults": null,
+    "xUniprotRelease": "2026_03",
+    "purpose": "单条正例：4,773 B / 17 个顶层键 / sequence.length=120（**氨基酸数**）",
+    "cropping": "verbatim; 未删字段（保持上游原样，便于核对体积与结构）",
+    "canonicalSha256": "F00AD0C08699669F8CBD4F00C955D611C6010F2B7381CCDA281E789704DC36DA",
+    "canonicalSha256OfRawBody": "F00AD0C08699669F8CBD4F00C955D611C6010F2B7381CCDA281E789704DC36DA",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256。sourceSha256 只对给定基线验一致性（**不证明历史采集动作**）；canonical 只对所比较的这两份内容成立，不保证未来跨次永不变。",
+    "rawBodyNote": "rawBody 为上游原体逐字副本（与 sourceSha256 对应，可离线校验）。它是 2026-11-01 抓取的，**不得据此推断更早的采集时刻**。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T06:35:20.929Z"
+  },
+  "rawBody": "{\"entryType\":\"UniProtKB reviewed (Swiss-Prot)\",\"primaryAccession\":\"P46290\",\"uniProtkbId\":\"RL31_NICGU\",\"entryAudit\":{\"firstPublicDate\":\"1995-11-01\",\"lastAnnotationUpdateDate\":\"2025-06-18\",\"lastSequenceUpdateDate\":\"1995-11-01\",\"entryVersion\":76,\"sequenceVersion\":1},\"annotationScore\":2.0,\"organism\":{\"scientificName\":\"Nicotiana glutinosa\",\"commonName\":\"Tobacco\",\"taxonId\":35889,\"lineage\":[\"Eukaryota\",\"Viridiplantae\",\"Streptophyta\",\"Embryophyta\",\"Tracheophyta\",\"Spermatophyta\",\"Magnoliopsida\",\"eudicotyledons\",\"Gunneridae\",\"Pentapetalae\",\"asterids\",\"lamiids\",\"Solanales\",\"Solanaceae\",\"Nicotianoideae\",\"Nicotianeae\",\"Nicotiana\"]},\"proteinExistence\":\"2: Evidence at transcript level\",\"proteinDescription\":{\"recommendedName\":{\"fullName\":{\"evidences\":[{\"evidenceCode\":\"ECO:0000305\"}],\"value\":\"Large ribosomal subunit protein eL31\"}},\"alternativeNames\":[{\"fullName\":{\"value\":\"60S ribosomal protein L31\"}}]},\"genes\":[{\"geneName\":{\"value\":\"RPL31\"}}],\"comments\":[{\"texts\":[{\"evidences\":[{\"evidenceCode\":\"ECO:0000305\"}],\"value\":\"Belongs to the eukaryotic ribosomal protein eL31 family\"}],\"commentType\":\"SIMILARITY\"}],\"features\":[{\"type\":\"Chain\",\"location\":{\"start\":{\"value\":1,\"modifier\":\"EXACT\"},\"end\":{\"value\":120,\"modifier\":\"EXACT\"}},\"description\":\"Large ribosomal subunit protein eL31\",\"featureId\":\"PRO_0000153780\"}],\"keywords\":[{\"id\":\"KW-0687\",\"category\":\"Molecular function\",\"name\":\"Ribonucleoprotein\"},{\"id\":\"KW-0689\",\"category\":\"Molecular function\",\"name\":\"Ribosomal protein\"}],\"references\":[{\"referenceNumber\":1,\"citation\":{\"id\":\"CI-48K58L2ACA7R6\",\"citationType\":\"online journal article\",\"authors\":[\"Choi D.\",\"Yun H.-K.\",\"Bok S.-H.\",\"Kim S.-U.\"],\"title\":\"Nucleotide sequence of a cDNA encoding ribosomal protein L31 from Nicotiana glutinosa.\",\"publicationDate\":\"1995\",\"journal\":\"Plant Gene Register\",\"locator\":\"PGR95-028\"},\"referencePositions\":[\"NUCLEOTIDE SEQUENCE [MRNA]\"]}],\"uniProtKBCrossReferences\":[{\"database\":\"EMBL\",\"id\":\"U23784\",\"properties\":[{\"key\":\"ProteinId\",\"value\":\"AAA80638.1\"},{\"key\":\"Status\",\"value\":\"-\"},{\"key\":\"MoleculeType\",\"value\":\"mRNA\"}]},{\"database\":\"AlphaFoldDB\",\"id\":\"P46290\",\"properties\":[{\"key\":\"Description\",\"value\":\"-\"}]},{\"database\":\"SMR\",\"id\":\"P46290\",\"properties\":[{\"key\":\"Description\",\"value\":\"-\"}]},{\"database\":\"GO\",\"id\":\"GO:0022625\",\"properties\":[{\"key\":\"GoTerm\",\"value\":\"C:cytosolic large ribosomal subunit\"},{\"key\":\"GoEvidenceType\",\"value\":\"IEA:TreeGrafter\"}]},{\"database\":\"GO\",\"id\":\"GO:0003735\",\"properties\":[{\"key\":\"GoTerm\",\"value\":\"F:structural constituent of ribosome\"},{\"key\":\"GoEvidenceType\",\"value\":\"IEA:InterPro\"}]},{\"database\":\"GO\",\"id\":\"GO:0002181\",\"properties\":[{\"key\":\"GoTerm\",\"value\":\"P:cytoplasmic translation\"},{\"key\":\"GoEvidenceType\",\"value\":\"IEA:TreeGrafter\"}]},{\"database\":\"CDD\",\"id\":\"cd00463\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal_L31e\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"FunFam\",\"id\":\"3.10.440.10:FF:000001\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"60S ribosomal protein L31\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"Gene3D\",\"id\":\"3.10.440.10\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"-\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"InterPro\",\"id\":\"IPR000054\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal_eL31\"}]},{\"database\":\"InterPro\",\"id\":\"IPR020052\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal_eL31_CS\"}]},{\"database\":\"InterPro\",\"id\":\"IPR023621\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal_eL31_dom_sf\"}]},{\"database\":\"NCBIfam\",\"id\":\"NF002258\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"PRK01192.1-1\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"PANTHER\",\"id\":\"PTHR10956\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"60S RIBOSOMAL PROTEIN L31\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"PANTHER\",\"id\":\"PTHR10956:SF52\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"LARGE RIBOSOMAL SUBUNIT PROTEIN EL31X-RELATED\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"Pfam\",\"id\":\"PF01198\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal_L31e\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"SMART\",\"id\":\"SM01380\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal_L31e\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"SUPFAM\",\"id\":\"SSF54575\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"Ribosomal protein L31e\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]},{\"database\":\"PROSITE\",\"id\":\"PS01144\",\"properties\":[{\"key\":\"EntryName\",\"value\":\"RIBOSOMAL_L31E\"},{\"key\":\"MatchStatus\",\"value\":\"1\"}]}],\"sequence\":{\"value\":\"MSDKTKGRKEEVVTREYTINLHKRLHSCTFKKKAPTAIKEIRKFAQKAMGTKDVRVDVKLNKQIWSRGIRSVPRRVRVRIARKRNDDEDAKEELYSLVTVAEIPAKGLKGLGTKIIEDED\",\"length\":120,\"molWeight\":13861,\"crc64\":\"595660CB7A8B62E0\",\"md5\":\"EF03553E63A397451E9B579ABF655412\"},\"extraAttributes\":{\"countByCommentType\":{\"SIMILARITY\":1},\"countByFeatureType\":{\"Chain\":1},\"uniParcId\":\"UPI0000133F1C\"}}",
+  "payload": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "P46290",
+    "uniProtkbId": "RL31_NICGU",
+    "entryAudit": {
+      "firstPublicDate": "1995-11-01",
+      "lastAnnotationUpdateDate": "2025-06-18",
+      "lastSequenceUpdateDate": "1995-11-01",
+      "entryVersion": 76,
+      "sequenceVersion": 1
+    },
+    "annotationScore": 2,
+    "organism": {
+      "scientificName": "Nicotiana glutinosa",
+      "commonName": "Tobacco",
+      "taxonId": 35889,
+      "lineage": [
+        "Eukaryota",
+        "Viridiplantae",
+        "Streptophyta",
+        "Embryophyta",
+        "Tracheophyta",
+        "Spermatophyta",
+        "Magnoliopsida",
+        "eudicotyledons",
+        "Gunneridae",
+        "Pentapetalae",
+        "asterids",
+        "lamiids",
+        "Solanales",
+        "Solanaceae",
+        "Nicotianoideae",
+        "Nicotianeae",
+        "Nicotiana"
+      ]
+    },
+    "proteinExistence": "2: Evidence at transcript level",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000305"
+            }
+          ],
+          "value": "Large ribosomal subunit protein eL31"
+        }
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "60S ribosomal protein L31"
+          }
+        }
+      ]
+    },
+    "genes": [
+      {
+        "geneName": {
+          "value": "RPL31"
+        }
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000305"
+              }
+            ],
+            "value": "Belongs to the eukaryotic ribosomal protein eL31 family"
+          }
+        ],
+        "commentType": "SIMILARITY"
+      }
+    ],
+    "features": [
+      {
+        "type": "Chain",
+        "location": {
+          "start": {
+            "value": 1,
+            "modifier": "EXACT"
+          },
+          "end": {
+            "value": 120,
+            "modifier": "EXACT"
+          }
+        },
+        "description": "Large ribosomal subunit protein eL31",
+        "featureId": "PRO_0000153780"
+      }
+    ],
+    "keywords": [
+      {
+        "id": "KW-0687",
+        "category": "Molecular function",
+        "name": "Ribonucleoprotein"
+      },
+      {
+        "id": "KW-0689",
+        "category": "Molecular function",
+        "name": "Ribosomal protein"
+      }
+    ],
+    "references": [
+      {
+        "referenceNumber": 1,
+        "citation": {
+          "id": "CI-48K58L2ACA7R6",
+          "citationType": "online journal article",
+          "authors": [
+            "Choi D.",
+            "Yun H.-K.",
+            "Bok S.-H.",
+            "Kim S.-U."
+          ],
+          "title": "Nucleotide sequence of a cDNA encoding ribosomal protein L31 from Nicotiana glutinosa.",
+          "publicationDate": "1995",
+          "journal": "Plant Gene Register",
+          "locator": "PGR95-028"
+        },
+        "referencePositions": [
+          "NUCLEOTIDE SEQUENCE [MRNA]"
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "EMBL",
+        "id": "U23784",
+        "properties": [
+          {
+            "key": "ProteinId",
+            "value": "AAA80638.1"
+          },
+          {
+            "key": "Status",
+            "value": "-"
+          },
+          {
+            "key": "MoleculeType",
+            "value": "mRNA"
+          }
+        ]
+      },
+      {
+        "database": "AlphaFoldDB",
+        "id": "P46290",
+        "properties": [
+          {
+            "key": "Description",
+            "value": "-"
+          }
+        ]
+      },
+      {
+        "database": "SMR",
+        "id": "P46290",
+        "properties": [
+          {
+            "key": "Description",
+            "value": "-"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0022625",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytosolic large ribosomal subunit"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:TreeGrafter"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0003735",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:structural constituent of ribosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:InterPro"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002181",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cytoplasmic translation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:TreeGrafter"
+          }
+        ]
+      },
+      {
+        "database": "CDD",
+        "id": "cd00463",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal_L31e"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "FunFam",
+        "id": "3.10.440.10:FF:000001",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "60S ribosomal protein L31"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "Gene3D",
+        "id": "3.10.440.10",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "-"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "InterPro",
+        "id": "IPR000054",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal_eL31"
+          }
+        ]
+      },
+      {
+        "database": "InterPro",
+        "id": "IPR020052",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal_eL31_CS"
+          }
+        ]
+      },
+      {
+        "database": "InterPro",
+        "id": "IPR023621",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal_eL31_dom_sf"
+          }
+        ]
+      },
+      {
+        "database": "NCBIfam",
+        "id": "NF002258",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "PRK01192.1-1"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "PANTHER",
+        "id": "PTHR10956",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "60S RIBOSOMAL PROTEIN L31"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "PANTHER",
+        "id": "PTHR10956:SF52",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "LARGE RIBOSOMAL SUBUNIT PROTEIN EL31X-RELATED"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "Pfam",
+        "id": "PF01198",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal_L31e"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "SMART",
+        "id": "SM01380",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal_L31e"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "SUPFAM",
+        "id": "SSF54575",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "Ribosomal protein L31e"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "database": "PROSITE",
+        "id": "PS01144",
+        "properties": [
+          {
+            "key": "EntryName",
+            "value": "RIBOSOMAL_L31E"
+          },
+          {
+            "key": "MatchStatus",
+            "value": "1"
+          }
+        ]
+      }
+    ],
+    "sequence": {
+      "value": "MSDKTKGRKEEVVTREYTINLHKRLHSCTFKKKAPTAIKEIRKFAQKAMGTKDVRVDVKLNKQIWSRGIRSVPRRVRVRIARKRNDDEDAKEELYSLVTVAEIPAKGLKGLGTKIIEDED",
+      "length": 120,
+      "molWeight": 13861,
+      "crc64": "595660CB7A8B62E0",
+      "md5": "EF03553E63A397451E9B579ABF655412"
+    },
+    "extraAttributes": {
+      "countByCommentType": {
+        "SIMILARITY": 1
+      },
+      "countByFeatureType": {
+        "Chain": 1
+      },
+      "uniParcId": "UPI0000133F1C"
+    }
+  }
+}

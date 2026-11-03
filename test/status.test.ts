@@ -318,8 +318,10 @@ describe('RETR-11（实跑新发现）：元工具计数必须等于真实注册
     expect(tool, 'hub_find_sources 未接线进注册表').toBeDefined();
 
     const out = await tool!.run({ question: '小麦已知基因' }, { http: forbiddenHttp });
-    expect(out.text).toContain(`工具 ${registry.listTools().length}`);
-    expect(out.text).toContain(`源 ${registry.listSources().length}`);
+    // 2026-11-03 尾注改为「目录快照：全库目录 N 源 / M 条能力登记」（T10：两数并列，不许只报本会话规模）。
+    // 断言**运行时值本身**，不写死 41/39——写死就等于把当时的数字抄进测试，下次接源又要手改。
+    expect(out.text).toContain(`全库目录 ${registry.listSources().length} 源`);
+    expect(out.text).toContain(`${TOOL_CAPABILITIES.length} 条能力登记`);
   });
 });
 

@@ -34,7 +34,14 @@ export function catalogSnapshotOf(registry: ToolRegistry, version?: string): Cat
     get toolCount() {
       return registry.listTools().length;
     },
-    // 子集启用时能力目录仍是全局的；必须给真实注册的工具名，否则会推荐不存在的工具（RETR-12）
+    /**
+     * 本会话**已加载**的业务工具名（2026-11-03 口径，替换旧 RETR-12 说法）。
+     *
+     * 旧口径「不在集合里就不许出现」会让"库里有、本会话没装"完全不可见——接了像没接。
+     * 新口径：未加载的源仍要出现，但**只能出现在「另外 N 个相关源未加载」区块**，
+     * 带目录登记工具数与加装路径；候选区与「命中 X 源」都不含它们。
+     * 真正的禁令因此是：**不得出现未标注的不可调用工具**。
+     */
     get enabledTools() {
       return registry.listSources().flatMap((bundle) => bundle.tools.map((tool) => tool.name));
     },

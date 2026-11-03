@@ -127,7 +127,7 @@ const SIMULATED: readonly string[] = [
  * 闸门仍然要求：每一份有 rawBody 的件都落进上述三类之一（分别是"有 rawBody 的件"那条断言的完备性）。
  * 统计口径上，**实测覆盖只取 CAPTURED**；重建件只到"内部自洽"。
  */
-const CAPTURED_COUNT = 23;
+const CAPTURED_COUNT = 31;
 const RECONSTRUCTED_COUNT = 5;
 
 /** 有 rawBody 但没声明 rawBodySource 的件（当前只有未接线的 UniProt）。补声明后从这里删掉。 */
@@ -139,31 +139,41 @@ const UNDECLARED_SOURCE: readonly string[] = [
 interface Entry { rel: string; simulated: boolean; cropped: boolean; payloadRelation?: string; rawBody?: string; rawBodySource?: string; capturedAt?: unknown; rawBodyCollectedAt?: unknown; sha?: string; contentType?: string; payload: unknown }
 
 /**
- * 全仓 fixture 份数。增减要在这里写明理由。
+ * 全仓 fixture 份数（按**已接线源**统计，见下方 REGISTERED_SOURCES）。增减要在这里写明理由。
  *
- * 2026-11-02 由 101 回退到 93：UniProt 的 8 份 fixture 属于 **R11 未过审、未提交** 的源，
- * 它们躺在工作区里、不在 HEAD 里；任何干净检出（含公开仓）只有 93 份。
- * 断言必须数**真实存在的文件**——按含 uniprot 计数会让外部 clone 的 `npm test` 必红（后端负责人 2026-11-03 裁定）。
- * R11 过审、uniprot 提交时一次性升回 101，并在提交正文里附审查编号。
+ * 2026-11-02 曾由 101 回退到 93：当时 UniProt 属 R11 未过审、未提交的源，干净检出只有 93 份。
+ * 2026-11-03 R11 通过、uniprot 接线，恢复 101（+8 份 fixture）；同一批 CAPTURED_COUNT 23 → 31。
  */
-const FIXTURE_TOTAL = 93;
+const FIXTURE_TOTAL = 101;
 
 /**
- * 枚举全部 fixture。
+ * 扫描集合**按接线派生**：源 id 来自 `src/sources/index.ts` 的注册表，而不是"src/sources 下有哪些目录"。
+ *
+ * 为什么（后端负责人 2026-11-03 裁定）：未接线的源目录（如 R11 未过审的 uniprot）不是产品的一部分，
+ * 不构成任何工具，把它们算进"实测覆盖"只会让工作区天天红、让公开树必红。反过来，
+ * 用手写白名单排除它们（PENDING_READERS 那种）又是个会过期的人工同步点——所以改成从接线派生。
+ *
+ * 这不是"自动跳过"：FIXTURE_TOTAL / CAPTURED_COUNT 仍然钉死。把某个已接线的源从注册表摘掉，
+ * 它的 fixture 立刻从计数里消失 → 总份数与钉死值不符 → 测试红（2026-11-03 已用摘 string 复现）。
+ */
+const { registry } = await import('../src/sources/index.js');
+const REGISTERED_SOURCES: string[] = registry
+  .listSources()
+  .map((bundle) => bundle.manifest.id as string)
+  .sort();
+
+/**
+ * 枚举**已接线源**的全部 fixture。
  *
  * **不做静默跳过**（后端负责人 2026-11-01 的规矩：校验函数里不许条件跳过）。
- * 原先是 `if (!existsSync(dir)) continue;`——某个源目录里 fixtures/ 消失或被改名，
- * 计数会静默变少而测试照样绿。现在把"没有 fixtures 目录的源"收集起来，
- * 由断言要求它为空，并用 FIXTURE_TOTAL 钉住总份数：少一份就红。
+ * 某个已接线的源目录里 fixtures/ 消失或被改名，会被收进 SOURCES_WITHOUT_FIXTURES 并由断言要求为空；
+ * 总份数另有 FIXTURE_TOTAL 钉着：少一份就红。
  */
 const SOURCES_WITHOUT_FIXTURES: string[] = [];
 
 function allFixtures(): Entry[] {
   const out: Entry[] = [];
-  // 只枚举目录：src/sources 下还有 index.ts 这类文件，不是源目录，不该进"缺 fixtures"的清单。
-  for (const dirent of readdirSync(FIXTURES, { withFileTypes: true })) {
-    if (!dirent.isDirectory()) continue;
-    const src = dirent.name;
+  for (const src of REGISTERED_SOURCES) {
     const dir = join(FIXTURES, src, 'fixtures');
     if (!existsSync(dir)) { SOURCES_WITHOUT_FIXTURES.push(src); continue; }
     for (const f of readdirSync(dir).filter((n) => n.endsWith('.json')).sort()) {
@@ -265,6 +275,20 @@ describe('fixture 证据层级（原体 / 派生 / 合成）', () => {
   it('扫描不留暗格：没有 fixtures 目录的源必须为空，总份数等于 FIXTURE_TOTAL', () => {
     expect(SOURCES_WITHOUT_FIXTURES, '这些源目录下没有 fixtures/，扫描会静默少算；补目录或把它登记进清单').toEqual([]);
     expect(entries.length, `fixture 总份数与 FIXTURE_TOTAL(${FIXTURE_TOTAL}) 不符——少算就是漏扫`).toBe(FIXTURE_TOTAL);
+  });
+
+  /**
+   * 「按接线派生」不是「自动跳过」的证明。
+   *
+   * 扫描集合必须**恰好等于**注册表：未接线的目录（如 R11 未过审的 uniprot）不计数，
+   * 而已接线源一份 fixture 都不能少。后者由 FIXTURE_TOTAL/CAPTURED_COUNT 钉着——
+   * 把一个已接线的源从 `src/sources/index.ts` 摘掉，它的 fixture 立刻从计数里消失，
+   * 总份数对不上 → 这条和上一条都会红（2026-11-03 用摘 string 实测复现）。
+   */
+  it('扫描集合恰好等于注册表：未接线目录不计数，已接线源一份都不能少', () => {
+    const scanned = [...new Set(entries.map((e) => e.rel.split('/')[0]))].sort();
+    expect(scanned, '扫到的源必须与 src/sources/index.ts 的注册表逐项相等').toEqual(REGISTERED_SOURCES);
+    expect(REGISTERED_SOURCES.length, '注册表为空：先看 src/sources/index.ts').toBeGreaterThan(0);
   });
 
   it('注册表里的源不得还有未声明来源的件（这条才真正卡住「先声明再接线」）', async () => {

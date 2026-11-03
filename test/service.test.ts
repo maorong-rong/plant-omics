@@ -12,7 +12,9 @@ import { PlantOmicsError } from '../src/core/errors.js';
 import { ToolRegistry } from '../src/core/registry.js';
 import type { SourceBundle, ToolDefinition } from '../src/core/types.js';
 import { assertBudget, assertSubsetBudget, BudgetError } from '../src/service/budget.js';
+import { buildCatalog } from '../src/service/catalog.js';
 import { parseServiceConfig, ServiceConfigError } from '../src/service/config.js';
+import { DEFAULT_SET_SOURCES, DEFAULT_SET_TOOLS_SOFT_MAX } from '../src/service/budget.js';
 import { SERVICE_IDENTITY, readBuildRev, serviceVersion } from '../src/service/version.js';
 import { createService, MAX_REQUEST_BODY_BYTES, type RunningService, type ServiceLogEntry } from '../src/service/http.js';
 import { registry as defaultRegistry } from '../src/sources/index.js';
@@ -43,12 +45,13 @@ function tool(name: string): ToolDefinition {
   };
 }
 
-function syntheticRegistry(options: { tools: string[]; sources?: number }): ToolRegistry {
+function syntheticRegistry(options: { tools: string[]; sources?: number; ids?: string[] }): ToolRegistry {
   const registry = new ToolRegistry();
   const sourceCount = options.sources ?? 1;
   const perSource = Math.ceil(options.tools.length / sourceCount);
   for (let s = 0; s < sourceCount; s += 1) {
-    const id = `synth${s}`;
+    // 用默认集清单里的 id，才能测到「默认集超软建议」；清单外的源应不影响默认集
+    const id = options.ids?.[s] ?? `synth${s}`;
     const slice = options.tools.slice(s * perSource, (s + 1) * perSource);
     const bundle: SourceBundle = {
       manifest: {
@@ -86,22 +89,62 @@ async function startService(overrides: Partial<Parameters<typeof parseServiceCon
 describe('启动期预算门禁（v2.3 源市场制）', () => {
   it('正常注册表通过，并报出工具名预算与两级阈值', () => {
     const report = assertBudget(defaultRegistry, 'plantomics-hub');
-    expect(report.tools).toBe(39);
+    expect(report.tools).toBe(41);
     expect(report.nameBudget).toBe(43);
     expect('mcp__plantomics-hub__'.length).toBe(21);
     // v2.3：全库只统计；硬阈值挂在订阅集上
     expect(report.subsetToolsHardMax).toBe(80);
     expect(report.defaultSetToolsSoftMax).toBe(40);
-    expect(report.warnings).toEqual([]); // 37 ≤ 40，不警示
+    // 全库 41 但默认推荐集是**清单口径**（7 个源 + 2 元工具 = 35）→ 不触发软建议警示。
+    // 2026-11-03 负责人定：默认集不再等于全库，否则软建议会永远报警、等于没有。
+    expect(report.defaultSetTools).toBe(35);
+    expect(report.warnings).toEqual([]);
   });
 
-  it('全库 41 工具：**不拒绝**，只对默认集超过软建议给警示', () => {
-    const many = syntheticRegistry({ tools: Array.from({ length: 41 }, (_, i) => `t${i}`) });
-    const report = assertBudget(many, 'plantomics-hub');
-    expect(report.tools).toBe(41);
-    expect(report.warnings.join()).toContain('软建议 40');
-    // 警示不是错误：没有抛错、也没有 problems
-    expect(report.warnings.length).toBe(1);
+  it('默认集是清单口径：清单内的源超 40 才警示，清单外的源加多少都不进默认集', () => {
+    // 清单内的源撑到 41 工具 → 警示
+    const inList = syntheticRegistry({ tools: Array.from({ length: 41 }, (_, i) => `t${i}`), ids: ['wheatomics'] });
+    const warned = assertBudget(inList, 'plantomics-hub');
+    expect(warned.defaultSetTools).toBe(41);
+    expect(warned.warnings.join()).toContain('软建议 40');
+
+    // 同一份 41 工具挂到**清单外**的源上 → 默认集仍是 0（元工具也没有）→ 不警示
+    const outList = syntheticRegistry({ tools: Array.from({ length: 41 }, (_, i) => `t${i}`), ids: ['uniprot'] });
+    const quiet = assertBudget(outList, 'plantomics-hub');
+    expect(quiet.tools).toBe(41);
+    expect(quiet.defaultSetTools).toBe(0);
+    expect(quiet.warnings, '新接的源不许自动进默认集').toEqual([]);
+  });
+
+  /**
+   * 契约 v1.1 铁律 4：页面要能**自己复算**默认集——
+   * `defaultSources` 逐项来自 `DEFAULT_SET_SOURCES`（顺序照抄），且
+   * `defaultSetTools === 清单内源工具数之和 + totals.metaTools`。
+   * 页面初始选中/全选都照它来，否则"默认 41 全选报警"的假象会回来。
+   */
+  it('catalog 的 defaultSources 与 DEFAULT_SET_SOURCES 一致，且 defaultSetTools 可被页面复算', () => {
+    const catalog = buildCatalog(defaultRegistry, { version: '0.1.1+svc.8.test' }) as {
+      totals: { metaTools: number; tools: number };
+      sources: Array<{ id: string; toolCount: number }>;
+      budget: { defaultSources: readonly string[]; defaultSetTools: number };
+    };
+    expect(catalog.budget.defaultSources).toEqual([...DEFAULT_SET_SOURCES]);
+    const sum = catalog.sources
+      .filter((source) => catalog.budget.defaultSources.includes(source.id))
+      .reduce((total, source) => total + source.toolCount, 0);
+    expect(catalog.budget.defaultSetTools).toBe(sum + catalog.totals.metaTools);
+    // 默认集必须是全库的真子集：不写死数字，比大小即可
+    expect(catalog.budget.defaultSetTools).toBeLessThan(catalog.totals.tools);
+  });
+
+  it('默认推荐集：清单 ⊆ 全库、且 ≤ 软建议', () => {
+    const report = assertBudget(defaultRegistry, 'plantomics-hub');
+    const ids = new Set(defaultRegistry.listSources().map((bundle) => bundle.manifest.id));
+    for (const id of DEFAULT_SET_SOURCES) {
+      expect(ids.has(id), `默认集清单里的 ${id} 不在注册表里：清单元数据过期`).toBe(true);
+    }
+    expect(report.defaultSetTools).toBeLessThanOrEqual(DEFAULT_SET_TOOLS_SOFT_MAX);
+    expect(report.defaultSetTools).toBeLessThan(report.tools); // 默认集是子集，不是全库
   });
 
   it('全库 21 源：**不拒绝**（v2.3 源数不设上限）', () => {
@@ -208,7 +251,7 @@ describe('HTTP 鉴权', () => {
       requestInit: { headers: { authorization: `Bearer ${TOKEN}` } },
     }));
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(39);
+    expect(tools.length).toBe(41);
   });
 
   it('认证失败发生在传输层：零上游调用，也不伪装成"本次未返回"', async () => {
@@ -658,7 +701,7 @@ describe('健康检查（上云探针）', () => {
     expect(status.code).toBe(200);
     const payload = JSON.parse(status.body) as { status: string; version: string; tools: number };
     expect(payload.status).toBe('ok');
-    expect(payload.tools).toBe(39);
+    expect(payload.tools).toBe(41);
     expect(payload.version).toBeTruthy();
     // 不泄露工具清单
     expect(status.body).not.toContain('wheatomics_');
@@ -700,8 +743,8 @@ describe('服务端版本独立于包版本', () => {
     // 版本 = serviceVersion(实际包版本)，或在其后带构建 sha 后缀；别的值一律不许
     const versionOk = payload.version === base || payload.version.startsWith(`${base}.g`);
     expect(versionOk, `version=${payload.version} 不在 serviceVersion(${pkgVersion})=${base} 或其 .g<sha> 后缀内`).toBe(true);
-    expect(payload.sources).toBe(9);
-    expect(payload.tools).toBe(39);
+    expect(payload.sources).toBe(10);
+    expect(payload.tools).toBe(41);
   });
   it('版本可带构建 sha：+svc.N.g<sha>，拿不到 sha 时退化', () => {
     expect(serviceVersion('0.1.0')).toBe('0.1.0+svc.7');

@@ -33,7 +33,9 @@ GET /catalog
   "totals": { "sources": 8, "tools": 37, "metaTools": 2 },
 
   "budget": {
-    "defaultSetTools": 37,              // 不带订阅头时实际下发的工具数
+    "defaultSources": ["wheatomics", "gramene", "ensemblplants", "ic4r", "strawberry", "gwh", "icg"],
+                                        // 默认推荐集包含的源 id，顺序即推荐顺序；页面初始选中必须照它
+    "defaultSetTools": 35,              // 不带订阅头时实际下发的工具数（= 清单内源工具 + 元工具）
     "defaultSetSoftMax": 40,            // 软建议；超了只警示
     "defaultSetOverSoftMax": false,     // 上一条的直接结论，页面直接用，别自己比
     "subsetToolsHardMax": 80,           // 唯一硬阈值；超了服务端 400
@@ -61,11 +63,14 @@ GET /catalog
 1. **`budget.librarySources` / `budget.libraryTools` 取消**，改用 `totals.sources` / `totals.tools`。同一个数字在响应里出现两次，下次一定不一致——今天我们已经在 `/healthz`、`npm run stats`、面板三处踩过这个坑。
 2. **新增 `budget.defaultSetOverSoftMax`**，页面不要自己拿 `defaultSetTools > defaultSetSoftMax` 再判一次。
 
-## 四、一致性铁律（三条，缺一条不算通过）
+## 四、一致性铁律（四条，缺一条不算通过）
 
 1. **工具集合逐一相等**：`union(sources[].tools) ∪ metaToolNames` **必须等于** `tools/list` 返回的全集。元工具（`hub_find_sources`、`hub_status`）不进任何 `sources[]`，只计入 `totals.metaTools`——所以「选 2 个源的 4 个工具」实际下发 **6 个**，页面算 token 必须把元工具算进去。
 2. **三处数字同源**：`/catalog.totals` = `/healthz` 的 `sources/tools/metaTools` = `npm run stats` 的读数。
 3. **阈值只有一个来源**：`subsetToolsHardMax` 必须直接取 `budget.ts` 的 `SUBSET_TOOLS_HARD_MAX`，`defaultSetSoftMax` 取 `DEFAULT_SET_TOOLS_SOFT_MAX`。**禁止在 catalog 里写字面量 80/40**。
+4. **默认集可被页面复算**：`budget.defaultSources` 必须逐项来自 `budget.ts` 的 `DEFAULT_SET_SOURCES`（顺序照抄），且 `defaultSetTools` **必须等于**「这些源的工具数之和 + `totals.metaTools`」。页面初始选中态、全选态一律照 `defaultSources` 来，**不许自己全选所有源**——全库 41 而默认 35，页面若全选就必然谎报"默认会报警"。
+
+> 前端注意：`web/` 里**不得出现阈值字面量**（`80`/`40`）与 `budget.tools`（已取消）。阈值与默认集一律从 `/catalog` 现读；这条由前端审查者按本文件核，不由实现自己声明"已改"。
 
 ## 五、禁止项
 
@@ -100,3 +105,4 @@ GET /catalog
 | 日期 | 变更 | 依据 |
 |---|---|---|
 | 2026-11-01 | 初版：定字段、三条一致性铁律、八条验收；与前端草案两处差异（去 library*、加 defaultSetOverSoftMax） | 本涛 2026-11-01「推进 /catalog」；前端已冻结草案，本文件为其权威版本 |
+| 2026-11-03 | v1.1：新增 `budget.defaultSources`（默认清单源 id，顺序即推荐顺序），一致性铁律加第 4 条「默认集可被页面复算」；明确 `web/` 不得写阈值字面量与读已取消的 `budget.tools` | 默认推荐集改为显式清单（7 源 35 工具、全库 41）后，页面否则无法知道"默认"是哪些源；由后端负责人定 |

@@ -22,6 +22,29 @@ import { PlantOmicsError } from '../core/errors.js';
 export const SUBSET_TOOLS_HARD_MAX = 80;
 /** 默认推荐集的工具数软建议（超过只警示）。 */
 export const DEFAULT_SET_TOOLS_SOFT_MAX = 40;
+
+/**
+ * **默认推荐集的源清单**（2026-11-03 后端负责人定）。
+ *
+ * 为什么不再"默认集 = 全库"：全库已经 41 个工具、越过软建议 40，而且随接源只会继续涨——
+ * 那样软建议就永远在报警，等于没有。所以默认集是**显式列出的源**：新接一个源不会自动进默认集，
+ * 要进就得改这张表，改动可被审阅、可被 diff。
+ *
+ * 取舍口径：T1 主源 + 元工具；`scod`（单一作物甘蔗）、`string`（蛋白互作）、
+ * `uniprot`（蛋白条目）留给用户在市场上自行订阅。
+ */
+export const DEFAULT_SET_SOURCES: readonly string[] = [
+  'wheatomics', 'gramene', 'ensemblplants', 'ic4r', 'strawberry', 'gwh', 'icg',
+];
+
+/** 默认推荐集的工具数 = 清单内各源的工具 + 元工具（元工具不属于任何源，随默认集一起下发）。 */
+export function defaultSetToolCount(registry: ToolRegistry): number {
+  const wanted = new Set(DEFAULT_SET_SOURCES);
+  const sourceTools = registry.listSources()
+    .filter((bundle) => wanted.has(bundle.manifest.id))
+    .reduce((sum, bundle) => sum + bundle.tools.length, 0);
+  return sourceTools + registry.listMetaTools().length;
+}
 /** 历史值：v2.3 起**不再作为拦截条件**，仅保留导出供统计/展示对照。 */
 export const HISTORICAL_SOURCE_LIMIT = 20;
 export const HISTORICAL_TOOL_LIMIT = 40;
@@ -62,6 +85,8 @@ export interface BudgetReport {
   readonly tools: number;
   /** 其中的元工具数（如检索层入口）；metaTools ⊆ tools */
   readonly metaTools: number;
+  /** 默认推荐集（按 `DEFAULT_SET_SOURCES` 清单算）的工具数；**不等于全库** */
+  readonly defaultSetTools: number;
   /** 每个工具名在规则前缀下的可用字符预算 */
   readonly nameBudget: number;
   /** 默认推荐集是否超过软建议（只警示，不影响启动） */
@@ -93,9 +118,10 @@ export function assertBudget(registry: ToolRegistry, serverName: string): Budget
   if (problems.length > 0) throw new BudgetError(problems);
 
   const warnings: string[] = [];
-  if (tools.length > DEFAULT_SET_TOOLS_SOFT_MAX) {
+  const defaultSetTools = defaultSetToolCount(registry);
+  if (defaultSetTools > DEFAULT_SET_TOOLS_SOFT_MAX) {
     warnings.push(
-      `默认推荐集 ${tools.length} 个工具，超过软建议 ${DEFAULT_SET_TOOLS_SOFT_MAX}（不拒绝启动）；`
+      `默认推荐集 ${defaultSetTools} 个工具，超过软建议 ${DEFAULT_SET_TOOLS_SOFT_MAX}（不拒绝启动）；`
       + '32K 级上下文会明显拥挤，建议用户按需订阅，或按默认集取舍（v2.3 §10.2）',
     );
   }
@@ -104,6 +130,7 @@ export function assertBudget(registry: ToolRegistry, serverName: string): Budget
     sources,
     tools: tools.length,
     metaTools: registry.listMetaTools().length,
+    defaultSetTools,
     nameBudget,
     warnings,
     subsetToolsHardMax: SUBSET_TOOLS_HARD_MAX,

@@ -3,6 +3,24 @@
 格式照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号用语义化版本。
 **破坏性变更（工具改名、必填参数变化）必须在本文件显式标 ⚠️**。
 
+## [plantomics-hub 0.2.0] — 未发布
+
+> 本段是当前包线（`plantomics-hub`），与下方 `[0.2.0] — 2026-10-28`（旧包 `dsh-plugin-plant-omics` 时期）
+> 不是同一条版本线。本段内容**不进 0.1.1**；须本涛批准后才发。
+
+### ⚠️ 破坏性变更：默认会话的工具从「全库」变成 35 个
+
+- **默认加载集不再等于全库**：默认会话只加载 `DEFAULT_SET_SOURCES` 清单里的 7 个源
+  （`wheatomics` / `gramene` / `ensemblplants` / `ic4r` / `strawberry` / `gwh` / `icg`）+ 2 个元工具
+  = **35 个工具**。此前是"全库默认全部加载"，接入 UniProt 后全库 41 个，越过软建议 40 且会继续涨。
+- **受影响的老用户**：`scod`（甘蔗）、`string`（蛋白互作）、`uniprot`（蛋白条目）**不再默认出现**。
+  取回方式：请求头 `x-plantomics-sources: scod,string,uniprot`，或服务端 `PLANTOMICS_SOURCES=scod,string,uniprot`。
+  不传这两个东西时，模型看到的就是那 35 个工具。
+- **为什么算破坏性**：对已安装用户，"某个工具突然不见了"与"工具改名"同级——模型会答"没有这个能力"。
+  所以按破坏性处理，并在 README 的默认加载说明里写明清单与取回方式。
+- **可检查性**：`npm run check:counts` 现在核的是 **README 里的清单与 `DEFAULT_SET_SOURCES` 逐项一致**，
+  不是核一句固定措辞；清单变了而 README 没改会直接红。
+
 ## [plantomics-hub 0.1.1] — 未发布
 
 ### ⚠️ 参数契约变更（新增可选参数，但改变了既有工具的行为描述）

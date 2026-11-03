@@ -162,3 +162,40 @@ describe('GET /catalog：边界与禁止项', () => {
     expect(body(withHeader.text)).toBe(body(plain.text));
   });
 });
+
+/**
+ * ETag 与 304（契约 §二：`ETag: "<内容哈希>"`）。
+ *
+ * 2026-11-03 检索负责人实测的 M2：ETag 每次都变、304 从未发生。根因是 `generatedAt`
+ * 是"本次响应的时刻"，被算进了哈希。下面三条把"内容哈希"钉住：同内容同 ETag、命中返 304 空体、
+ * 不命中的 If-None-Match 不许被误判成 304。
+ */
+describe('GET /catalog：ETag 是内容哈希，能命中 304', () => {
+  it('同一注册表状态下两次请求 ETag 相同', async () => {
+    const instance = await start();
+    const first = await getCatalog(instance.url);
+    const second = await getCatalog(instance.url);
+    expect(first.response.headers.get('etag')).toMatch(/^"[0-9a-f]{32}"$/);
+    expect(second.response.headers.get('etag'), '内容没变，ETag 就必须一样，否则 304 永远不会发生')
+      .toBe(first.response.headers.get('etag'));
+  });
+
+  it('If-None-Match 命中 → 304 且空体，缓存头仍在', async () => {
+    const instance = await start();
+    const first = await getCatalog(instance.url);
+    const etag = first.response.headers.get('etag') ?? '';
+    const hit = await fetch(new URL('/catalog', instance.url).toString(), { headers: { 'if-none-match': etag } });
+    expect(hit.status).toBe(304);
+    expect(await hit.text(), '304 不许带响应体').toBe('');
+    // 缓存端要靠这两个头续期 / 复核，304 也必须有
+    expect(hit.headers.get('etag')).toBe(etag);
+    expect(hit.headers.get('cache-control')).toBe('public, max-age=60');
+  });
+
+  it('负控：不匹配的 If-None-Match 必须回 200 带体，不许误判成 304', async () => {
+    const instance = await start();
+    const miss = await getCatalog(instance.url, { 'if-none-match': '"deadbeefdeadbeefdeadbeefdeadbeef"' });
+    expect(miss.response.status).toBe(200);
+    expect(miss.text.length).toBeGreaterThan(0);
+  });
+});

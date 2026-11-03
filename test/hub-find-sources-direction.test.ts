@@ -115,18 +115,93 @@ describe('排除门：意图求交 + 模式条件，不误杀合法查询', () =
   });
 });
 
-describe('启用集求交：没注册的工具一个都不许出现（RETR-12）', () => {
+describe('启用集求交：未加载源只能出现在「未加载」区块（R1–R5，2026-11-03）', () => {
+  /**
+   * 原意由 R1–R4 承接：2026-11-03 之前这里是「未加载源一个都不许出现」，
+   * 那会让"已接入但本会话没装"的源彻底隐身（接了像没接）。现在允许出现，
+   * 但必须待在固定区块里、带加装路径，且不计入「命中 X 源」。
+   */
   const subset = createRegistry({ enabled: ['wheatomics'] });
-
-  it('只启用小麦时，不得推荐 ic4r / gramene 的工具', async () => {
+  const runSubset = async (question: string): Promise<string> => {
     const tool = subset.getTool('hub_find_sources');
-    expect(tool, 'hub_find_sources 未接线').toBeDefined();
-    const out = await tool!.run({ question: '水稻基因详情' }, { http: forbiddenHttp });
-    expect(out.text).not.toContain('ic4r_gene');
-    expect(out.text).not.toContain('gramene_gene');
-    // 也不许把它们当缺口/线索列出来——它们不在本服务里
-    expect(out.text).not.toContain('ic4r：');
-    expect(out.text).not.toContain('gramene：');
+    if (!tool) throw new Error('hub_find_sources 未接线');
+    return (await tool.run({ question }, { http: forbiddenHttp })).text;
+  };
+  const BLOCK_TITLE = /^另外 \d+ 个相关源未加载/;
+  const CIRCLED = /^[①-⑳] /;
+  const splitAtBlock = (text: string): { before: string[]; after: string[] } => {
+    const lines = text.split('\n');
+    const at = lines.findIndex((line) => BLOCK_TITLE.test(line));
+    return at < 0 ? { before: lines, after: [] } : { before: lines.slice(0, at), after: lines.slice(at) };
+  };
+  // 这个问题在「只启用 wheatomics」时同时出现：已加载候选（wheatomics）+ 未加载命中源（覆盖小麦的其它源）
+  const QUESTION = '小麦基因详情';
+
+  /** 从「未加载」区块里取源 id（区块项形如 `- string：目录登记 2 个工具｜加装：…`）。 */
+  const unloadedIdsOf = (after: string[]): string[] => after.slice(1)
+    .filter((line) => line.startsWith('- '))
+    .map((line) => /^- ([a-z0-9-]+)：/.exec(line)?.[1])
+    .filter((id): id is string => Boolean(id));
+
+  it('R1 结构：未加载源的工具名只许出现在该区块之后，候选区不许有', async () => {
+    const { before, after } = splitAtBlock(await runSubset(QUESTION));
+    const ids = unloadedIdsOf(after);
+    expect(ids.length, '这个问题没有产生「未加载」区块，R1 无从检验').toBeGreaterThan(0);
+    const head = before.join('\n');
+    const block = after.join('\n');
+    for (const id of ids) {
+      expect(head, `未加载源 ${id} 的工具名混进了候选区`).not.toContain(`${id}_`);
+      // 区块内也不许出现工具名（它只报 id 与目录登记数，不当成可调工具）
+      expect(block).not.toContain(`${id}_`);
+    }
+  });
+
+  it('R2 计数：「命中 X 源」只数已加载的候选，不把未加载源算进去', async () => {
+    const text = await runSubset(QUESTION);
+    const { before } = splitAtBlock(text);
+    const matched = /命中 (\d+) 源/.exec(text);
+    expect(matched, '输出里没有「命中 X 源」').toBeTruthy();
+    const declared = Number(matched![1]);
+    const rendered = before.filter((line) => CIRCLED.test(line)).length;
+    expect(declared, `「命中 ${declared} 源」与候选区实际渲染的 ${rendered} 个源不一致`).toBe(rendered);
+    expect(before.join('\n'), '未加载的源被算进了候选区').not.toMatch(/^[①-⑳] (ic4r|gramene)｜/m);
+  });
+
+  it('R3 区块内容：每项要给源 id、目录登记工具数、可执行的加装路径、以及「不可直接调用」', async () => {
+    const { after } = splitAtBlock(await runSubset(QUESTION));
+    expect(after.length, '没有「另外 N 个相关源未加载」区块').toBeGreaterThan(1);
+    expect(after[0], '区块标题必须写明不可直接调用').toContain('不可直接调用');
+    const items = after.slice(1).filter((line) => line.startsWith('- '));
+    expect(items.length, '区块里没有列出源').toBeGreaterThan(0);
+    for (const item of items) {
+      expect(item, `缺源 id 或目录登记数：${item}`).toMatch(/^- [a-z0-9-]+：目录登记 \d+ 个工具/);
+      expect(item, `缺加装路径：${item}`).toContain('加装：');
+      // 可执行的加装路径：要么点名环境变量/请求头，要么明确「启用后重开会话」。
+      // 只说"未加载"不算路径——那就等于只告诉用户"没有"。
+      expect(item, `加装路径不可执行：${item}`).toMatch(/PLANTOMICS_SOURCES|x-plantomics-sources|重开会话/);
+    }
+  });
+
+  it('R4 收尾：「下一步」行不得指向未加载源的工具', async () => {
+    const text = await runSubset(QUESTION);
+    const steps = text.split('\n').filter((line) => line.startsWith('下一步'));
+    expect(steps.length, '输出没有「下一步」行').toBeGreaterThan(0);
+    for (const line of steps) {
+      expect(line, `下一步把用户指向了未加载源：${line}`).not.toMatch(/ic4r|gramene/);
+      expect(line).not.toMatch(/ic4r_|gramene_/);
+    }
+  });
+
+  it('R5 负控：同一问题在「全源启用」时，那些源的工具名出现在候选区（证明挡住它们的是区块，不是过滤）', async () => {
+    const subsetText = await runSubset(QUESTION);
+    const ids = unloadedIdsOf(splitAtBlock(subsetText).after);
+    const full = await findSources(QUESTION);
+    const head = splitAtBlock(full).before.join('\n');
+    const visible = ids.filter((id) => head.includes(`${id}_`));
+    expect(
+      visible.length,
+      `全源启用时仍看不到 ${ids.join('/')} 的工具名：说明不是区块在挡，而是它们压根没被召回`,
+    ).toBeGreaterThan(0);
   });
 
   it('输出的每个工具名都能在当前注册表解析（验收第 3 条）', async () => {

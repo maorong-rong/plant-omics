@@ -1,0 +1,31 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://rest.uniprot.org/uniprotkb/search?query=a&format=json&fields=notafield",
+    "status": 400,
+    "contentType": "application/json",
+    "sourceBytes": 108,
+    "sourceSha256": "8896713FFBF69A8AE3076FB0853DCD6CBBE912015369F57A2143B47ADCF118EB",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T06:56:35.399Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "provenanceTier": "内部自洽 + 可复现（本次实抓）；**不等于已证明历史采集**",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T06:56:35.399Z",
+    "purpose": "第③类 400：fields 参数非法 108 B —— 又一种入参错误，证明 400 不止两类",
+    "cropping": "verbatim; 未删字段",
+    "canonicalSha256": "246808538F7E9FD08FC3EBC16FD75986C7B00C7D51C61DC74A98B5B411491476",
+    "canonicalSha256OfRawBody": "246808538F7E9FD08FC3EBC16FD75986C7B00C7D51C61DC74A98B5B411491476",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256。sourceSha256 只对给定基线验一致性（**不证明历史采集动作**）；canonical 只对所比较的这两份内容成立，不保证未来跨次永不变。",
+    "rawBodyNote": "rawBody 为上游原体逐字副本（与 sourceSha256 对应，可离线校验）。它是 2026-11-01 抓取的，**不得据此推断更早的采集时刻**。"
+  },
+  "rawBody": "{\"url\":\"http://rest.uniprot.org/uniprotkb/search\",\"messages\":[\"Invalid fields parameter value 'notafield'\"]}",
+  "payload": {
+    "url": "http://rest.uniprot.org/uniprotkb/search",
+    "messages": [
+      "Invalid fields parameter value 'notafield'"
+    ]
+  }
+}

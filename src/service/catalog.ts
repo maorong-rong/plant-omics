@@ -15,7 +15,7 @@
 import type { SourceBundle, ToolDefinition } from '../core/types.js';
 import type { ToolRegistry } from '../core/registry.js';
 import { applyPinnedOrder, loadPinnedSources, type PinnedSources } from '../core/pinned.js';
-import { DEFAULT_SET_TOOLS_SOFT_MAX, SUBSET_TOOLS_HARD_MAX } from './budget.js';
+import { DEFAULT_SET_SOURCES, DEFAULT_SET_TOOLS_SOFT_MAX, SUBSET_TOOLS_HARD_MAX, defaultSetToolCount } from './budget.js';
 
 /** 实测折算：37 工具 ≈ 10,274 token，约 280 token/工具（契约 §三 固定口径）。 */
 export const EST_TOKENS_PER_TOOL = 280;
@@ -51,6 +51,8 @@ export interface CatalogResponse {
   readonly generatedAt: string;
   readonly totals: { sources: number; tools: number; metaTools: number };
   readonly budget: {
+    /** 默认推荐集包含的源 id，顺序即推荐顺序（页面初始选中/全选一律照它，别自己全选所有源） */
+    defaultSources: readonly string[];
     defaultSetTools: number;
     defaultSetSoftMax: number;
     defaultSetOverSoftMax: boolean;
@@ -126,7 +128,8 @@ export function buildCatalog(
   });
 
   // 默认集 = 不带订阅头时实际下发的工具数（含元工具：它们真的会进模型上下文）
-  const defaultSetTools = tools.length;
+  // 默认推荐集按**显式清单**算，不是全库（2026-11-03 负责人定）：新接源不会自动进默认集。
+  const defaultSetTools = defaultSetToolCount(registry);
 
   /**
    * 排序：与 site/ 读**同一份** src/core/pinned-sources.json（构建后 dist/core/）。
@@ -149,6 +152,9 @@ export function buildCatalog(
     generatedAt: (options.now ?? new Date()).toISOString(),
     totals: { sources: bundles.length, tools: tools.length, metaTools: metaTools.length },
     budget: {
+      // 契约 v1.1 铁律 4：逐项来自 DEFAULT_SET_SOURCES，顺序照抄；defaultSetTools 必须等于
+      // 「这些源的工具数之和 + totals.metaTools」——页面据此复算，不许自己全选所有源。
+      defaultSources: [...DEFAULT_SET_SOURCES],
       defaultSetTools,
       defaultSetSoftMax: DEFAULT_SET_TOOLS_SOFT_MAX,
       defaultSetOverSoftMax: defaultSetTools > DEFAULT_SET_TOOLS_SOFT_MAX,

@@ -257,8 +257,11 @@ export function scanSensitive(files, readBlob) {
   return { blocks, allowed, binarySkipped };
 }
 
-/** 生成 PUBLISH.md：公开仓能追溯到本地哪次提交、由什么导出、哪些内部链接被降级。 */
-export function renderPublishMd({ localSha, localSubject, date, fileCount, baseSha, strippedLinks = [] }) {
+/**
+ * 生成 PUBLISH.md：公开仓能追溯到本地哪次提交、由什么导出、哪些内部链接被降级，
+ * 以及本次相对基线**哪些路径消失或换了位置**（旧快照里有、新快照里没有，容易被当成误删）。
+ */
+export function renderPublishMd({ localSha, localSubject, date, fileCount, baseSha, strippedLinks = [], removals = [] }) {
   const lines = [
     '# 发布快照说明',
     '',
@@ -282,6 +285,24 @@ export function renderPublishMd({ localSha, localSubject, date, fileCount, baseS
     '  `.archify/`、内部规则文件与工作区总览、运维物料（`deploy/`：内网拓扑、主机地址与部署手册）。',
     '',
   ];
+
+  if (removals.length > 0) {
+    lines.push(
+      '## 本次相对基线移除 / 迁移的路径',
+      '',
+      '这些路径在上一次快照里还有、这次快照里没有了（或换了位置）——**是有意为之，不是误删**。',
+      '找文件先看这张表：迁移过的在新路径，下线的已从公开树移除。',
+      '',
+      '| 处理 | 原路径 | 现路径 |',
+      '|---|---|---|',
+    );
+    for (const item of removals) {
+      const from = item.from.replace(/\|/g, '\\|');
+      const to = item.kind === 'moved' ? `\`${item.to.replace(/\|/g, '\\|')}\`` : '—';
+      lines.push(`| ${item.kind === 'moved' ? '迁移' : '下线'} | \`${from}\` | ${to} |`);
+    }
+    lines.push('');
+  }
 
   if (strippedLinks.length > 0) {
     lines.push(
@@ -345,12 +366,19 @@ export function resolveRemote(remote, transport = 'ssh') {
   return remote;
 }
 
+/**
+ * 基线从哪来的：显式 `--base` / 本地 `public` 分支 / 默认 bootstrap 点。
+ *
+ * 返回来源而不是只返回 SHA：原来那句「本地无 public 分支，取默认 bootstrap 点」
+ * 是无条件打印的，`refs/heads/public` 明明存在也照样这么说，会误导后来的人
+ * （2026-11-03 后端负责人指出）。基线值本身没错，错的是这句话。
+ */
 function resolveBase(explicit) {
-  if (explicit) return git(['rev-parse', explicit]).trim();
+  if (explicit) return { sha: git(['rev-parse', explicit]).trim(), source: 'explicit' };
   try {
-    return git(['rev-parse', 'refs/heads/public']).trim();
+    return { sha: git(['rev-parse', 'refs/heads/public']).trim(), source: 'public-branch' };
   } catch {
-    return git(['rev-parse', `${DEFAULT_BASE}^{commit}`]).trim();
+    return { sha: git(['rev-parse', `${DEFAULT_BASE}^{commit}`]).trim(), source: 'default-bootstrap' };
   }
 }
 
@@ -365,7 +393,7 @@ async function main() {
   const localSha = git(['rev-parse', 'HEAD']).trim();
   const localSubject = git(['log', '-1', '--format=%s']).trim();
   const base = resolveBase(args.base);
-  const baseSha = git(['rev-parse', base]).trim();
+  const baseSha = git(['rev-parse', base.sha]).trim();
 
   // 公开仓当前 tip（只读，确认 bootstrap 点没漂）
   let remoteTip = null;
@@ -458,14 +486,13 @@ async function main() {
       }
     }
 
-    const publishMd = renderPublishMd({
-      localSha, localSubject, date, fileCount: kept.length + 1, baseSha, strippedLinks,
-    });
-    const publishBlob = execFileSync('git', ['hash-object', '-w', '--stdin'], {
-      cwd: ROOT, input: publishMd, encoding: 'utf8',
+    // ① 先放一个**占位** PUBLISH.md：只为让树的形状与最终一致（它的存在与否会改变 diff，
+    //    内容不会）。真正的 PUBLISH.md 要等算出本次"移除 / 迁移"清单之后才能写。
+    const hashBlob = (text) => execFileSync('git', ['hash-object', '-w', '--stdin'], {
+      cwd: ROOT, input: text, encoding: 'utf8',
     }).trim();
-    git(['update-index', '--add', '--cacheinfo', `100644,${publishBlob},PUBLISH.md`], { env });
-    const tree = git(['write-tree'], { env }).trim();
+    git(['update-index', '--add', '--cacheinfo', `100644,${hashBlob('PUBLISH.md placeholder\n')},PUBLISH.md`], { env });
+    const treePreview = git(['write-tree'], { env }).trim();
 
     // 审查对**导出后**的内容做：拦的是真正会公开的文本。
     const scan = scanSensitive(kept, (file) => {
@@ -474,15 +501,21 @@ async function main() {
     });
 
     const baseTree = git(['rev-parse', `${baseSha}^{tree}`]).trim();
-    // -z：不转义非 ASCII 路径；name-status 的输出是 STATUS\0path\0 交替
-    const rawDiff = git(['diff-tree', '-r', '-z', '--name-status', baseTree, tree]);
+    // -z：不转义非 ASCII 路径；-M：识别重命名，否则"迁移"会被当成"删除"记账。
+    // name-status 的字段序列是 STATUS\0path\0，R/C 多一个目标路径字段。
+    const rawDiff = git(['diff-tree', '-r', '-z', '-M', '--name-status', baseTree, treePreview]);
     const fields = rawDiff.split('\0').filter((field) => field !== '');
     const changes = [];
-    for (let index = 0; index + 1 < fields.length; index += 2) {
-      const status = fields[index];
-      const file = fields[index + 1];
+    for (let index = 0; index < fields.length;) {
+      const status = fields[index++];
+      const file = fields[index++];
       if (!status || !file) break;
-      changes.push({ status: status[0] ?? '?', file });
+      if (status[0] === 'R' || status[0] === 'C') {
+        const to = fields[index++];
+        changes.push({ status: status[0], file: to ?? file, from: file });
+      } else {
+        changes.push({ status: status[0] ?? '?', file });
+      }
     }
     const summary = { A: 0, M: 0, D: 0, R: 0, T: 0 };
     for (const change of changes) summary[change.status] = (summary[change.status] ?? 0) + 1;
@@ -492,6 +525,18 @@ async function main() {
       const top = change.file.includes('/') ? change.file.split('/')[0] : '(root)';
       byTopDir.set(top, (byTopDir.get(top) ?? 0) + 1);
     }
+
+    // 公开读者会看到这些文件消失：迁移与下线都写进 PUBLISH.md，免得被当成误删。
+    const removals = changes
+      .filter((change) => change.status === 'D' || change.status === 'R')
+      .map((change) => ({ kind: change.status === 'D' ? 'deleted' : 'moved', from: change.from ?? change.file, to: change.file }));
+
+    // ② 真正写 PUBLISH.md（此时已知 removals），再用最终树做快照。
+    const publishMd = renderPublishMd({
+      localSha, localSubject, date, fileCount: kept.length + 1, baseSha, strippedLinks, removals,
+    });
+    git(['update-index', '--add', '--cacheinfo', `100644,${hashBlob(publishMd)},PUBLISH.md`], { env });
+    const tree = git(['write-tree'], { env }).trim();
 
     const report = {
       localSha,
@@ -522,7 +567,10 @@ async function main() {
       const lines = [
         '发布快照 dry-run',
         `  本地 HEAD      ${localSha} — ${localSubject}`,
-        `  快照基线       ${baseSha}${args.base ? '' : '（本地无 public 分支，取默认 bootstrap 点）'}`,
+        `  快照基线       ${baseSha}${
+          base.source === 'public-branch' ? '（本地 public 分支）'
+            : base.source === 'default-bootstrap' ? '（本地无 public 分支，取默认 bootstrap 点）'
+              : '（--base 指定）'}`,
         `  GitHub main    ${remoteTip ?? '读不到'}`,
         `  推送传输       ${args.transport} → ${remote}`,
         `  白名单文件     ${kept.length}（排除 ${skipped.length}: ${skipped.join(', ') || '无'}）`,

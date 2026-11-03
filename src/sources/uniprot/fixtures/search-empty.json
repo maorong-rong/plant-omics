@@ -1,0 +1,30 @@
+{
+  "capture": {
+    "date": "2026-11-01",
+    "request": "GET https://rest.uniprot.org/uniprotkb/search?query=gene:NOSUCHGENEZZZ%20AND%20organism_id:3702&format=json&size=20&fields=accession,gene_names,protein_name,length,organism_name,reviewed",
+    "status": 200,
+    "contentType": "application/json",
+    "sourceBytes": 14,
+    "sourceSha256": "5021E624E752B001CE3E3846E8F158ED4AEB93A4C9A72FDB35A0C5B14A0EEA84",
+    "simulated": false,
+    "client": "curl 8.21.0 (schannel) via PowerShell，单次 GET",
+    "captureTimeStatus": "确证",
+    "capturedAt": "2026-11-01T06:35:19.472Z",
+    "captureTimeNote": "抓取与记录在同一脚本动作内完成，capturedAt 为 UTC 时刻。",
+    "provenanceTier": "内部自洽 + 可复现（本次实抓）；**不等于已证明历史采集**",
+    "xTotalResults": 0,
+    "xUniprotRelease": "2026_03",
+    "purpose": "空结果：200 + {\"results\":[]} 14 B，**带 x-total-results: 0**——能确定说\"命中 0 条\"",
+    "cropping": "verbatim; 未删字段（保持上游原样，便于核对体积与结构）",
+    "canonicalSha256": "5021E624E752B001CE3E3846E8F158ED4AEB93A4C9A72FDB35A0C5B14A0EEA84",
+    "canonicalSha256OfRawBody": "5021E624E752B001CE3E3846E8F158ED4AEB93A4C9A72FDB35A0C5B14A0EEA84",
+    "canonicalNote": "canonicalSha256 = 键名递归排序后 JSON.stringify 再 sha256。sourceSha256 只对给定基线验一致性（**不证明历史采集动作**）；canonical 只对所比较的这两份内容成立，不保证未来跨次永不变。",
+    "rawBodyNote": "rawBody 为上游原体逐字副本（与 sourceSha256 对应，可离线校验）。它是 2026-11-01 抓取的，**不得据此推断更早的采集时刻**。",
+    "rawBodySource": "re-collected",
+    "rawBodyCollectedAt": "2026-11-01T06:35:19.472Z"
+  },
+  "rawBody": "{\"results\":[]}",
+  "payload": {
+    "results": []
+  }
+}

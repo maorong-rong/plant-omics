@@ -134,3 +134,19 @@ describe('能力目录 ↔ 注册表双向一致', () => {
     }
   });
 });
+
+  /**
+   * 业务工具**逐个**都要在能力目录里（2026-11-03 负责人要求）。
+   *
+   * 不核数字相等就够：数字相等可以是"少登记一个、多登记一个"凑出来的。
+   * 这里做双向集合相等——缺登记 → 用户看到的「目录登记 N 个工具」会悄悄变小，
+   * 会觉得这个源不值得装；多登记 → 推荐出不存在的工具（RETR-12 的老问题）。
+   */
+  it('能力目录必须覆盖全部业务工具：注册表每个非元工具都要有登记，且不多不少', () => {
+    const cataloged = TOOL_CAPABILITIES.map((cap) => cap.tool).sort();
+    const business = [...registryToolNames].sort();
+    const missing = business.filter((name) => !cataloged.includes(name));
+    const extra = cataloged.filter((name) => !business.includes(name));
+    expect(missing, `这些业务工具没有登记能力目录：${missing.join(', ')}`).toEqual([]);
+    expect(extra, `能力目录登记了不存在的工具：${extra.join(', ')}`).toEqual([]);
+  });

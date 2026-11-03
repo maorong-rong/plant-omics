@@ -128,7 +128,9 @@ describe('golden 题集：候选真实相关', () => {
   it('「小麦里调控春化的已知基因」候选不得混入缺口/线索条目', async () => {
     const result = await run('小麦里调控春化的已知基因');
     const ids = candidateIds(result.text);
-    expect(ids).toEqual(['wheatomics']);
+    // 2026-11-03 接线 uniprot 后：它按 gene-search + 小麦在册，合法进候选（负责人定的映射）。
+    // 期望值跟着改成两源；这里核的是「有谁」，不是「只能有一个」。
+    expect(ids).toEqual(['wheatomics', 'uniprot']);
   });
 
   it('物种在册判断与目录一致（水稻/小麦在册，油菜不在册）', () => {
@@ -154,7 +156,10 @@ describe('输出预算与出处', () => {
     expect(utf8Bytes(result.text)).toBeLessThanOrEqual(DEFAULT_MAX_BYTES);
     expect(result.text).toContain('源：plantomics-hub 本地目录');
     expect(result.text).toContain('无上游请求');
-    expect(result.text).toContain('目录快照：服务版本');
+    // 2026-11-03 尾注改为「目录快照：全库目录 N 源/M 条能力登记｜服务版本…」；
+    // 这里只要求尾注区块在、且没被预算截断，具体措辞不钉（钉了每改一次文案就得改测试）。
+    expect(result.text).toContain('目录快照：');
+    expect(result.text).toContain('服务版本');
     expect(result.text.trimEnd().endsWith('Z')).toBe(true); // 查询时刻（ISO）在最后一行
   });
 
@@ -332,8 +337,10 @@ describe('方向门与排除门（审查反例）', () => {
 
   it('排除门不误伤无关意图：问"小麦已知基因"时不得冒出区间类禁令', async () => {
     const result = await run('小麦已知基因');
-    expect(result.text).not.toContain('按基因组区间');
-    expect(result.text).not.toContain('模糊搜索');
+    // 断言只盯**排除门**（'明确不做' 那种硬禁令），不盯源的 blindSpot：
+    // uniprot 的盲区本来就写「不按基因组区间」，那是它自己的覆盖说明，不是对用户意图的禁令。
+    // 若把整段文本一起判，接线新源就会误伤——测的想表达的其实是「别冒出无关硬禁令」。
+    expect(result.text).not.toMatch(/明确不做[^\n]*(按基因组区间|模糊搜索)/);
   });
 
   it('两个物种同时出现时，以先出现的为查询主体', async () => {

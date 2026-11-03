@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 // @ts-expect-error 独立 CLI 脚本，无声明文件
-import { EXCLUDED_PATHS, resolveRemote, whitelist } from '../scripts/publish-public.mjs';
+import { EXCLUDED_PATHS, renderPublishMd, resolveRemote, whitelist } from '../scripts/publish-public.mjs';
 
 /**
  * 公开仓导出白名单（PUB-01，2026-10-31）。
@@ -160,5 +160,37 @@ describe('publish-public 传输切换：ssh ⇄ https 只换协议不换目标',
     // 推送与复核都必须用解析后的 remote，不能再直接写 GITHUB
     expect(source).not.toMatch(/git\(\['push', GITHUB/);
     expect(source).toMatch(/git\(\['push', remote,/);
+  });
+});
+
+/**
+ * PUBLISH.md 的"移除 / 迁移"清单（2026-11-03）。
+ * 公开读者看到旧快照里有的文件不见了，很容易当成误删——所以要有一张表说明去向。
+ */
+describe('PUBLISH.md：相对基线的移除/迁移要写清楚', () => {
+  const base = {
+    localSha: 'a'.repeat(40),
+    localSubject: '测试提交',
+    date: '2026-11-03 00:00:00 UTC',
+    fileCount: 10,
+    baseSha: 'b'.repeat(40),
+  };
+
+  it('迁移与下线各占一行，原路径与新路径都在', () => {
+    const md = renderPublishMd({
+      ...base,
+      removals: [
+        { kind: 'moved', from: 'web/market.css', to: 'site/assets/market.css' },
+        { kind: 'deleted', from: 'web/market-sketch.html', to: 'web/market-sketch.html' },
+      ],
+    });
+    expect(md).toContain('移除 / 迁移');
+    expect(md).toContain('| 迁移 | `web/market.css` | `site/assets/market.css` |');
+    expect(md).toContain('| 下线 | `web/market-sketch.html` | — |');
+  });
+
+  it('没有移除时不出现这一节（不塞空表，避免读者以为没关系也说"有变化"）', () => {
+    const md = renderPublishMd({ ...base, removals: [] });
+    expect(md).not.toContain('移除 / 迁移');
   });
 });

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * `hub_find_sources` —— 无状态"指路牌"：把一句自然语言问题映射到候选源与工具名。
  *
  * 它**不激活任何工具、不发任何上游请求、不替工具说"查无"**。
@@ -324,6 +324,15 @@ interface Scored {
   readonly tool: ToolCapability;
   readonly intentHit: number;
   readonly speciesHit: number;
+  /**
+   * 该工具的源是否在**本会话加载的源**里（registry 启用集）。
+   *
+   * 2026-11-03 口径（负责人定 A 方案）：不在启用集的候选**不再被丢弃**——
+   * 丢了对用户就是"能力被隐藏"，和"没接却说能做"是同一种欺骗的反面。
+   * 正确做法是保留候选并标注「需订阅」。真正的禁令因此改成：
+   * **不得出现未标注的不可调用工具**（RETR-12 由"不许提"改为"提了必须说明"）。
+   */
+  readonly installed: boolean;
 }
 
 interface Gap {
@@ -392,8 +401,14 @@ export function selectCandidates(
 
   // 按注册顺序遍历，天然实现 k3 平局键
   for (const tool of TOOL_CAPABILITIES) {
-    // 先与启用集求交：没注册的工具连"缺口"都不该出现（RETR-12）
-    if (enabled && !enabled.has(tool.tool)) continue;
+    /**
+     * **不再与启用集求交**（2026-11-03 A 方案，替换 RETR-12 的旧形式）。
+     *
+     * 旧形式：没在本会话加载的源连候选都不进池，结果"库里有、本会话没装"这件事
+     * 对用户完全不可见——那是隐藏能力。新形式：仍然算候选，但要带「需订阅」档位与
+     * 加装路径；真正的禁令变成**不得出现未标注的不可调用工具**。
+     */
+    const installed = !enabled || enabled.has(tool.tool);
     const semantics = SOURCE_SEMANTICS[tool.sourceId];
     if (!semantics) continue;
 
@@ -469,9 +484,11 @@ export function selectCandidates(
            * `wheatomics_cross_species_homologs`（那个工具是被目标端门挡下的）。
            * 两句话同屏出现就是自相矛盾：一句说方向不匹配、一句说没有这个能力。
            */
+
+          // 2026-11-03：这里**不再**按 enabled 过滤。本会话没加载该源时它明明有这类能力，
+          // 过滤掉就会写出"覆盖但没这个能力"的假话——D7 的 ② 档正是这个病的另一面。
           const sourceHasIntent = TOOL_CAPABILITIES.some((capability) => capability.sourceId === tool.sourceId
-            && capability.intents.some((id) => wanted.has(id))
-            && (!enabled || enabled.has(capability.tool)));
+            && capability.intents.some((id) => wanted.has(id)));
           if (sourceHasIntent) continue;
           const entry = capabilityGaps.get(tool.sourceId)
             ?? { species: new Set<string>(), intents: new Set<IntentId>() };
@@ -624,7 +641,7 @@ export function selectCandidates(
     }
 
     if (intents.length === 0 && species.length === 0) continue;
-    scored.push({ sourceId: tool.sourceId, tool, intentHit, speciesHit });
+    scored.push({ sourceId: tool.sourceId, tool, intentHit, speciesHit, installed });
   }
 
   for (const [sourceId, entry] of capabilityGaps) {
@@ -675,6 +692,8 @@ interface Grouped {
   readonly speciesLabels: string[];
   readonly blindSpots: string[];
   readonly rank: number;
+  /** 该源是否在**本会话加载的源**里；false 时要标「需订阅」并给加装路径（2026-11-03 A 方案） */
+  readonly installed: boolean;
 }
 
 function groupBySource(picked: Scored[]): Grouped[] {
@@ -704,6 +723,7 @@ function groupBySource(picked: Scored[]): Grouped[] {
         speciesLabels: [...speciesLabels],
         blindSpots: [...hit.tool.blindSpots],
         rank: (hit.intentHit > 0 ? 1 : 0) + (hit.speciesHit > 0 ? 1 : 0),
+        installed: hit.installed,
       });
       continue;
     }
@@ -831,6 +851,85 @@ function catalogSpeciesText(): string {
     .join('、');
 }
 
+/**
+ * 能力目录里该源登记了几个工具（2026-11-03「需订阅（…，目录登记 N 个工具）」用）。
+ *
+ * 未加载的源不在注册表里，真实工具数拿不到，所以只能数目录；**标注里写明"目录登记"**，
+ * 不冒充真实工具数。反过来「目录必须覆盖全部业务工具」由自测断言钉住，
+ * 否则 N 会静默变小、用户会觉得这个源不值得装。
+ */
+function catalogSourceCount(): number {
+  return new Set(TOOL_CAPABILITIES.map((capability) => capability.sourceId)).size;
+}
+
+function catalogToolCount(sourceId: string): number {
+  return TOOL_CAPABILITIES.filter((capability) => capability.sourceId === sourceId).length;
+}
+
+/**
+ * 「当前启用的源按物种声明的范围」——**从注册表现算，不写死**。
+ *
+ * 只为 B 档文案用（用户给了物种、词表里没有时，得告诉他能查什么）。
+ * 与 `catalogSpeciesText()` 的区别：这里按 `enabledTools` 求交，只报**本服务实际注册**的源；
+ * 那边是全量目录，用来说明"目录里有什么"。
+ */
+function coveredSpeciesText(enabledTools?: readonly string[]): string {
+  const enabled = enabledTools ? new Set(enabledTools) : undefined;
+  const scopes = TOOL_CAPABILITIES
+    .filter((capability) => !enabled || enabled.has(capability.tool))
+    .flatMap((capability) => capability.speciesScope.query ?? [])
+    .filter((scope) => scope !== '不限物种（按精确 ID）');
+  const unique = [...new Set(scopes)];
+  const labels = unique
+    .filter((label) => !unique.some((other) => other !== label && other.includes(label)))
+    .join('、');
+  return labels || '（当前没有声明物种范围的源）';
+}
+
+/** 当前启用的源 id（按注册顺序），B 档文案里用来提示"可以点名源" */
+function coveredSourceIds(enabledTools?: readonly string[]): string[] {
+  const enabled = enabledTools ? new Set(enabledTools) : undefined;
+  return [...new Set(TOOL_CAPABILITIES
+    .filter((capability) => !enabled || enabled.has(capability.tool))
+    .map((capability) => capability.sourceId))];
+}
+
+/** 有界的编辑距离（只用来判断"像不像拼错"，超过 2 一律当作不像）。 */
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      row[j] = Math.min(prev[j]! + 1, row[j - 1]! + 1, prev[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = row;
+  }
+  return prev[b.length]!;
+}
+
+/**
+ * 「疑似拼写」的近似别名查找——**只用于提示，绝不改变判定**。
+ *
+ * 用户给 `species_hint="Tritcum aestivum"`（少一个 i）时，本服务既认不出它，
+ * 也不能因此说"没识别出物种 → 请补充 species_hint"（他已经给了）。正确说法是
+ * 「未覆盖 + 最接近的已接写法是小麦（triticum aestivum）」，判定仍是"未覆盖"。
+ */
+export function nearestSpeciesAlias(hint: string): { species: string; alias: string } | undefined {
+  const needle = hint.trim().toLowerCase();
+  if (needle.length < 4) return undefined;
+  let best: { species: string; alias: string; distance: number } | undefined;
+  for (const [species, aliases] of Object.entries(SPECIES_ALIASES)) {
+    for (const alias of aliases) {
+      const target = alias.toLowerCase();
+      if (target.length < 4) continue;
+      const distance = editDistance(needle, target);
+      if (distance <= 2 && (!best || distance < best.distance)) best = { species, alias, distance };
+    }
+  }
+  return best === undefined ? undefined : { species: best.species, alias: best.alias };
+}
+
 export interface FindSourcesInput {
   readonly question: string;
   readonly speciesHint?: string;
@@ -841,7 +940,19 @@ export interface FindSourcesOutput {
   readonly text: string;
   readonly raw: {
     readonly recognized: Recognized;
-    readonly candidates: Array<{ sourceId: string; tools: string[] }>;
+    /**
+     * 全部命中源（v2.2 口径）。
+     *
+     * `installed` 是 2026-11-03 新增：false = 该源不在本会话加载的源里，正文会标「需订阅」
+     * 并给加装路径。消费方据此才能分清"现在能调"与"要装才能调"（验收第 3 条）。
+     */
+    readonly candidates: Array<{ sourceId: string; tools: string[]; installed: boolean }>;
+    /**
+     * 未加载的命中源（D7/T1，2026-11-03）：本服务已接入、但**本会话未加载**的源 id。
+     * 它们不进 `candidates`、不计入「命中 X 源」；正文里单独成块并给加装路径。
+     * 物种判不了（`speciesGap='not-given'`）时**必须为空**——T5 门：判不了覆盖就别推荐装源。
+     */
+    readonly unloadedSources?: string[];
     readonly gaps: Gap[];
     readonly clues: Clue[];
     readonly state: 'A' | 'B' | 'ok';
@@ -858,6 +969,15 @@ export interface FindSourcesOutput {
      * 未命中时该字段不出现。
      */
     readonly computation?: string;
+    /**
+     * 物种提示的分档（2026-11-01）——验收时要能一眼分开 A/B 两档，不看文案猜：
+     *   - `'not-given'`：没给物种（`species_hint` 空、问题里也没识别出）；
+     *   - `'hint-unrecognized'`：**给了** `species_hint` 但词表里没有该写法（属未覆盖，不属未识别）。
+     * 识别成功时不出现该字段。
+     */
+    readonly speciesGap?: 'not-given' | 'hint-unrecognized';
+    /** B 档回显：用户原样给的 `species_hint`（便于验收核对没有被改写） */
+    readonly hintEcho?: string;
   };
 }
 
@@ -905,7 +1025,13 @@ export function findSources(input: FindSourcesInput, context: {
   const tail = [
     '——',
     `源：plantomics-hub 本地目录｜hub_find_sources(${echo})｜无上游请求`,
-    `目录快照：服务版本 ${context.version}｜源 ${context.sourceCount}/工具 ${context.toolCount}｜查询时刻 ${now.toISOString()}`,
+    /**
+     * T10（2026-11-03）：**两数并列**，不许只报本会话规模。
+     * 旧写法只写"源 1/工具 4"，用户读成"这个服务只有 1 个源"，而下一行又说有源没加载——自己打自己。
+     * 全库数按能力目录现算（目录源 id 去重 / 条目数），已加载数来自本会话 inject 的快照。
+     */
+    `目录快照：全库目录 ${catalogSourceCount()} 源/${TOOL_CAPABILITIES.length} 条能力登记｜`
+      + `本会话已加载 ${context.sourceCount} 源/${context.toolCount} 工具｜服务版本 ${context.version}｜查询时刻 ${now.toISOString()}`,
   ].join('\n');
 
   if (computation) {
@@ -947,14 +1073,79 @@ export function findSources(input: FindSourcesInput, context: {
   if (speciesHintText || intentHintText) found.clauses.length = 0;
 
   const { picked, gaps, clues } = selectCandidates(found, context.enabledTools);
-  const grouped = groupBySource(picked);
-  /** 逐物种交代：识别到的每个物种都必须有一条判定，结果同时进正文与 raw。 */
-  const verdicts = accountSpecies(found, picked, context.enabledTools);
+  /**
+   * 候选区（D7/R1，2026-11-03 A 方案）：**只放本会话加载的源**。
+   *
+   * 未加载的命中源不进候选区、不计入「命中 X 源」，而是单独成块
+   * 「另外 N 个相关源未加载」并给加装路径——理由：未加载源的工具名若混进候选区，
+   * 用户会以为现在就能调；而被整段丢弃又会隐藏能力。两个位置分工，同一个事实只说一次。
+   */
+  const installedPicked = picked.filter((hit) => hit.installed);
+  const unloadedGroups = groupBySource(picked.filter((hit) => !hit.installed));
+  const grouped = groupBySource(installedPicked);
+  /** T5 门：物种判不了（not-given）时不得推荐装源，否则又是"物种没认出来就凑几个源" */
+  const showUnloaded = found.species.length > 0 || found.sources.length > 0;
+  const unloadedSources = showUnloaded ? unloadedGroups.map((group) => group.sourceId) : [];
+  const unloadedBlock = (): string[] => {
+    if (unloadedSources.length === 0) return [];
+    const lines = [`另外 ${unloadedSources.length} 个相关源未加载（本服务已接入，本会话未加载；不可直接调用）：`];
+    for (const group of unloadedGroups) {
+      lines.push(`- ${group.sourceId}：目录登记 ${catalogToolCount(group.sourceId)} 个工具`
+        + `｜加装：需服务端启用该源（当前仅支持服务端配置），启用后重开会话`);
+    }
+    return lines;
+  };
+  /** 逐物种交代只认已加载的候选，否则会写成"命中：某物种→未加载源" */
+  const verdicts = accountSpecies(found, installedPicked, context.enabledTools);
 
   const speciesText = found.species.length ? found.species.join('、') : '未识别出物种';
   const intentText = found.intents.length
     ? found.intents.map((id) => INTENT_BY_ID.get(id)?.label ?? id).join('、')
     : '未识别出意图';
+
+  /**
+   * 物种提示的两档（2026-11-01 负责人裁定，转来的真实缺陷）：
+   *
+   * - **A 档「没给物种」**：`species_hint` 为空、问题里也没识别出物种
+   *   → 老文案（"未识别出物种…请补充 species_hint"）**原样保留**。
+   * - **B 档「给了但词表里没有」**：`species_hint` 非空、`detectSpecies` 认不出
+   *   → 必须换文案。原来的实现把这两档并成一档，于是用户给出 `species_hint="棉花"`
+   *   却被告知"请补充 species_hint"——让他补一个已经给了的参数，既没用又像在推责任。
+   *
+   * B 档的四条硬要求：① 原文回显 hint；② 已接物种范围**从注册表现算**；
+   * ③ 明说"本服务未覆盖，不是数据不存在"，且**不许**再让用户补 species_hint；
+   * ④ 疑似拼写时提示学名/源 id，但**不得**因此把「未覆盖」改判成「未识别」。
+   *
+   * **不把「棉花」加进 `SPECIES_ALIASES`**：本服务没有任何棉花源，加进词表等于把
+   * "未覆盖"伪装成"已识别但无候选"，那是另一种欺骗。
+   */
+  const hintGiven = speciesHintText !== '';
+  const hintRecognized = hintGiven && detectSpecies(normalize(speciesHintText)).length > 0;
+  if (found.species.length === 0 && hintGiven && !hintRecognized) {
+    const near = nearestSpeciesAlias(speciesHintText);
+    const lines = [
+      `未覆盖你给的物种：${speciesHintText}`,
+      `- 你给的 species_hint：${speciesHintText}（本服务的物种词表里没有这个写法，也没有已接源声明覆盖它）`,
+      `- 已接物种范围（从注册表现算）：${coveredSpeciesText(context.enabledTools)}`,
+      `- 已接源：${coveredSourceIds(context.enabledTools).join('、')}`,
+      '- 说明：这属于「本服务未覆盖」，不是「该数据不存在」；上游数据库可能存在，只是未接入',
+    ];
+    if (near) {
+      lines.push(`- 疑似拼写：最接近的已接写法是「${near.species}」（${near.alias}）；若你要问的是它，请按该写法重试——但这仍然不改判：本条是「未覆盖」，不是「未识别」`);
+    }
+    lines.push('- 下一步：要查它需要接入对应源（docs/新增一个源.md）；也可以在问题里点名源 id（如 wheatomics）只查该源');
+    return finish(lines.join('\n'), tail, {
+      recognized: found,
+      candidates: [],
+      gaps: [],
+      clues: [],
+      state: 'B',
+      speciesVerdicts: [],
+      unloadedSources: [],
+      speciesGap: 'hint-unrecognized',
+      hintEcho: speciesHintText,
+    });
+  }
 
   /**
    * 题级硬门 ②：物种未识别时**不许回落全库**。
@@ -978,6 +1169,9 @@ export function findSources(input: FindSourcesInput, context: {
     ];
     return finish(lines.join('\n'), tail, {
       recognized: found, candidates: [], gaps: [], clues: [], state: 'B', speciesVerdicts: verdicts,
+      unloadedSources: [],
+      // A 档：确实没给物种（hint 为空且题面也没识别出）——文案保留，字段标明分档
+      speciesGap: 'not-given',
     });
   }
 
@@ -988,7 +1182,11 @@ export function findSources(input: FindSourcesInput, context: {
       '- 请补充：物种（species_hint）或意图（intent_hint），或换更具体的问法（例：「小麦 春化 已知基因」）',
       '- 说明：这是「检索无法识别输入」，既不是没有覆盖，也不是数据不存在。',
     ].join('\n');
-    return finish(body, tail, { recognized: found, candidates: [], gaps, clues, state: 'A', speciesVerdicts: verdicts });
+    return finish(body, tail, {
+      recognized: found, candidates: [], gaps, clues, state: 'A', speciesVerdicts: verdicts,
+      unloadedSources: [],
+      speciesGap: 'not-given',
+    });
   }
 
   // 状态 B：有识别但没有可执行候选
@@ -1045,9 +1243,19 @@ export function findSources(input: FindSourcesInput, context: {
        * 只是它的 target 不含玉米（「小麦同源基因对应玉米」）。单物种那句话逐字保留，
        * 多物种改成"没有源能同时满足这些物种与该意图"，这是唯一对所有物种都成立的说法。
        */
-      lines.push(knownSpecies.length > 1
-        ? `- 判定：${knownSpecies.join('、')} 各${covering}，但没有源能同时答「${labels}」这一问${directionSuffix}，也不是物种没人接`
-        : `- 判定：${knownSpecies.join('、')} ${covering}，但没有覆盖 ${knownSpecies.join('、')} 的「${labels}」类工具${directionSuffix}，不是物种没人接`);
+      /**
+       * 判定行：**一句合成**，不许"先写错再更正"（2026-11-03 检索负责人）。
+       * 反例：先说"没有覆盖 小麦 的「表达」类工具"，紧接着又说"wheatomics 它有这个能力"——
+       * 两句同屏就是自相矛盾。已接入但未加载的源必须与"已加载却没这类工具"的源在同一句里分开写。
+       */
+      const unloadedDesc = unloadedSources
+        .map((id) => `${id}——本会话未加载，它有「${labels}」工具`).join('、');
+      lines.push(unloadedSources.length > 0
+        ? `- 判定：${knownSpecies.join('、')} 有源覆盖（${unloadedDesc}）；`
+          + `${coveringIds.join('、')} 已加载但没有「${labels}」类工具——不是物种没人接`
+        : (knownSpecies.length > 1
+          ? `- 判定：${knownSpecies.join('、')} 各${covering}，但没有源能同时答「${labels}」这一问${directionSuffix}，也不是物种没人接`
+          : `- 判定：${knownSpecies.join('、')} ${covering}，但没有覆盖 ${knownSpecies.join('、')} 的「${labels}」类工具${directionSuffix}，不是物种没人接`));
     }
     if (unknownSpecies.length > 0) {
       lines.push(`- 没有源：${unknownSpecies.join('、')}不在本服务目录（已接：${catalogSpeciesText()}）`);
@@ -1100,7 +1308,16 @@ export function findSources(input: FindSourcesInput, context: {
         lines.push('- 若不限来源：去掉问题里的来源名再问一次，本服务其他源可能有这类工具');
       }
     }
-    lines.push(`- 说明：这是「本服务未覆盖」，不是「该数据不存在」；上游数据库可能存在，只是未接入`);
+    /**
+     * 零命中的三态（D7）：① 库里真没有 → 原文案；② 库里已接入但本会话未加载 → 必须说清两件事
+     * 「已接入」+「本会话未加载」（只说前者像能直接调，只说后者像要重装）；
+     * ③ 源在、能力不在 → 上方的能力缺口。
+     * 旧文案在 ② 情形下写"只是未接入"是**假话**，用户会去等一个永远不会发生的接入。
+     */
+    lines.push(unloadedSources.length > 0
+      ? '- 说明：命中的源本服务已接入，但本会话未加载（见下方「未加载」块）；这不是「该数据不存在」，也不是「本服务没接」'
+      : '- 说明：这是「本服务未覆盖」，不是「该数据不存在」；上游数据库可能存在，只是未接入');
+    lines.push(...unloadedBlock());
     if (gaps.length > 0 || clues.length > 0) {
       lines.push('接近但不覆盖（非可执行候选，不附默认动作）：');
       // 同一物种被多个源"不覆盖"时合并成一行。原来会连列三条
@@ -1131,7 +1348,10 @@ export function findSources(input: FindSourcesInput, context: {
         lines.push(`- ${prefix}：${clue.sourceId}：${clue.reason}`);
       }
     }
-    lines.push(hasDirectionGap
+    lines.push(unloadedSources.length > 0
+      // 已接入但未加载：走"加载后重问"，不是"去接源"
+      ? `下一步：按上方「未加载」块把 ${unloadedSources.join('、')} 加载进本会话后重问；这不是缺源，不要用别的物种或别的意图的工具代替作答。`
+      : hasDirectionGap
       // 方向不匹配时，"走源接入流程"是错的下一步：能力是接进来的，只是方向/目标端不符。
       ? '下一步：按下方缺口行换目标物种或换工具再问（能力是接进来的，不是缺源）。不要用别的物种或别的意图的工具代替作答。'
       : namedIntentGap
@@ -1143,6 +1363,8 @@ export function findSources(input: FindSourcesInput, context: {
           : '下一步：需要覆盖请走源接入流程（docs/新增一个源.md）；不要用其他物种或别的意图的工具代替作答。');
     return finish(lines.join('\n'), tail, {
       recognized: found, candidates: [], gaps, clues, state: 'B', speciesVerdicts: verdicts,
+      // D7 ② 档：命中源本服务已接入、本会话未加载——必须让它进 raw，断言查字段不查文案
+      unloadedSources,
     });
   }
 
@@ -1266,16 +1488,32 @@ export function findSources(input: FindSourcesInput, context: {
     // 顺序还有个硬理由——`finish()` 超预算从**尾部**截断，放在前面保证这段不会被切掉。
     lines.push(...verdictLines());
     shown.forEach((group, index) => {
-      lines.push(`${circled(index)} ${group.sourceId}｜${group.semantics}`);
+      /**
+       * 档位（2026-11-03 A 方案）只陈述**本会话装没装**，不暗示质量：
+       * 在启用集内 → 「默认可调用」；不在 → 「需订阅（本会话未加载 <id>，目录登记 N 个工具）」。
+       * N 取能力目录登记数——未加载的源不在注册表里，真实工具数拿不到；标注比精确更重要。
+       */
+      const tier = group.installed
+        ? '默认可调用'
+        : `需订阅（本会话未加载 ${group.sourceId}，目录登记 ${catalogToolCount(group.sourceId)} 个工具）`;
+      lines.push(`${circled(index)} ${group.sourceId}｜${group.semantics}｜${tier}`);
       lines.push(`   命中：物种=${group.speciesLabels.join('、') || '不限'}；意图=${group.intentLabels.join('、')}`);
       lines.push(`   工具：${group.tools.join('、')}`);
+      if (!group.installed) {
+        // D4① 可执行的加装路径；不给路径，这一档等于只说"没有"
+        lines.push(`   加装：需服务端启用该源（当前仅支持服务端配置），启用后重开会话`);
+      }
       lines.push(`   盲区：${group.blindSpots.slice(0, 3).join('；')}`);
     });
     if (keep < grouped.length) {
       lines.push(`另有 ${grouped.length - keep} 个命中源未展示（受输出预算所限，不是没命中；可加 species_hint/intent_hint 缩小范围后重问）`);
     }
+    // 未加载源单独成块（只出现一次）；候选区与命中数都不含它们（D6 等式不被污染）
+    lines.push(...unloadedBlock());
     lines.push(...uncoveredIntentLines);
-    lines.push(`下一步：直接调 ${shown[0]!.tools[0]}（全部工具现在就可调用，无需激活），参数见其 schema。`);
+    // 「下一步」只指向候选区里的源——候选区已经不含未加载源，这里不必再分档
+    // （R4：正文标了需订阅、收尾却说"直接调 xxx"，前半段就白写；未加载的加装路径在上一块里）
+    lines.push(`下一步：直接调 ${shown[0]!.tools[0]}（本次会话已加载该源，无需激活），参数见其 schema。`);
     return lines;
   };
 
@@ -1300,7 +1538,9 @@ export function findSources(input: FindSourcesInput, context: {
      * 正文受 1408 B 预算限制、并在装不下时明说"另有 N 个源未展示"，
      * 结构化字段必须保留完整命中集，否则下游按 raw 核对会以为源被漏掉。
      */
-    candidates: grouped.map((group) => ({ sourceId: group.sourceId, tools: group.tools })),
+    candidates: grouped.map((group) => ({ sourceId: group.sourceId, tools: group.tools, installed: group.installed })),
+    /** 未加载的命中源（D7/T1）：候选区不含它们，这里单列；T5 门在物种判不了时为空 */
+    unloadedSources,
     gaps,
     clues,
     state: 'ok',

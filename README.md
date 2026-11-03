@@ -26,9 +26,10 @@
 | **SCOD**（NGDC，甘蔗多组学） | T2 | 甘蔗（Saccharum spontaneum）及相关材料：基因组目录、按区间查基因（服务端分页）；区间需**包住整条基因**才返回，0 条不代表该位置没有基因；不是主粮 | 2 | 无 |
 | **Ensembl Plants**（EMBL-EBI） | T1 | 共享 REST：**只开拟南芥、水稻、小麦、玉米四个物种**（响应侧再核 `species`，同 host 也服务脊椎动物）；按符号/ID 查基因、取序列（本批仅 `genomic`）、外部 ID 映射；**查无是 HTTP 400 而非 404**，批量 `POST /lookup/id` 本批未接 | 3 | 无 |
 | **STRING**（EMBL，蛋白互作） | T1 | 实测拟南芥（3702）与水稻（39947 / 4530）：标识符解析成 STRING ID、按 ID 取互作伙伴（含 score）；**不传 species 时上游会跨物种乱解析，本仓强制必填**；未接 `/api/json/interactions`（只处理单标识符单物种） | 2 | 无 |
+| **UniProt 蛋白知识库**（UniProt） | T1 | 蛋白条目：按 ``organism_id``（只开 3702 拟南芥 / 4565 小麦 / 39947 水稻 / 4577 玉米四个已实测物种）+ ``gene``/``accession`` 检索，或按精确 accession 取单条；**不返回序列本体、不做比对、不接 POST 的 ``idmapping``、不分页**；同基因常多条 reviewed/unreviewed，不替用户挑一条；上游 404 = 没有此条目，不是源坏了 | 2 | 无 |
 
 <!-- counts:begin -->
-> **当前源码口径：9 源、39 工具（含 2 个元工具）。** 本块由 `npm run counts -- --write` 从 `dist/` 实测生成，勿手改；已发布包能装到什么另见 `npm run counts -- --published`（两者可以不同，发布滞后不是索引写错）。
+> **当前源码口径：10 源、41 工具（含 2 个元工具）。** 本块由 `npm run counts -- --write` 从 `dist/` 实测生成，勿手改；已发布包能装到什么另见 `npm run counts -- --published`（两者可以不同，发布滞后不是索引写错）。
 <!-- counts:end -->
 
 > 对外只提供两种接入方式（远端入口 / 本地 stdio），见下方「接入」。0.7.x 及更早的 `dsh-plugin-plant-omics` 是旧形态，与本包不可同时启用。
@@ -78,6 +79,8 @@
 | `ensemblplants_xrefs` | 按 `species`+`id`（或 `symbol`）取外部 ID 映射；数组本身可能不含物种字段，故同一请求内先 `lookup` 核验物种与 ID 一致性；空数组只表示本次未返回映射，不代表该基因没有对应记录 |
 | `string_resolve_ids` | 把基因名/标识符解析成 STRING ID（**必须给 `species`**：不传时上游会跨物种乱解析，实测 `FT` 会落到小鼠）；返回 `stringId`、taxon 与首选名 |
 | `string_interaction_partners` | 按已解析的 STRING ID 取互作伙伴与 `score`；`score` 缺失显示「未提供」，不倒成 0；记录必须回显并绑定请求的 ID，不符整次拒答 |
+| `uniprot_search_proteins` | 按 `organism_id`（3702 拟南芥 / 4565 小麦 / 39947 水稻 / 4577 玉米，只开这四个已实测物种）+ `gene` 或 `accession` 检索蛋白条目：accession、基因名、蛋白名、氨基酸长度、`entryType` 已审/未审；**同一基因常多条，不替用户挑一条**；不返回序列本体、不做比对、不接 POST 的 `idmapping`、不分页 |
+| `uniprot_get_entry` | 按精确 accession（6–10 位）取单条：条目类型、蛋白名、基因名、氨基酸长度、物种、关键词、是否有序列；不返回序列本体；**上游 404 表示没有此条目，不是源坏了** |
 
 分类分三轴：物种覆盖、数据类型、查询意图；官方MCP/公开API是接入方式，本仓工具是封装层，不重复计源。Strawberry首版仅GET，不包含批量序列、导出、单细胞、表观或GWAS实际查询。HTML404仅说明未获业务响应，不能断定基因不存在。
 
@@ -101,7 +104,7 @@
 
 **入口** `https://datamcp.moilab.net/mcp`（Streamable HTTP），请求头带 `Authorization: Bearer <token>`。
 **token 向维护者申请**（当前没有自助发放渠道）；没带或不对会得到 `401 {"error":"unauthorized"}`。
-`GET /healthz` 免鉴权，返回 `{"status":"ok","version":"…","sources":9,"tools":39,"metaTools":2}`，可用来确认入口在线。
+`GET /healthz` 免鉴权，返回 `{"status":"ok","version":"…","sources":10,"tools":41,"metaTools":2}`，可用来确认入口在线。
 
 **Claude Code**
 
@@ -216,7 +219,7 @@ npm run check:market # 市场双闸（联网）：数量闸 + 措辞闸，任一
 
 | 命令 | 联网 | 锁什么 | 什么时候跑 |
 |---|---|---|---|
-| `npm run check:counts` | 否 | README 标记块、逐源表格、`/healthz` 示例、「默认全部加载」句、三处预算常量 vs 本地 `dist` | 每次 `npm run check`（已内置） |
+| `npm run check:counts` | 否 | README 标记块、逐源表格、`/healthz` 示例、**默认加载清单（源 id 与工具数，与 `DEFAULT_SET_SOURCES` 逐项对齐）**、三处预算常量 vs 本地 `dist` | 每次 `npm run check`（已内置） |
 | `npm run check:wording` | 否 | `web/` 里会误导安全判断的措辞：把「关闭标签页」写成确定清除即失败；README 与输入框提示必须同时有「通常会清除 + 恢复会话可能保留 + 点按钮」 | 每次 `npm run check`（已内置） |
 | `npm run counts:published` | 是 | 市场描述的数量短语 vs **npm 上最新 tarball 的真实数量**（重下载、核 sha512） | 发布前后单独跑 |
 | `npm run check:market` | 是 | 单一入口，两道都跑：**数字闸**（描述数量短语 vs npm 最新 tarball，含 sha512）＋**措辞闸**（`market/scripts/check-index.mjs`：文案逐字等于 `copy.json`、官方校验器、版本、图标）。任一道红都分别点名并给方向 | 发布前、改市场描述后；**刻意不进 `npm run check`** |
@@ -304,7 +307,7 @@ PLANTOMICS_SOURCES=wheatomics npx -p plantomics-hub@0.1.0 plant-omics-mcp
 - **不做数据镜像。** 要批量下载数据，请回各自的科研项目按那边规则走。
 - **⚠️ 真实 DSH 会话尚未验收。** 已验证的是：适配器能取数、MCP 协议握手正常、包能干净安装、插件装配形状正确。
   **还没验证**的是：在 DSH 里提问 → 模型自主选工具 → 取数 → 带出处作答，这条完整链路。别把前者当成后者。
-- **⚠️ 检索层是发现入口，不是按需展开。** `hub_find_sources` / `hub_status` 按「物种覆盖 ∧ 意图能力」给候选源与工具名，未命中时如实说没有覆盖；当前源码的 39 个工具默认全部加载（订阅集上限 80 个），「只把命中工具装进会话」的按需展开尚未实现。已发布包的工具更少，实际数量以 `npm run counts -- --published` 现查。
+- **⚠️ 检索层是发现入口，不是按需展开。** `hub_find_sources` / `hub_status` 按「物种覆盖 ∧ 意图能力」给候选源与工具名，未命中时如实说没有覆盖；默认加载清单 7 个源、35 个工具（wheatomics、gramene、ensemblplants、ic4r、strawberry、gwh、icg）；清单外的源用 `x-plantomics-sources` 或 `PLANTOMICS_SOURCES` 自取（订阅集上限 80 个），「只把命中工具装进会话」的按需展开尚未实现。已发布包的工具更少，实际数量以 `npm run counts -- --published` 现查。
 - **侧边栏面板是静态清单。** 只显示构建时的源/工具/盲区，不显示探活或调用统计，也不反映运行时的 `sources` 子集配置；它不能用来判断上游是否可用。
 - **上游限流。** Strawberry Data Hub 的公开额度是 120 请求/分钟（导出 12/分钟），超出返 429 带 `Retry-After`。本仓不内置全局限流器，密集调用需自行节流。
 - **工具输出里的上游文本按数据处理。** 数据库内容可能包含看起来像指令的文字，本仓不做过滤；请在客户端侧把工具输出当数据、不当指令。
