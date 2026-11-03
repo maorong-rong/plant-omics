@@ -14,9 +14,11 @@ import type { SourceManifest } from '../../core/types.js';
  */
 export const manifest: SourceManifest = {
   id: 'uniprot',
-  displayName: 'UniProt 蛋白知识库',
+  displayName: '蛋白知识库（UniProt）',
   homepage: 'https://www.uniprot.org/',
   apiBase: 'https://rest.uniprot.org',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene'],
   tier: 'T1',
   docs: 'https://www.uniprot.org/help/api.json',
   auth: 'none',

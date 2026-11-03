@@ -16,6 +16,8 @@ import type { SourceBundle, ToolDefinition } from '../core/types.js';
 import type { ToolRegistry } from '../core/registry.js';
 import { applyPinnedOrder, loadPinnedSources, type PinnedSources } from '../core/pinned.js';
 import { DEFAULT_SET_SOURCES, DEFAULT_SET_TOOLS_SOFT_MAX, SUBSET_TOOLS_HARD_MAX, defaultSetToolCount } from './budget.js';
+import { SERVICES_CATALOG, isCatalogServiceKey } from '../core/catalog-services.js';
+import { speciesNameZh } from './species-names.js';
 
 /** 实测折算：37 工具 ≈ 10,274 token，约 280 token/工具（契约 §三 固定口径）。 */
 export const EST_TOKENS_PER_TOOL = 280;
@@ -42,6 +44,12 @@ export interface CatalogSource {
   readonly blindSpotsTotal: number;
   readonly tools: string[];
   readonly homepage: string;
+  /** 大众称呼，格式「中文常用名（原名简称）」——页面主标题用这个 */
+  readonly displayName: string;
+  /** 该源能提供的研究服务（顶层字典的 key），manifest 显式声明、不推断 */
+  readonly services: readonly string[];
+  /** 中文物种名（呈现层翻译；真相仍是 manifest 的拉丁名） */
+  readonly species: readonly string[];
   // status 缺省 = 未记录（ProbeRecord.status 是可选的）；缺失就不写，不编一个 0。
   readonly lastProbe?: { date: string; ok: boolean; status?: number; ms?: number };
 }
@@ -60,7 +68,33 @@ export interface CatalogResponse {
     estTokensPerTool: number;
     subsetToolsHardMaxTokens: number;
   };
+  /** 全局服务字典，**只有一份**；源只引用 key（契约 v1.2 §三.1 规则 1） */
+  readonly servicesCatalog: readonly { key: string; label: string; hint: string }[];
   readonly sources: CatalogSource[];
+}
+
+/**
+ * 该源能提供的研究服务：**只认 manifest 显式声明**，不从工具名推断（契约 v1.2 §三.1 规则 2）。
+ *
+ * 两条硬断言在这里就抛：空数组、以及引用了字典里没有的 key。宁可启动失败，
+ * 也不许把一个查不到的服务摆到页面上——那比不列更伤。
+ */
+function catalogServicesOf(bundle: SourceBundle): readonly string[] {
+  const declared = bundle.manifest.services ?? [];
+  if (declared.length === 0) {
+    throw new Error(
+      `源 ${bundle.manifest.id} 没有声明 services：在它的 manifest.ts 里列出真实能做的服务（`
+        + `${SERVICES_CATALOG.map((entry) => entry.key).join(' / ')}），不许留空。`,
+    );
+  }
+  const unknown = declared.filter((key) => !isCatalogServiceKey(key));
+  if (unknown.length > 0) {
+    throw new Error(
+      `源 ${bundle.manifest.id} 声明了字典里没有的服务 key：${unknown.join(', ')}。`
+        + `只能用 ${SERVICES_CATALOG.map((entry) => entry.key).join(' / ')}。`,
+    );
+  }
+  return [...declared];
 }
 
 /**
@@ -115,6 +149,9 @@ export function buildCatalog(
     return {
       id: bundle.manifest.id,
       name: bundle.manifest.displayName,
+      displayName: bundle.manifest.displayName,
+      services: catalogServicesOf(bundle),
+      species: bundle.manifest.species.map((latin) => speciesNameZh(latin)),
       tier: bundle.manifest.tier,
       toolCount: bundle.tools.length,
       coverage: coverageOf(bundle),
@@ -149,7 +186,8 @@ export function buildCatalog(
 
   return {
     version: options.version,
-    generatedAt: (options.now ?? new Date()).toISOString(),
+    // 注册表快照时刻（创建时冻结）：同一实例恒定；新建实例时间可能不同，但 ETag 按内容算所以仍相同
+    generatedAt: (options.now ?? new Date(registry.createdAt)).toISOString(),
     totals: { sources: bundles.length, tools: tools.length, metaTools: metaTools.length },
     budget: {
       // 契约 v1.1 铁律 4：逐项来自 DEFAULT_SET_SOURCES，顺序照抄；defaultSetTools 必须等于
@@ -162,6 +200,7 @@ export function buildCatalog(
       estTokensPerTool: EST_TOKENS_PER_TOOL,
       subsetToolsHardMaxTokens: SUBSET_TOOLS_HARD_MAX * EST_TOKENS_PER_TOOL,
     },
+    servicesCatalog: SERVICES_CATALOG.map((entry) => ({ key: entry.key, label: entry.label, hint: entry.hint })),
     sources: orderedSources,
   };
 }

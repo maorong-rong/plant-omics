@@ -46,7 +46,16 @@ const DEFAULT_BASE = '38d9aa6';
  * 就会随 `git ls-tree HEAD` 进公开快照——所以这里与 `FORBIDDEN_PREFIXES` 双重兜底
  * （2026-10-31 PUB-01）。
  */
-export const EXCLUDED_PATHS = ['docs/协作分工.md', 'docs/任务看板.md'];
+export const EXCLUDED_PATHS = [
+  'docs/协作分工.md',
+  'docs/任务看板.md',
+  // 2026-11-03：这几份是内部协作文档。发布扫描拦不住「本涛点头」「代码改动者」这类内部称谓
+  // （它们不是 IP/token 那种敏感串），所以必须在白名单阶段整份排除，不能指望扫描兜底。
+  'docs/发布清单.md',
+  'docs/里程碑.md',
+  'docs/架构导读.md',
+  // `docs/架构解读.md` **不排除**：纯技术解释、0 处内部称谓，公开出去对使用者有用。
+];
 
 /**
  * 基线里存在、本地没有、但**不能因快照而消失**的文件：整体替换式导出默认会删掉它们。
@@ -87,7 +96,93 @@ const FORBIDDEN_PREFIXES = [
   'deploy/',
 ];
 
-/** 指向未发布文件的相对链接：导出时可选降级为纯文本（`--strip-internal-links`）。 */
+/**
+ * 明确要随快照发布的部署物料（`deploy/` 的**其余**文件仍整体排除）。
+ *
+ * 为什么不是放开整个 `deploy/`：目录里还有服务器现状、放宽项清单、运行时配置，
+ * 含真实主机地址与个人姓名。只让下面这些「不含真值」的文件走——脚本把域名、
+ * 本机 IP、期望数字一律从 `/etc/plantomics-hub/deploy.conf` 读，本体不带地址，
+ * 于是服务器上的部署脚本第一次有了 git 出处。
+ *
+ * 这些文件进快照走的是**本地版本**（不是基线旧版）。`README.md`、`nginx.conf` 于
+ * 2026-11-03 脱敏后加入：公开仓里的部署手册此前停在基线，缺 443 块与 `deploy.conf` 说明，
+ * 正是我们要治的"文档与事实不符"。公网 IP 由 `checkDeployNoPublicIp()` 在最终树上再核一遍。
+ */
+export const PUBLISH_DEPLOY_FILES = [
+  'deploy/update.sh',
+  'deploy/check.sh',
+  'deploy/enable-https.sh',
+  'deploy/backup.sh',
+  'deploy/daily-check.sh',
+  'deploy/plantomics-check.cron',
+  'deploy/deploy.conf.example',
+  'deploy/README.md',
+  'deploy/nginx.conf',
+];
+
+/**
+ * 无论如何都不许进快照的 deploy 文件，每项都写清理由（删证据=删理由，注释必须跟着走）：
+ *
+ * - `deploy/deploy.conf`：运行时真值（域名 + 公网 IP + 期望数字），只在服务器 `600 root:root`；
+ * - `deploy/waivers.conf`：放宽项清单含真实人名，命中 `personal-name` 规则，发出去必然 abort；
+ * - `deploy/服务器现状.md`：含公网 IP 与内网拓扑（Nginx/systemd/端口布局）。
+ *
+ * 这三条是**负控的锚点**：`test/publish-public.test.ts` 里有"清空本清单后必须放行"的反证，
+ * 证明拦截来自这里而不是别处硬编码。
+ */
+const DEPLOY_MUST_NOT_PUBLISH = [
+  { file: 'deploy/deploy.conf', why: '运行时真值（域名 / 公网 IP / 期望数字），只留在服务器' },
+  { file: 'deploy/waivers.conf', why: '含真实人名，命中 personal-name' },
+  { file: 'deploy/服务器现状.md', why: '含公网 IP 与内网拓扑' },
+];
+
+/**
+ * 快照里 `deploy/` 的**双向**断言：该有的在、不该有的不在。
+ * 只靠 `internal-host` 规则兜底是不够的——那是"误放开就整次发布失败"，不是"知道有没有纳入"。
+ *
+ * @param {string[]} deployPaths 快照树里 `deploy/` 下的全部路径
+ * @returns {string[]} 问题列表（空数组 = 通过）
+ */
+export function checkDeploySnapshot(deployPaths) {
+  const present = new Set(deployPaths);
+  const problems = [];
+  for (const file of PUBLISH_DEPLOY_FILES) {
+    if (!present.has(file)) {
+      problems.push(`快照 deploy/ 缺少 ${file}：服务器上这份脚本将没有 git 出处`);
+    }
+  }
+  for (const { file, why } of DEPLOY_MUST_NOT_PUBLISH) {
+    if (present.has(file)) {
+      problems.push(`快照 deploy/ 出现了 ${file}（${why}）：必须排除`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * 快照里 `deploy/` 的文档与配置**不许含本机网段地址**（2026-11-03 裁定）。
+ *
+ * 为什么单列一条：`deploy/README.md` 与 `deploy/nginx.conf` 是给外部读者看的部署手册与镜像配置，
+ * 写进公网地址等于把内网拓扑公开；脱敏后又很容易在"下次顺手同步"时被改回来，所以按**内容**核，
+ * 不靠人记得。只查 `.md` / `.conf` / `.example`（脚本本体交给 `internal-host` 规则与脱敏约定）。
+ *
+ * 为什么不用通用的"任意 IPv4"：`127.0.0.1`、`0.0.0.0` 在部署文档里是正常内容，拦它们等于天天误报。
+ * 只盯我们自有的那个网段；规则文本本身不能构成命中，故用 `\d` 拼出，不写字面量。
+ */
+export function checkDeployNoPublicIp(entries) {
+  const ownNetwork = /\b182\.92\.\d{1,3}\.\d{1,3}\b/;
+  const problems = [];
+  for (const { file, text } of entries) {
+    if (!/\.(md|conf|example)$/.test(file)) continue;
+    const match = ownNetwork.exec(text);
+    if (match) {
+      problems.push(`快照 ${file} 含自有网段地址「${match[0]}」：先脱敏（真值留服务器配置，不写进仓库）`);
+    }
+  }
+  return problems;
+}
+
+/** 指向未发布文件的相对链接：**默认**降级为纯文本；`--keep-internal-links` 才保真导出。 */
 const INTERNAL_LINK = /\[([^\]]+)\]\((?:\.\.\/)*(?:记录\/|\.archify\/|论文\/|AGENTS\.md|00_工作区总览\.md|docs\/协作分工\.md|docs\/任务看板\.md|deploy\/)[^)]*\)/g;
 export const STRIPPED_LINK_NOTE = '（私有仓记录，未公开）';
 
@@ -180,12 +275,18 @@ export function trackedPaths() {
   return raw.split('\0').filter(Boolean);
 }
 
-/** 白名单 = 跟踪文件 − 排除项；再兜一层防御性前缀。 */
+/** 白名单 = 跟踪文件 − 排除项；再兜一层防御性前缀。`PUBLISH_DEPLOY_FILES` 是唯一的破例口子。 */
 export function whitelist(allPaths) {
   const excluded = new Set(EXCLUDED_PATHS);
+  const deployAllowed = new Set(PUBLISH_DEPLOY_FILES);
   const kept = [];
   const skipped = [];
   for (const file of allPaths) {
+    // 例外先判：这三个脚本要公开，且必须是**本地版本**（不是基线旧版），否则等于没纳入。
+    if (deployAllowed.has(file)) {
+      kept.push(file);
+      continue;
+    }
     if (excluded.has(file) || FORBIDDEN_PREFIXES.some((prefix) => file === prefix || file.startsWith(prefix))) {
       skipped.push(file);
       continue;
@@ -335,14 +436,22 @@ export function renderPublishMd({ localSha, localSubject, date, fileCount, baseS
  * CLI
  * ------------------------------------------------------------------ */
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const flags = new Set(argv.slice(2));
   const baseIndex = argv.indexOf('--base');
   const transportIndex = argv.indexOf('--transport');
   return {
     apply: flags.has('--apply'),
     push: flags.has('--push'),
-    stripLinks: flags.has('--strip-internal-links'),
+    /**
+     * 内部链接降级（把指向 `记录/`、`deploy/` 等未发布文件的链接换成纯文本）**默认开启**。
+     *
+     * 2026-11-03 裁定：这些悬空链接在默认路径上会产出 11 条 `dangling-internal-link` 阻断，
+     * 于是"发布必须先想起加一个开关"——迟早有人忘，然后误以为发布坏了。
+     * 默认可用是硬要求；逃生口是 `--keep-internal-links`（保真导出，用于调试规则本身）。
+     * `--strip-internal-links` 仍被接受，视为已默认行为的空操作（旧命令不报错）。
+     */
+    stripLinks: !flags.has('--keep-internal-links'),
     base: baseIndex > 0 ? argv[baseIndex + 1] : undefined,
     // 传输方式：ssh（默认）或 https。2026-11-02 实测本机到 github.com:22 时通时断，
     // 而 443 与 credential.helper=manager 正常——写死 SSH 会在推的那一步才炸，所以做成可切。
@@ -538,6 +647,27 @@ async function main() {
     git(['update-index', '--add', '--cacheinfo', `100644,${hashBlob(publishMd)},PUBLISH.md`], { env });
     const tree = git(['write-tree'], { env }).trim();
 
+    // deploy/ 双向断言：拿**最终树**核，不看 kept 列表——kept 只说明"想发什么"，
+    // 树才说明"实际会发什么"（基线保留、链接降级都可能改变结果）。
+    const deploySnapshot = git(['ls-tree', '-r', '-z', '--name-only', tree, '--', 'deploy/'])
+      .split('\0')
+      .filter(Boolean);
+    // 内容检查也要在**最终树**上做：文件在不在是一件事，里面有没有地址是另一件事。
+    const deployEntries = deploySnapshot.map((file) => ({
+      file,
+      text: git(['cat-file', '-p', `${tree}:${file}`]),
+    }));
+    const deployProblems = [
+      ...checkDeploySnapshot(deploySnapshot),
+      ...checkDeployNoPublicIp(deployEntries),
+    ];
+    if (deployProblems.length > 0) {
+      process.stderr.write('❌ 快照 deploy/ 断言未通过：\n');
+      for (const problem of deployProblems) process.stderr.write(`  - ${problem}\n`);
+      process.exitCode = 1;
+      return;
+    }
+
     const report = {
       localSha,
       localSubject,
@@ -554,6 +684,7 @@ async function main() {
       sensitive: { blocks: scan.blocks, allowed: scan.allowed, binarySkippedCount: scan.binarySkipped.length },
       strippedLinks,
       carriedOver,
+      deploySnapshot,
       tree,
       applyReady: scan.blocks.length === 0,
     };
@@ -581,7 +712,8 @@ async function main() {
         '',
         `  敏感审查：阻断 ${scan.blocks.length} 条，占位放行 ${scan.allowed.length} 条，二进制跳过 ${scan.binarySkipped.length} 个`,
         `  基线保留：${carriedOver.length > 0 ? carriedOver.join(', ') : '无'}`,
-        `  内部链接降级：${strippedLinks.length} 处${args.stripLinks ? '' : '（未启用 --strip-internal-links）'}`,
+        `  快照 deploy/（${deploySnapshot.length}）：${deploySnapshot.join(', ') || '无'}`,
+        `  内部链接降级：${strippedLinks.length} 处${args.stripLinks ? '（默认行为）' : '（--keep-internal-links：保真导出）'}`,
       ];
       if (strippedLinks.length > 0) {
         lines.push('  降级链接（逐条）：');

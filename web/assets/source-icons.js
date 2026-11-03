@@ -32,6 +32,14 @@
   "ensemblplants": {
     "color": "#2f7f74",
     "svg": "<circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M12 10.4C11.2 8 9.4 6.6 6.4 6.6c0 3 1.2 4.8 4 5.2\"/><path d=\"M12 10.4c.8-2.4 2.6-3.8 5.6-3.8 0 3-1.2 4.8-4 5.2\"/><path d=\"M12 13.6c-.8 2.4-2.6 3.8-5.6 3.8 0-3 1.2-4.8 4-5.2\"/><path d=\"M12 13.6c.8 2.4 2.6 3.8 5.6 3.8 0-3-1.2-4.8-4-5.2\"/><path d=\"M12 14v7\"/>"
+  },
+  "string": {
+    "color": "#2f7f8f",
+    "svg": "<circle cx=\"6\" cy=\"7\" r=\"2.2\"/><circle cx=\"18\" cy=\"6\" r=\"2.2\"/><circle cx=\"12\" cy=\"17\" r=\"2.2\"/><path d=\"M7.9 8.4 10.7 15M16.2 7.6 13.3 15.4M8.2 6.6l7.6-.5\"/>"
+  },
+  "uniprot": {
+    "color": "#2a5b9a",
+    "svg": "<path d=\"M5.6 18.4c0-4.4 3.3-5.8 6.4-6.4 3.1-.6 6.4-2 6.4-6.4\"/><circle cx=\"5.6\" cy=\"18.4\" r=\"1.7\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"18.4\" cy=\"5.6\" r=\"1.7\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M9.6 9.6 7.8 7.4M14.4 12.4l1.8 2.2\"/>"
   }
 };
 })();

@@ -3,9 +3,11 @@ import type { SourceManifest } from '../../core/types.js';
 /** T1 evidence: portal Data API + OpenAPI 3.1.1; low-frequency GET capture 2026-10-28. */
 export const manifest: SourceManifest = {
   id: 'strawberry',
-  displayName: 'Strawberry Data Hub 草莓及相关病原',
+  displayName: '草莓及相关病原数据平台（Strawberry）',
   homepage: 'https://bioinformatics.hainanu.edu.cn/strawberry/',
   apiBase: 'https://sci.hainanu.edu.cn/strawberry/api/v1',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene', 'expression', 'homology'],
   tier: 'T1',
   docs: 'https://sci.hainanu.edu.cn/strawberry/api/v1/openapi.json',
   auth: 'none',

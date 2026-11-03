@@ -96,6 +96,8 @@ describe('catalog 的 coverage 与盲区字段（按契约输出）', () => {
         homepage: 'https://example.invalid',
         apiBase: 'https://example.invalid',
         tier: 'T2',
+        // 契约 v1.2：services 必填、不许空数组；这个夹具测的是「没有物种」不是「没有服务」
+        services: ['gene'],
         auth: 'none',
         species: [],
         network: 'direct',

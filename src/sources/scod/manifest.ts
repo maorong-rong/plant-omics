@@ -2,9 +2,11 @@ import type { SourceManifest } from '../../core/types.js';
 
 export const manifest: SourceManifest = {
   id: 'scod',
-  displayName: 'SCOD 甘蔗多组学数据库',
+  displayName: '甘蔗多组学数据库（SCOD）',
   homepage: 'https://ngdc.cncb.ac.cn/scod/',
   apiBase: 'https://ngdc.cncb.ac.cn/scod/api',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene'],
   tier: 'T2',
   docs: 'https://ngdc.cncb.ac.cn/scod/help',
   auth: 'none',

@@ -3,9 +3,11 @@ import type { SourceManifest } from '../../core/types.js';
 /** T1 evidence: Swagger 2.0 at /v69/swagger (basePath /v69) + four endpoints observed 2026-10-28 (200). */
 export const manifest: SourceManifest = {
   id: 'gramene',
-  displayName: 'Gramene v69（禾本科比较基因组）',
+  displayName: '禾本科比较基因组（Gramene）',
   homepage: 'https://data.gramene.org/v69/',
   apiBase: 'https://data.gramene.org/v69',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene', 'expression', 'taxonomy'],
   tier: 'T1',
   docs: 'https://data.gramene.org/v69/swagger',
   auth: 'none',

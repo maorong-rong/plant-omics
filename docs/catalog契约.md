@@ -63,6 +63,53 @@ GET /catalog
 1. **`budget.librarySources` / `budget.libraryTools` 取消**，改用 `totals.sources` / `totals.tools`。同一个数字在响应里出现两次，下次一定不一致——今天我们已经在 `/healthz`、`npm run stats`、面板三处踩过这个坑。
 2. **新增 `budget.defaultSetOverSoftMax`**，页面不要自己拿 `defaultSetTools > defaultSetSoftMax` 再判一次。
 
+## 三.1、v1.2 新增：给用户看的字段（2026-11-03 本涛定的三条）
+
+**本涛的三条要求**：① 数据库说明不要讲「多少个 tools」，要讲「支持哪些服务」；② 不要把「缺失/盲区」写进页面；③ 源名与内部代号改成大众熟悉的叫法。
+
+**处置原则**：**数据不动、呈现变**。`toolCount`、`coverage`、`blindSpots` 仍然下发（内部统计与检索层要用），但**页面一个字都不展示**；新增给人看的字段，规则如下。
+
+```jsonc
+{
+  // 顶层新增：全局服务字典，只有一份
+  "servicesCatalog": [
+    { "key": "gene",         "label": "基因查询",   "hint": "按基因 ID 或名称取注释" },
+    { "key": "expression",   "label": "表达谱",     "hint": "组织或处理下的表达量" },
+    { "key": "variant",      "label": "变异查询",   "hint": "区间内的变异位点" },
+    { "key": "interaction",  "label": "互作网络",   "hint": "蛋白互作伙伴" },
+    { "key": "homology",     "label": "同源与共线", "hint": "跨物种对应关系" },
+    { "key": "id-convert",   "label": "编号换算",   "hint": "不同数据库的 ID 互转" },
+    { "key": "sequence",     "label": "序列",       "hint": "基因组或蛋白序列" },
+    { "key": "taxonomy",     "label": "物种分类",   "hint": "覆盖与分类单元信息" },
+    { "key": "genome",       "label": "基因组与装配", "hint": "基因组版本、组装级别与下载入口" },
+    { "key": "sample-meta",  "label": "项目与样本", "hint": "项目号、样本号及其元数据" }
+  ],
+
+  "sources": [
+    {
+      "id": "wheatomics",                                  // 内部 id，前端只做 key，不上页面
+      "displayName": "小麦多组学平台（WheatOmics）",        // 大众称呼，上页面
+      "services": ["gene", "expression", "variant"],        // 服务 key 数组，上页面
+      "species": ["小麦", "硬粒小麦", "节节麦"],            // 中文物种名，上页面
+      "tier": "T1",                                        // 保留，页面要翻成人话或不上
+      "toolCount": 11,                                     // 内部统计，页面不展示
+      "coverage": "…",                                     // 内部，页面不展示
+      "blindSpots": "…",                                   // 内部，页面不展示
+      "tools": ["wheatomics_search_known_genes", "…"]      // 内部，页面不展示
+    }
+  ]
+}
+```
+
+**四条硬规则（实现方按这个写，审查按这个核）**
+
+1. **`services` 只允许字典里存在的 key**，每个源 `services` 必须非空。**全局字典只有一份在顶层**，源只引用 key——否则同一个能力在不同源上会写成「基因查询 / 基因信息 / 基因注释」，用户以为是不一样的东西。
+2. **`services` 必须由 manifest 显式声明，不许从工具名推断**。推断会造出"这个源支持变异查询"而实际只有数据集目录的假象。**宁可少列：列了一个查不到的服务，比不列更伤。**
+3. **`species` 用中文常用名**（小麦、水稻、拟南芥、玉米、甘蔗、草莓…）。**真相仍是 manifest 里的拉丁名**（给检索层与物种核验用），中文名是**呈现层翻译**：映射表放**单一文件** `src/service/species-names.ts`，不许散落在各源。**新增源若带来映射表里没有的物种，`createRegistry()` 直接拒绝启动**（与 budget 门禁同级），并有离线断言——不许默默回落到拉丁名，也不许在请求期抛 500。
+4. **`displayName` 格式：`中文常用名（原名简称）`**，例如「蛋白互作数据库（STRING）」「水稻信息平台（IC4R）」。原名只作括注，不做主标题。
+
+**`generatedAt` 语义同时收紧**：它是**数据生成时刻**，不是请求时刻。实现上取「注册表快照时刻」（服务启动时冻结，注册表变更时更新），不再每请求 `new Date()`。这既符合语义，也让 ETag 稳定——两件事本来就该是同一个原因。
+
 ## 四、一致性铁律（四条，缺一条不算通过）
 
 1. **工具集合逐一相等**：`union(sources[].tools) ∪ metaToolNames` **必须等于** `tools/list` 返回的全集。元工具（`hub_find_sources`、`hub_status`）不进任何 `sources[]`，只计入 `totals.metaTools`——所以「选 2 个源的 4 个工具」实际下发 **6 个**，页面算 token 必须把元工具算进去。
@@ -89,7 +136,7 @@ GET /catalog
 | 4 | **负控**：把 `SUBSET_TOOLS_HARD_MAX` 改成 81 编译后，`/catalog` 报 81（证明没有第二处字面量）；改回 |
 | 5 | 响应全文不含 token 字样、不含 env 值 |
 | 6 | `POST /catalog` → 405 |
-| 7 | `Date` 头与 `generatedAt` 同一请求内相差 < 2 s |
+| 7 | `generatedAt` 在同一注册表状态下**恒定**（连续两次请求相同）；它与 `Date` **不必**接近——`Date` 是响应时刻，`generatedAt` 是注册表快照时刻，两者语义不同，页面也不得把二者的差当"数据新鲜度" |
 | 8 | 不带 `x-plantomics-sources` 与带上它，`/catalog` 输出**完全相同**（本端点不看订阅头） |
 
 ## 七、不做
@@ -106,3 +153,4 @@ GET /catalog
 |---|---|---|
 | 2026-11-01 | 初版：定字段、三条一致性铁律、八条验收；与前端草案两处差异（去 library*、加 defaultSetOverSoftMax） | 本涛 2026-11-01「推进 /catalog」；前端已冻结草案，本文件为其权威版本 |
 | 2026-11-03 | v1.1：新增 `budget.defaultSources`（默认清单源 id，顺序即推荐顺序），一致性铁律加第 4 条「默认集可被页面复算」；明确 `web/` 不得写阈值字面量与读已取消的 `budget.tools` | 默认推荐集改为显式清单（7 源 35 工具、全库 41）后，页面否则无法知道"默认"是哪些源；由后端负责人定 |
+| 2026-11-03 | v1.2：服务字典补 `genome`（基因组与装配）、`sample-meta`（项目与样本），gwh 不再无处归类；`species` 明确「真相是 manifest 拉丁名、中文是单文件映射、缺映射拒绝启动」；验收第 7 条改为「`generatedAt` 恒定」，取消「与 `Date` 相差 < 2 s」这条自相矛盾的要求 | 源适配者实测 `SourceManifest` 无 `publicName`、gwh 无字典项；对抗审查者指出冻结的 `generatedAt` 不可能永远贴近响应 `Date`；由后端负责人定 |

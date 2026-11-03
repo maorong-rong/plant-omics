@@ -3,9 +3,11 @@
 /** T1 evidence: official docs page /ic4r/api (lists 5 GET endpoints) + five endpoints observed 2026-10-28 (200 / JSON). */
 export const manifest: SourceManifest = {
   id: 'ic4r',
-  displayName: 'IC4R 水稻信息共享平台（NGDC）',
+  displayName: '水稻信息平台（IC4R）',
   homepage: 'https://ngdc.cncb.ac.cn/ic4r/',
   apiBase: 'https://ngdc.cncb.ac.cn/ic4r/api/json',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene', 'id-convert'],
   tier: 'T1',
   docs: 'https://ngdc.cncb.ac.cn/ic4r/api',
   auth: 'none',

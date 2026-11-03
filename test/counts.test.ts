@@ -56,8 +56,8 @@ const counts = {
 const head = (block: string) => `# 标题\n\n## 现在支持什么\n\n| 源 | 等级 | 覆盖 | 工具数 | 鉴权 |\n|---|---|---|---|---|\n${block}\n`;
 
 const table = (alpha = 3, beta = 1, alphaTier = 'T1') =>
-  `| **Alpha**（某大学） | ${alphaTier} | 覆盖说明 | ${alpha} | 无 |\n`
-  + `| **Beta** | T2 | 覆盖说明 | ${beta} | 无 |\n`;
+  `| **Alpha 平台**（某大学） | ${alphaTier} | 覆盖说明 | ${alpha} | 无 |\n`
+  + `| **Beta 数据库** | T2 | 覆盖说明 | ${beta} | 无 |\n`;
 
 const readme = (block = renderReadmeBlock(counts), rows = table()) => `${block}\n${head(rows)}`;
 
@@ -135,7 +135,7 @@ describe('README 逐源表格：等级与工具数必须与注册表一致', () 
   it('工具数写错、等级写错、漏源、多源都点名', () => {
     expect(checkReadmeTable(readme(undefined, table(9, 1)), counts)[0]).toContain('工具数写 9');
     expect(checkReadmeTable(readme(undefined, table(3, 1, 'T2')), counts)[0]).toContain('等级写 T2');
-    const missing = readme(undefined, '| **Alpha**（某大学） | T1 | 覆盖说明 | 3 | 无 |\n');
+    const missing = readme(undefined, '| **Gamma**（某大学） | T1 | 覆盖说明 | 3 | 无 |\n');
     expect(checkReadmeTable(missing, counts).some((problem) => problem.includes('缺少源'))).toBe(true);
     const extra = readme(undefined, `${table()}| **Gamma** | T1 | 覆盖说明 | 1 | 无 |\n`);
     expect(checkReadmeTable(extra, counts).some((problem) => problem.includes('Gamma'))).toBe(true);

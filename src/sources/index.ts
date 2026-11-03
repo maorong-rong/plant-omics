@@ -40,6 +40,7 @@ import { manifest as uniprotManifest } from './uniprot/manifest.js';
 import { tools as uniprotTools } from './uniprot/tools.js';
 import { createHubTools } from '../retrieval/index.js';
 import { assertSubsetBudget } from '../service/budget.js';
+import { speciesNameZh } from '../service/species-names.js';
 
 const bundles: SourceBundle[] = [
   { manifest: wheatomicsManifest, tools: wheatomicsTools },
@@ -89,6 +90,16 @@ export function createRegistry(options: RegistryOptions = {}): ToolRegistry {
     if (enabled && !enabled.has(bundle.manifest.id)) continue;
     registry.register(bundle);
   }
+
+  /**
+   * 物种中文名门禁（契约 v1.2 §三.1 规则 3）：任何一个已注册源的物种缺中文映射，就拒绝启动。
+   *
+   * 为什么放在**启动**而不是请求期：请求期抛会把 500 甩给用户，而且只在他们正好问到这个源时
+   * 才暴露；启动就红，接源的人在本地第一次跑就看见。宁可起不来，也不许页面中英混排。
+   */
+  for (const bundle of registry.listSources()) {
+    for (const latin of bundle.manifest.species) speciesNameZh(latin);
+  }
   // 检索层入口（`hub_*`）：不属于任何源，走 registerMetaTool——
   // 计入工具预算、不计入源数。装配点放这里，是因为 `src/sources/index.ts`
   // 是"有哪些源"的唯一清单，元工具由它统一挂上，避免两处都能注册。
@@ -105,6 +116,9 @@ export function createRegistry(options: RegistryOptions = {}): ToolRegistry {
    * 未指定 enabled（用全库默认集）时不经过这里：默认集是软建议 ≤40，只警示不拦截。
    */
   if (enabled) assertSubsetBudget(registry.listTools().length);
+  // 创建后不可变（契约 v1.2）：generatedAt 因此天然稳定，不需要失效机制。
+  // **必须放在全部 register/registerMetaTool 之后**——否则 seal 之后挂元工具会直接抛。
+  registry.seal();
   return registry;
 }
 

@@ -1,0 +1,36 @@
+# PlantOmics Hub 部署脚本配置（模板）
+#
+# 这是**模板**，进公开快照，因此只有键名与说明，**没有任何真实值**。
+# 真值放服务器 `/etc/plantomics-hub/deploy.conf`：`chown root:root && chmod 600`。
+#
+# 脚本怎么读它：`deploy/update.sh`、`deploy/check.sh`、`deploy/enable-https.sh`
+# 启动时 source 这个文件。**下面四个键是必填：缺任何一个，脚本直接报错退出**，
+# 不许静默退回内置默认值——历史上就是因为脚本里写死地址与数字，服务器上那几份
+# 脚本既没有 git 出处，门禁还会在错误的期望值上"装绿"。
+
+# ── 必填 1/4：对外域名 ─────────────────────────────────────────────
+# 门禁与静态自检用它，并配合 `--resolve` 把它固定解析到本机，绕开 80 端口的 301。
+# 键名只有这一个：`enable-https.sh` 里旧叫 DOMAIN，已统一改为 PROXY_HOST。
+PROXY_HOST=
+
+# ── 必填 2/4：本机公网 IP ─────────────────────────────────────────
+# 巡检用它断言 DNS 真的指到这台机器，而不是指着别处在跑的服务。
+# 旧名 EXPECT_IP 已废止，只认 EXPECTED_IP。
+EXPECTED_IP=
+
+# ── 必填 3/4、4/4：门禁期望的源数 / 工具数 ─────────────────────────
+# 与 `/healthz` 的 sources / tools 逐字比对，对不上就回滚。
+# 参考值：2026-11-03 现网实测 10 / 41（含 2 个元工具）；接入源有增减时必须跟着改。
+# 这两个数字本不该由人手填（双真相），后续要做"构建自证"：
+#   用部署的那个 commit 跑 `npm run counts --json`，门禁拿它的输出对 `/healthz`。
+# 现在填值是**过渡方案**，不是终点。
+EXPECT_SOURCES=
+EXPECT_TOOLS=
+
+# ── 可选（不填走脚本内置默认值；这些不是机密）──────────────────────
+# 部署根目录，默认 /srv/plantomics-hub
+# SITE_ROOT=/srv/plantomics-hub/site
+# 服务名，默认 plantomics-hub
+# SERVICE=plantomics-hub
+# Nginx 站点文件名（/etc/nginx/sites-available/<这个名字>）；默认取 PROXY_HOST 的首段
+# NGINX_SITE=

@@ -354,11 +354,22 @@ export function checkReadmeTable(readme, counts) {
     const bold = /\*\*(.+?)\*\*/.exec(cells[0]);
     if (!bold) continue; // 表头与分隔行
     const label = bold[1].trim();
-    const source = counts.perSource.find((candidate) => candidate.displayName.startsWith(label));
-    if (!source) {
-      problems.push(`README 表格里的源「${label}」在注册表里不存在（源被删/改名后表格没跟着改）`);
+    /**
+     * **全等匹配，且必须恰好一条**（2026-11-03）。
+     *
+     * 原来用 startsWith：两个源的 displayName 一旦有包含关系（「小麦」与「小麦多组学（WheatOmics）」），
+     * 它会悄悄匹配到错的那行还照样绿——文案写错应该让检查器喊出来，而不是让它找近似。
+     */
+    const hits = counts.perSource.filter((candidate) => candidate.displayName === label);
+    if (hits.length !== 1) {
+      problems.push(
+        hits.length === 0
+          ? `README 表格里的源「${label}」在注册表里不存在（源被删/改名后表格没跟着改）`
+          : `README 表格里的源「${label}」在注册表里命中 ${hits.length} 条：displayName 有重复，先改 manifest`,
+      );
       continue;
     }
+    const source = hits[0];
     if (seen.has(source.id)) {
       problems.push(`README 表格里的源「${label}」重复出现`);
       continue;

@@ -8,9 +8,11 @@ import type { SourceManifest } from '../../core/types.js';
  */
 export const manifest: SourceManifest = {
   id: 'string',
-  displayName: 'STRING 蛋白互作数据库',
+  displayName: '蛋白互作数据库（STRING）',
   homepage: 'https://string-db.org/',
   apiBase: 'https://string-db.org/api',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['interaction'],
   tier: 'T1',
   docs: 'https://string-db.org/help/api/',
   auth: 'none',

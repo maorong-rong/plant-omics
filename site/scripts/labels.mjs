@@ -107,6 +107,17 @@ export const SOURCE_LABELS = {
         'Protein interactions for Arabidopsis and japonica rice: resolve identifiers to STRING IDs first, then query interaction partners; wheat and maize are not yet verified.',
     },
   },
+  uniprot: {
+    zh: {
+      name: 'UniProt 蛋白知识库',
+      blurb: '拟南芥、小麦、水稻、玉米的蛋白条目：按字段化查询检索，或按登录号取单条；查询必须指定返回字段，否则响应会放大十几倍。',
+    },
+    en: {
+      name: 'UniProt',
+      blurb:
+        'Protein entries for Arabidopsis, wheat, rice and maize: fielded search or a single entry by accession. A query must name its return fields, or responses grow by an order of magnitude.',
+    },
+  },
 };
 
 /**

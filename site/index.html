@@ -48,15 +48,6 @@
 
 <main id="main">
 
-  <!-- 脏构建警告：catalog.build.dirty 为真时才由 app.js 显示。
-       默认 build-data.mjs 会拒绝在 -dirty 构建上生成；这是 --allow-dirty 逃生口的可见标记，
-       防止一份「看着正常」的工作区快照冒充发布口径。 -->
-  <div class="wrap">
-    <div class="notice notice-dirty" id="build-dirty" role="alert" hidden>
-      <span lang="zh"><b>工作区构建，非发布口径。</b>本页数据由 <code>-dirty</code> 构建生成（<span class="mono" data-build-rev>—</span>），可能含未过审或未提交的源；这里的数字与清单不能当作已发布能力。</span>
-      <span lang="en"><b>Working-tree build, not the release basis.</b> This page was generated from a <code>-dirty</code> build (<span class="mono" data-build-rev>—</span>) and may include unreviewed or uncommitted sources; these figures and this list are not published capability.</span>
-    </div>
-  </div>
 
   <!-- ── Hero ─────────────────────────────────────────────────────────── -->
   <section class="hero" id="top">
@@ -92,7 +83,7 @@
       </div>
 
       <p class="cta-note">
-        <span lang="zh">源市场按需订阅：<b>选哪些源，模型就只看到哪些工具</b>。工具数、token 估算与订阅集上限都读自运行中的 <code>GET /catalog</code>，页面不写死任何一个数。</span>
+        <span lang="zh">源市场按需订阅：<b>选哪些源，模型就只看到哪些工具</b>。订阅集成本与上限都读自运行中的 <code>GET /catalog</code>，页面不写死任何一个数。</span>
         <span lang="en">Subscribe source by source: <b>the model only sees the tools you pick</b>. Tool counts, token estimates and the subscription cap come from the live <code>GET /catalog</code>; the page hardcodes none of them.</span>
       </p>
         </div>
@@ -167,43 +158,31 @@
         </figure>
       </div>
 
-      <dl class="stat-strip" aria-label="当前源码口径的规模">
-        <div class="stat">
-          <dt><span lang="zh">已接入源</span><span lang="en">Sources</span></dt>
-          <dd><span data-stat="sources">—</span></dd>
-        </div>
-        <div class="stat">
-          <dt><span lang="zh">可调用工具</span><span lang="en">MCP tools</span></dt>
-          <dd><span data-stat="tools">—</span></dd>
-        </div>
-        <div class="stat">
-          <dt><span lang="zh">源等级</span><span lang="en">Source tiers</span></dt>
-          <dd class="stat-tier">
-            <span class="tier tier-t1">T1 <span data-stat="t1">—</span></span>
-            <span class="tier tier-t2">T2 <span data-stat="t2">—</span></span>
-          </dd>
-        </div>
-        <div class="stat">
-          <dt><span lang="zh">单次输出上限</span><span lang="en">Output cap</span></dt>
-          <dd>4 <span class="stat-of">KB</span></dd>
-        </div>
-      </dl>
-
-      <p class="strip-note">
-        <span lang="zh">统计自当前源码构建，<b>非已发布包</b>。全库只报数、<b>不设上限</b>；上限只在「一次订阅装多少」——<b>订阅集 ≤ 80 是硬阈值</b>，默认推荐集 ≤ 40 是软建议（超出只警示）。</span>
-        <span lang="en">Counted from the current source build, <b>not the published package</b>. The library is counted, not capped; the only limit is what one subscription loads — <b>≤ 80 tools is the hard cap</b>, and ≤ 40 for the default set is a soft suggestion (warn only).</span>
+      <!-- SEO / 无 JS 兜底（FE-09 明确要求）：不漂的**定性**介绍，静态写在 HTML 里。
+           不写源清单、不写工具数、不写任何具体数字——那些会漂，一律运行时向 /catalog 取。 -->
+      <p class="lead-soft" id="intro-static">
+        <span lang="zh">把国内植物组学数据库的查询能力聚合成一套模型能调用的工具：基因与功能注释、表达谱、变异、蛋白互作、同源与共线、编号换算、序列与物种分类，覆盖小麦、水稻、玉米、拟南芥、草莓、甘蔗等作物。</span>
+        <span lang="en">Query capabilities from Chinese plant-omics databases, aggregated into tools a model can call: genes and annotation, expression, variants, protein interactions, homology and synteny, ID conversion, sequences and taxonomy — covering wheat, rice, maize, Arabidopsis and sugarcane, among others.</span>
       </p>
+
+      <!-- 能力标签：服务的全局字典来自 /catalog.servicesCatalog（唯一一份），页面不自造同义词 -->
+      <div class="cap-strip" id="cap-strip" aria-label="支持哪些查询">
+        <span class="cap-label"><span lang="zh">能查什么</span><span lang="en">What you can query</span></span>
+        <div class="cap-chips" id="cap-chips"><span class="cap-pending">正在读取服务信息…</span></div>
+      </div>
+
+      <!-- 取数状态：404 / 超时 / 非 JSON 分别有明确文案，且**不**退回快照 -->
+      <div class="data-state" id="data-state" data-state="loading" role="status">
+        <span class="ds-dot" aria-hidden="true"></span>
+        <span class="ds-text" id="data-state-text">正在向 <code>GET /catalog</code> 取源清单…</span>
+        <button class="ds-retry" id="data-retry" type="button" hidden><span lang="zh">重试</span><span lang="en">Retry</span></button>
+      </div>
 
       <p class="snapshot" id="snapshot-note">
-        <span lang="zh"><b>当前源码口径</b>（取自工作区注册表与 <code>npm run stats</code>，取数时间见下方）：这是源码里此刻能调的源与工具，<b>不是已发布 npm 包的能力清单，也不表示上游此刻可用</b>。</span>
-        <span lang="en"><b>Current source-tree figures</b> (from the working-tree registry and <code>npm run stats</code>; timestamp below): what the source can call right now — <b>not</b> the published package's tool list, and <b>not</b> a statement that any upstream is reachable.</span>
-        <span class="snapshot-meta" id="snapshot-meta"></span>
+        <span class="snapshot-meta" id="snapshot-meta">—</span>
+        <span lang="zh">：数据时刻取自运行中的 <code>GET /catalog</code>，<b>不是本页的构建时间</b>；源清单与能力随服务变化，页面不预先写死。</span>
+        <span lang="en"> — data time read from the live <code>GET /catalog</code>, <b>not from this page's build</b>; the source list and capabilities follow the service, not a baked-in snapshot.</span>
       </p>
-
-      <div class="notice" id="data-missing" hidden>
-        <span lang="zh">数据文件未加载（<code>data/catalog.js</code>）。页面数字与源清单需要它；请在仓库根运行 <code>node site/scripts/build-data.mjs</code> 重新生成。</span>
-        <span lang="en">Data file not loaded (<code>data/catalog.js</code>). Numbers and the source list need it; regenerate with <code>node site/scripts/build-data.mjs</code> in the repo root.</span>
-      </div>
     </div>
   </section>
 
@@ -252,24 +231,19 @@
       <header class="section-head">
         <h2><span lang="zh">能查什么</span><span lang="en">What you can query</span></h2>
         <p>
-          <span lang="zh">每个源都按「实测能力」写覆盖与盲区：T1 有文档化 JSON 接口，T2 无文档但参数化 URL 稳定。下面每个源都附工具清单与盲区原文。</span>
-          <span lang="en">Coverage and blind spots follow what was actually tested: T1 has a documented JSON API, T2 has no docs but stable parameterised URLs. Every card lists its tools and its blind spots verbatim.</span>
+          <span lang="zh">按<b>服务</b>说话、不数工具：每张卡说清这个源支持哪几类查询、覆盖哪些作物。清单与能力取自运行中的服务——服务加了源，这里就多一张卡，不用等发版。</span>
+          <span lang="en">Described by <b>what you can ask</b>, not by tool counts: each card lists the query types a source supports and the crops it covers. The list follows the running service — add a source there and it appears here, no release needed.</span>
         </p>
       </header>
 
-      <div class="tier-legend">
-        <span><span class="tier tier-t1">T1</span> <span lang="zh">有文档化 JSON 接口</span><span lang="en">documented JSON API</span></span>
-        <span><span class="tier tier-t2">T2</span> <span lang="zh">无文档，URL 稳定</span><span lang="en">undocumented, stable URLs</span></span>
-      </div>
-
       <div class="source-grid" id="source-grid">
-        <p class="loading"><span lang="zh">正在读取构建期数据…</span><span lang="en">Loading build-time data…</span></p>
+        <p class="loading"><span lang="zh">正在读取服务信息…</span><span lang="en">Loading service info…</span></p>
       </div>
 
       <div class="meta-block">
         <h3>
-          <span lang="zh">两个元工具：先问「谁能答」</span>
-          <span lang="en">Two meta tools: ask who can answer first</span>
+          <span lang="zh">先问「谁能答」，再问「它现在好吗」</span>
+          <span lang="en">Ask who can answer, then whether it is up</span>
         </h3>
         <div class="meta-grid" id="meta-grid"></div>
       </div>
@@ -299,7 +273,7 @@
                 <span class="tier-badge"><span lang="zh">推荐</span><span lang="en">recommended</span></span>
               </h3>
               <p class="tier-lede">
-                <span lang="zh">客户端直接连公网 MCP 端点，不装包、不起服务、不配反代。换电脑、换机器、只想先试两个工具时选它。</span>
+                <span lang="zh">客户端直接连公网 MCP 端点，不装包、不起服务、不配反代。换电脑、换机器、只想先试两下时选它。</span>
                 <span lang="en">Point the client straight at the public MCP endpoint: no package, no local process, no reverse proxy. Right when you switch machines or just want to try two tools.</span>
               </p>
             </div>
@@ -386,16 +360,17 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
 
       <div class="callout">
         <p>
-          <span lang="zh"><b>只挂一部分源：</b>两档都支持 <code>PLANTOMICS_SOURCES=wheatomics</code> 这样的白名单；源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。<b>挑哪些源、装多少工具</b>先去<a href="market.html">源市场</a>勾，订阅集硬上限是 80 个工具。</span>
-          <span lang="en"><b>Load a subset:</b> both tiers honour a whitelist such as <code>PLANTOMICS_SOURCES=wheatomics</code>. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools. Pick sources in the <a href="market.html">source market</a> first; the hard cap is 80 tools per subscription.</span>
+          <span lang="zh"><b>只挂一部分源：</b>两档都支持 <code>PLANTOMICS_SOURCES=wheatomics</code> 这样的白名单；源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。<b>挑哪些源、装多少</b>先去<a href="market.html">源市场</a>勾；一次订阅装太多会超上限（硬上限 <span data-limit="cap">—</span>，软建议 <span data-limit="warn">—</span>，两个数都读自 <code>/catalog</code>）。</span>
+          <span lang="en"><b>Load a subset:</b> both tiers honour a whitelist such as <code>PLANTOMICS_SOURCES=wheatomics</code>. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools. Pick sources in the <a href="market.html">source market</a> first; one subscription can exceed the cap (hard cap <span data-limit="cap">—</span>, soft suggestion <span data-limit="warn">—</span>, both read from <code>/catalog</code>).</span>
         </p>
       </div>
 
-      <!-- 版本口径：装的是哪个版本，与上面「当前源码口径」分开说 -->
+      <!-- 版本口径：装的是哪个版本，与运行时的源清单分开说。
+           这里不写源数/工具数：那是「多少个 tools」式的卖点，而且会漂；只点名「还没随该版本发布」的源。 -->
       <div class="notice version-note" id="published-note">
         <p>
-          <span lang="zh"><b>第二档装的是 npm 上已发布的 <code><span data-pub="spec">—</span></code></b>：它实际包含 <b><span data-pub="sources">—</span> 个源、<span data-pub="tools">—</span> 个工具</b>；还没随该版本发布的源：<span data-pub="missing" data-pub-lang="zh">—</span>。<b>第一档不受这个版本号约束</b>——它连的是云服务当前构建，清单以端点自己报的为准。</span>
-          <span lang="en"><b>Tier 2 installs <code><span data-pub="spec">—</span></code> from npm</b>, which actually carries <b><span data-pub="sources">—</span> sources and <span data-pub="tools">—</span> tools</b>; not yet in that release: <span data-pub="missing" data-pub-lang="en">—</span>. <b>Tier 1 is not bound to that version</b>: it talks to the cloud service's current build, whose list is whatever the endpoint reports.</span>
+          <span lang="zh"><b>第二档装的是 npm 上已发布的 <code><span data-pub="spec">—</span></code></b>。它发布时收录的源比当前服务少——还没随该版本发布的源：<span data-pub="missing" data-pub-lang="zh">—</span>。<b>第一档不受这个版本号约束</b>：它连的是云服务当前构建，能力以端点自己报的为准。</span>
+          <span lang="en"><b>Tier 2 installs <code><span data-pub="spec">—</span></code> from npm</b>. That release carries fewer sources than the current service — not yet in it: <span data-pub="missing" data-pub-lang="en">—</span>. <b>Tier 1 is not bound to that version</b>: it talks to the cloud service's current build, whose capabilities are whatever the endpoint reports.</span>
         </p>
         <p class="small">
           <span lang="zh">源码里的 <code><span data-version>—</span></code> 是<b>开发版本号，不是 npm 上的版本</b>——发布前它会大于线上可用版本，所以安装命令钉的是上面那个已发布 spec，不是源码里的数字。</span>
@@ -411,8 +386,8 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
       <header class="section-head">
         <h2><span lang="zh">边界与已知限制</span><span lang="en">Boundaries and known limits</span></h2>
         <p>
-          <span lang="zh">下面每一条都不是免责声明，而是会实际影响结果怎么读的事。源级盲区见上方的源卡片，这里写全局的。</span>
-          <span lang="en">Each item below changes how a result should be read. Source-level blind spots are on the cards above; these are the global ones.</span>
+          <span lang="zh">下面每一条都不是免责声明，而是会实际影响结果怎么读的事。源级限制不在这页展开，以免写成第二份会过期的事实；这里只写全局的。</span>
+          <span lang="en">Each item below changes how a result should be read. Source-level limits are deliberately not expanded here — a second copy would go stale; these are the global ones.</span>
         </p>
       </header>
 
@@ -444,8 +419,8 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
         </li>
         <li>
           <b><span lang="zh">侧边栏面板是静态快照。</span><span lang="en">The sidebar panel is a static snapshot.</span></b>
-          <span lang="zh">它显示构建时的源、工具与盲区，不显示探活与调用统计，也不反映运行时的源子集配置；判断上游是否可用只能靠实测。</span>
-          <span lang="en">It shows sources, tools and blind spots as of build time — not liveness, not call stats, not the runtime source subset. Only a probe answers whether an upstream is up.</span>
+          <span lang="zh">它显示的是构建时的静态清单，不显示探活与调用统计，也不反映运行时的源子集配置；判断上游是否可用只能靠实测。</span>
+          <span lang="en">It shows a static build-time list — not liveness, not call stats, not the runtime source subset. Only a probe answers whether an upstream is up.</span>
         </li>
         <li>
           <b><span lang="zh">完整宿主链路的验证范围。</span><span lang="en">How far the host path is verified.</span></b>
@@ -494,10 +469,12 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
 </footer>
 
 <noscript>
-  <div class="wrap"><p class="notice"><span lang="zh">本页的源清单与数字由构建期数据生成，需要启用 JavaScript。</span><span lang="en">The source list and figures are generated from build-time data and need JavaScript enabled.</span></p></div>
+  <div class="wrap"><p class="notice"><span lang="zh">源清单与能力由运行中的服务提供，需要启用 JavaScript；本页上方那段能力介绍是静态写的，无脚本时也能看到，但它不含具体源名与数字——那些会漂。</span><span lang="en">The source list and capabilities come from the running service and need JavaScript. The qualitative introduction above is static and stays readable without scripts, but it names no specific sources or figures — those change.</span></p></div>
 </noscript>
 
-<script src="data/catalog.js"></script>
+<!-- 静态文案（人工写的源名与发布口径）、图标与站点骨架留在这里；
+     会漂的源清单 / 能力 / 数据时刻由 assets/app.js 运行时向 GET /catalog 取，不读 site/data/catalog.js。 -->
+<script src="data/copy.js"></script>
 <script src="assets/source-icons.js"></script>
 <script src="assets/app.js"></script>
 </body>

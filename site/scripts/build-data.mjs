@@ -265,7 +265,11 @@ async function main() {
 
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 
-  const catalog = {
+  /* web/ 的选源页仍需要一份带 sources 的数据（它要按源算订阅集），那份留在 web/data/catalog.js。
+     site/ 的快照（FE-09，2026-11-03 由后端负责人提出、前端负责人定）**只留不漂的东西**：
+     身份、构建时刻、包版本、人工文案与发布事实。源清单 / 工具数 / 等级 / 预算一律不进来——
+     页面运行时向 `GET /catalog` 取，仓库里不再维护第二份数据。 */
+  const fullCatalog = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     gitCommit: gitCommit(),
@@ -278,22 +282,59 @@ async function main() {
     metaTools,
   };
 
+  const slimCatalog = {
+    schemaVersion: 2,
+    generatedAt: fullCatalog.generatedAt,
+    gitCommit: fullCatalog.gitCommit,
+    package: fullCatalog.package,
+    build: fullCatalog.build,
+    note: '本文件不含源清单与任何数字：落地页运行时向 GET /catalog 取。见 site/README.md §2。',
+  };
+
   mkdirSync(OUT_DIR, { recursive: true });
-  const json = `${JSON.stringify(catalog, null, 2)}\n`;
-  writeFileSync(join(OUT_DIR, 'catalog.json'), json, 'utf8');
+  const slimJson = `${JSON.stringify(slimCatalog, null, 2)}\n`;
+  writeFileSync(join(OUT_DIR, 'catalog.json'), slimJson, 'utf8');
+  // 文件名保留 `catalog.js`：部署自检清单里点了它，删名会连带改部署脚本，不在这一轮范围。
+  // 内容已经是瘦身版；页面**不加载**它，只有部署自检与身份核对会读。
   writeFileSync(
     join(OUT_DIR, 'catalog.js'),
-    `/* 由 site/scripts/build-data.mjs 生成，勿手改。源：dist/ 注册表。 */\nwindow.__PLANTOMICS_CATALOG__ = ${json.trim()};\n`,
+    `/* 由 site/scripts/build-data.mjs 生成，勿手改。瘦身快照：只有身份，不含源清单/数字。 */\nwindow.__PMH_SNAPSHOT__ = ${slimJson.trim()};\n`,
+    'utf8',
+  );
+
+  /**
+   * `data/copy.js`：人工文案 + 发布事实（不漂）。页面用它是为了：源名的中文/英文写法、
+   * 元工具的两句说明、已发布 spec 与「还没随该版本发布」的源名。
+   * 它**不含源数、工具数、每源 toolCount**——那些走 /catalog。
+   */
+  const copy = {
+    schemaVersion: 1,
+    generatedAt: fullCatalog.generatedAt,
+    package: fullCatalog.package,
+    published: fullCatalog.published,
+    labels: Object.fromEntries(
+      sources.map((source) => [source.id, { zh: source.label.zh, en: source.label.en }]),
+    ),
+    metaLabels: Object.fromEntries(
+      metaTools.map((tool) => [tool.name, { label: tool.label, summary: tool.summary }]),
+    ),
+  };
+  const copyJson = `${JSON.stringify(copy, null, 2)}\n`;
+  writeFileSync(join(OUT_DIR, 'copy.json'), copyJson, 'utf8');
+  writeFileSync(
+    join(OUT_DIR, 'copy.js'),
+    `/* 由 site/scripts/build-data.mjs 生成，勿手改。只含人工文案与发布事实；不含当前服务的源数/工具数，published 下是已发布包的快照数字（随 npm 发布由生成器重算）。 */\nwindow.__PMH_COPY__ = ${copyJson.trim()};\n`,
     'utf8',
   );
 
   // `web/` 要能独立部署（Nginx 只挂 web/ 也能跑），所以数据与图标在这里一并投递一份。
   // 顺序、置顶、数字都来自这次生成——web/ 里不再自己算、也不再自己排。
+  const webJson = `${JSON.stringify(fullCatalog, null, 2)}\n`;
   const webDir = join(ROOT, 'web', 'data');
   mkdirSync(webDir, { recursive: true });
   writeFileSync(
     join(webDir, 'catalog.js'),
-    `/* 由 site/scripts/build-data.mjs 生成，勿手改。源：dist/ 注册表。 */\nwindow.__PLANTOMICS_CATALOG__ = ${json.trim()};\n`,
+    `/* 由 site/scripts/build-data.mjs 生成，勿手改。源：dist/ 注册表。 */\nwindow.__PLANTOMICS_CATALOG__ = ${webJson.trim()};\n`,
     'utf8',
   );
   // 图标 JS 由 JSON 生成：site 与 web 各一份，内容相同（web 要能独立部署）。
@@ -302,10 +343,11 @@ async function main() {
   writeIconScript(join(ROOT, 'web', 'assets', 'source-icons.js'), orderedIcons);
   copyFileSync(join(ROOT, 'site', 'favicon.svg'), join(ROOT, 'web', 'favicon.svg'));
 
-  console.log(`✓ 已生成 site/data/catalog.{json,js}`);
-  console.log(`  源 ${sources.length}，工具 ${toolCount}（含元工具 ${metaTools.length} 个；全库不设上限）`);
-  console.log(`  等级 T1 ${catalog.tiers.T1} / T2 ${catalog.tiers.T2} / T3 ${catalog.tiers.T3}`);
-  console.log(`  快照 ${catalog.gitCommit ?? '（无 git）'} · ${catalog.generatedAt} · 包版本 ${pkg.version}`);
+  console.log(`✓ 已生成 site/data/catalog.{json,js}（瘦身快照 ${Buffer.byteLength(slimJson)} B，只含身份）`);
+  console.log(`✓ 已生成 site/data/copy.{json,js}（人工文案 + 发布事实）与 web/data/catalog.js（选源页用，含 sources）`);
+  console.log(`  注册表：源 ${sources.length}，工具 ${toolCount}（含元工具 ${metaTools.length} 个；全库不设上限）`);
+  console.log(`  等级 T1 ${fullCatalog.tiers.T1} / T2 ${fullCatalog.tiers.T2} / T3 ${fullCatalog.tiers.T3}`);
+  console.log(`  快照 ${fullCatalog.gitCommit ?? '（无 git）'} · ${fullCatalog.generatedAt} · 包版本 ${pkg.version}`);
   if (buildInfo?.dirty) {
     console.log('  ⚠ 本次是工作区（-dirty）构建，页面会标「工作区构建，非发布口径」——不要拿它当发布口径。');
   }

@@ -3,9 +3,11 @@ import type { SourceManifest } from '../../core/types.js';
 /** T1 evidence: official docs page /gwh/api_documents + four endpoints observed 2026-10-28 (200 / JSON). */
 export const manifest: SourceManifest = {
   id: 'gwh',
-  displayName: 'GWH 基因组仓库（NGDC）',
+  displayName: '基因组仓库（GWH）',
   homepage: 'https://ngdc.cncb.ac.cn/gwh/',
   apiBase: 'https://ngdc.cncb.ac.cn/gwh/api/public',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['genome', 'sample-meta'],
   tier: 'T1',
   docs: 'https://ngdc.cncb.ac.cn/gwh/api_documents',
   auth: 'none',

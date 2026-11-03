@@ -37,7 +37,11 @@ const SOURCES = [
   { id: 'ic4r', name: 'IC4R 水稻信息资源（NGDC）', tier: 'T1', toolCount: 6, coverage: ['Oryza sativa'], homepage: 'https://example.org/ic4r' },
   { id: 'gramene', name: 'Gramene v69', tier: 'T1', toolCount: 4, coverage: ['Oryza sativa'], homepage: 'https://example.org/gramene' },
   { id: 'scod', name: 'SCOD 甘蔗多组学（NGDC）', tier: 'T2', toolCount: 2, coverage: ['Saccharum spontaneum'], homepage: 'https://example.org/scod' },
-  { id: 'ensemblplants', name: 'Ensembl Plants（EMBL-EBI）', tier: 'T1', toolCount: 3, coverage: ['Arabidopsis thaliana'], homepage: 'https://example.org/ensemblplants' }
+  { id: 'ensemblplants', name: 'Ensembl Plants（EMBL-EBI）', tier: 'T1', toolCount: 3, coverage: ['Arabidopsis thaliana'], homepage: 'https://example.org/ensemblplants' },
+  // 第 9 个源：弦与 snapshot 对齐，否则「全选」会把快照里独有、stub 不认识的源也算进来，
+  // 让「全选工具数」与 totals.tools 对不上——那是 fixture 不同步，不是页面错。
+  { id: 'string', name: 'STRING 蛋白互作数据库', tier: 'T1', toolCount: 2, coverage: ['Arabidopsis thaliana', 'Oryza sativa Japonica Group'], homepage: 'https://example.org/string' },
+  { id: 'uniprot', name: 'UniProt 蛋白知识库', tier: 'T1', toolCount: 2, coverage: ['Arabidopsis thaliana', 'Triticum aestivum', 'Oryza sativa', 'Zea mays'], homepage: 'https://example.org/uniprot' }
 ];
 
 const META_TOOLS = ['hub_find_sources', 'hub_status'];
@@ -46,14 +50,53 @@ function toolNamesFor(source, count) {
   return Array.from({ length: count }, (_, index) => `${source.id}_tool_${index + 1}`);
 }
 
-function buildCatalog({ load }) {
+/**
+ * 默认推荐集（契约 v1.1 §四.3 第 4 条）：顺序即推荐顺序，`defaultSetTools` 必须等于
+ * 「这些源的工具数之和 + 元工具数」，页面会自己复算一遍来核。
+ * `?defaults=none` 可以故意不给这两个字段，用来验「页面不猜默认集」。
+ */
+const DEFAULT_SET_SOURCES = ['wheatomics', 'gramene', 'ensemblplants', 'ic4r', 'strawberry', 'gwh', 'icg'];
+
+/**
+ * 契约 v1.2 的「给人看」的字段（§三.1）：服务字典全局唯一，源只引用 key。
+ * `?v12=off` 可以故意不给这组字段，用来验「页面不拿 name/coverage/blindSpots 兜底」。
+ */
+const SERVICES_CATALOG = [
+  { key: 'gene', label: '基因查询', hint: '按基因 ID 或名称取注释' },
+  { key: 'expression', label: '表达谱', hint: '组织或处理下的表达量' },
+  { key: 'variant', label: '变异查询', hint: '区间内的变异位点' },
+  { key: 'interaction', label: '互作网络', hint: '蛋白互作伙伴' },
+  { key: 'homology', label: '同源与共线', hint: '跨物种对应关系' },
+  { key: 'id-convert', label: '编号换算', hint: '不同数据库的 ID 互转' },
+  { key: 'sequence', label: '序列', hint: '基因组或蛋白序列' },
+  { key: 'taxonomy', label: '物种分类', hint: '覆盖与分类单元信息' },
+];
+
+const V12 = {
+  wheatomics: { displayName: '小麦多组学平台（WheatOmics）', services: ['gene', 'expression', 'variant', 'homology'], species: ['小麦', '硬粒小麦', '节节麦'] },
+  strawberry: { displayName: '草莓数据平台（Strawberry Hub）', services: ['gene', 'expression', 'homology'], species: ['草莓', '病原真菌'] },
+  gwh: { displayName: '基因组仓库（GWH）', services: ['taxonomy', 'sequence'], species: ['橡胶蒲公英'] },
+  icg: { displayName: '内参基因库（ICG）', services: ['gene'], species: ['玉米'] },
+  ic4r: { displayName: '水稻信息平台（IC4R）', services: ['gene', 'sequence', 'id-convert'], species: ['水稻'] },
+  gramene: { displayName: '禾本科比较基因组（Gramene）', services: ['gene', 'expression', 'taxonomy'], species: ['水稻'] },
+  scod: { displayName: '甘蔗多组学库（SCOD）', services: ['gene', 'taxonomy'], species: ['甘蔗'] },
+  ensemblplants: { displayName: '植物基因组浏览器（Ensembl Plants）', services: ['gene', 'sequence', 'id-convert'], species: ['拟南芥', '水稻', '小麦', '玉米'] },
+  string: { displayName: '蛋白互作数据库（STRING）', services: ['interaction', 'id-convert'], species: ['拟南芥', '水稻'] },
+  uniprot: { displayName: '蛋白知识库（UniProt）', services: ['sequence', 'id-convert'], species: ['拟南芥', '小麦', '水稻', '玉米'] },
+};
+
+function buildCatalog({ load, defaults = 'on', v12 = 'on' }) {
   const sources = SOURCES.map((source) => {
     const count = load === 'over' ? source.toolCount * 3 : load === 'warn' ? source.toolCount * 2 : source.toolCount;
+    const extra = v12 === 'on' && V12[source.id]
+      ? { displayName: V12[source.id].displayName, services: V12[source.id].services, species: V12[source.id].species }
+      : {};
     return {
       ...shapeSource(source),
+      ...extra,
       toolCount: count,
       tools: toolNamesFor(source, count),
-      // 盲区：只返回 5 条、但声明共 9 条 —— 验证「截断必须说出来」
+      // 盲区：只返回 5 条、但声明共 9 条 —— 验证「截断必须说出来」（v1.2 之后页面不展示这些）
       blindSpots: ['上游未提供版本口径', '仅覆盖已测物种', '大响应会先聚合', '不做批量下载', 'T3 源只登记不实现'],
       blindSpotsTotal: 9,
       lastProbe: '2026-10-31'
@@ -61,19 +104,27 @@ function buildCatalog({ load }) {
   });
   const sourceTools = sources.reduce((sum, source) => sum + source.toolCount, 0);
   const tools = sourceTools + META_TOOLS.length;
+  const defaultSourceTools = sources
+    .filter((source) => DEFAULT_SET_SOURCES.includes(source.id))
+    .reduce((sum, source) => sum + source.toolCount, 0);
+  const budget = {
+    librarySources: sources.length,
+    libraryTools: tools,
+    defaultSetSoftMax: 40,
+    defaultSetOverSoftMax: tools > 40,
+    subsetToolsHardMax: 80,
+    estTokensPerTool: 280,
+    subsetToolsHardMaxTokens: 80 * 280
+  };
+  if (defaults !== 'none') {
+    budget.defaultSources = DEFAULT_SET_SOURCES.filter((id) => sources.some((source) => source.id === id));
+    budget.defaultSetTools = defaultSourceTools + META_TOOLS.length;
+  }
   return {
+    ...(v12 === 'on' ? { servicesCatalog: SERVICES_CATALOG } : {}),
     version: '0.1.0',
     generatedAt: new Date().toISOString(),
-    budget: {
-      librarySources: sources.length,
-      libraryTools: tools,
-      defaultSetTools: tools,
-      defaultSetSoftMax: 40,
-      defaultSetOverSoftMax: tools > 40,
-      subsetToolsHardMax: 80,
-      estTokensPerTool: 280,
-      subsetToolsHardMaxTokens: 80 * 280
-    },
+    budget,
     totals: { sources: sources.length, tools, metaTools: META_TOOLS.length },
     sources
   };
@@ -117,9 +168,17 @@ const server = createServer((req, res) => {
     return;
   }
 
+  // ?hang=毫秒：永不响应，用来验页面的超时分支（8 s 内不许有内容，超时后显示明确文案）
+  const hang = url.searchParams.get('hang');
+  if (hang) { return; }
+
   const time = url.searchParams.get('time') || 'ok';
   const load = url.searchParams.get('load') || 'normal';
-  const catalog = buildCatalog({ load });
+  // ?defaults=none：故意不给 budget.defaultSources / defaultSetTools，验页面**不猜**默认集
+  const defaults = url.searchParams.get('defaults') || 'on';
+  // ?v12=off：不给 servicesCatalog / displayName / services / species，验页面不拿内部字段兜底
+  const v12 = url.searchParams.get('v12') || 'on';
+  const catalog = buildCatalog({ load, defaults, v12 });
   // budget 字段缺失场景：STUB_BUDGET=none（整块缺）/ partial（只给 subsetToolsHardMax）
   if (process.env.STUB_BUDGET === 'none') delete catalog.budget;
   if (process.env.STUB_BUDGET === 'partial') {
@@ -145,5 +204,5 @@ const server = createServer((req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`[catalog-stub] http://127.0.0.1:${PORT}/catalog`);
-  console.log('  场景：?time=ok|header|none  ?load=normal|warn|over  ?fail=404');
+  console.log('  场景：?time=ok|header|none  ?load=normal|warn|over  ?defaults=on|none  ?v12=on|off  ?fail=404');
 });

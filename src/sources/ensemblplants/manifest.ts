@@ -9,9 +9,11 @@ import type { SourceManifest } from '../../core/types.js';
  */
 export const manifest: SourceManifest = {
   id: 'ensemblplants',
-  displayName: 'Ensembl Plants（EMBL-EBI）',
+  displayName: '植物基因组数据库（Ensembl Plants）',
   homepage: 'https://plants.ensembl.org/',
   apiBase: 'https://rest.ensembl.org',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene', 'sequence', 'id-convert'],
   tier: 'T1',
   docs: 'https://rest.ensembl.org/documentation',
   auth: 'none',

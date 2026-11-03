@@ -23,6 +23,11 @@ export class ToolRegistry {
   readonly #sources = new Map<string, SourceBundle>();
   readonly #tools = new Map<string, ToolDefinition>();
   readonly #metaTools = new Map<string, ToolDefinition>();
+  /** 注册表快照时刻：创建时冻结，供 /catalog 的 generatedAt 使用（契约 v1.2） */
+  readonly createdAt: string = new Date().toISOString();
+
+  /** 创建后不可变：见 `seal()`。允许事后增删注册项就必须再定一套失效规则，那套规则自己会出错 */
+  #sealed = false;
 
   /**
    * 注册**元工具**：不属于任何数据源（如 `hub_find_sources`）。
@@ -33,7 +38,26 @@ export class ToolRegistry {
    *
    * 计入**工具**预算（共用 `#tools`，`listTools()` 自然包含），不计入源数。
    */
+  /**
+   * 冻结注册表：之后的任何注册都抛错。
+   *
+   * 为什么不做「变更时失效 generatedAt」的机制：只要允许同一实例增删，就必须定一套
+   * 「什么时候失效」的规则，而那套规则本身会出错（对抗审查者 2026-11-03 指出）。
+   * 规则收成一句「创建后不可变」，`generatedAt` 就是创建时刻，天然稳定。
+   * 将来真要热更注册表，另开设计，不在本批。
+   */
+  seal(): void {
+    this.#sealed = true;
+  }
+
+  #assertNotSealed(): void {
+    if (this.#sealed) {
+      throw new PlantOmicsError('注册表已 seal（创建后不可变）：要换源集请新建一个注册表，不要在旧实例上加删');
+    }
+  }
+
   registerMetaTool(tool: ToolDefinition): void {
+    this.#assertNotSealed();
     if (!tool.name.startsWith(META_PREFIX)) {
       throw new PlantOmicsError(
         `元工具 ${tool.name} 必须以 "${META_PREFIX}" 开头（元工具不属于任何源，靠前缀与源工具区分）`,
@@ -64,7 +88,9 @@ export class ToolRegistry {
   }
 
   register(bundle: SourceBundle): void {
+    this.#assertNotSealed();
     const { manifest, tools } = bundle;
+    
     this.#assertManifest(manifest);
 
     if (this.#sources.has(manifest.id)) {

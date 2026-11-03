@@ -32,7 +32,8 @@
       <h1>按需选源</h1>
       <p class="lede">
         同一份服务、同一套工具，你把哪些源勾上，模型就只看到哪些工具。
-        下面的工具数与 token 都是<b>实时算的</b>，不是写死的——超过 40 个工具会警示，超过 80 个会直接拒绝并说明怎么改。
+        下面的工具数与 token 都是<b>实时算的</b>；<b>阈值不写死在页面里</b>——软建议与硬上限都读自运行中的
+        <code>GET /catalog</code>，超软建议只警示、超硬上限直接拒绝并说明怎么改；取不到阈值时页面显示「待 /catalog」，不猜。
       </p>
     </section>
 
@@ -44,7 +45,7 @@
         <div class="pn"><span class="pn-v" id="n-cap">—</span><span class="pn-k">订阅集硬上限</span></div>
       </div>
       <div class="budget" aria-hidden="true"><span id="budget-bar"></span></div>
-      <p class="picked-note" id="picked-note">每工具按 280 token 估（实测口径）；工具总数按服务端预算计，含 <code>hub_*</code> 两个元工具。</p>
+      <p class="picked-note" id="picked-note">阈值与默认集读自 <code>GET /catalog</code>；每工具 token 估算也取服务端 <code>budget.estTokensPerTool</code>，页面不写死任何一个。</p>
     </section>
 
     <div id="warn" class="banner bad" hidden><div><span class="kind" id="warn-kind">装不下</span><span class="msg" id="warn-msg"></span></div></div>
@@ -53,9 +54,16 @@
       <span class="filters-label">作物</span>
       <div id="crops" class="chips"></div>
       <span class="spacer"></span>
-      <button id="all" type="button">全选</button>
+      <button id="defaults" type="button">默认推荐集</button>
+      <button id="all" type="button">全选（全库）</button>
       <button id="none" type="button">全不选</button>
     </section>
+    <p class="footnote" style="margin:0 0 10px">
+      <b>「默认推荐集」与「全选（全库）」是两件事</b>：默认集照服务端 <code>budget.defaultSources</code> 选中，
+      全选是把库里所有源都选上。以前这个按钮的初始态是「全选」，等于向用户谎报「默认会报警」——
+      服务器不带头时其实只下发默认集，那两个数不一样。
+    </p>
+    <p class="footnote bad-note" id="default-check" hidden></p>
     <p class="footnote" style="margin:0 0 14px">
       作物标签取自各源 <code>manifest.species</code> 原文，<b>不等于该源的收录范围</b>——例如 GWH 按精确 ID 取、不限物种，却因 manifest 登记了橡胶蒲公英而被打上该标签。要看准收录口径，以卡片对应的盲区原文为准。
     </p>
@@ -88,7 +96,9 @@
     </section>
 
     <p class="footnote">
-      数据来自构建期快照 <code id="snap">—</code>。勾选与预算计算全在本地；<b>只有点「连接并核对」时才会向服务发一次 <code>tools/list</code></b>，用来验证服务端是否真的按子集返回。
+      卡片事实（源名、工具数、盲区、物种）来自构建期快照 <code id="snap">—</code>；
+      <b>阈值、默认集与全库工具数来自运行中的 <code>GET /catalog</code></b>（只读、免鉴权），两者分工不同、不互相顶替。
+      勾选与预算计算全在本地；<b>只有点「连接并核对」时才会向服务发一次 <code>tools/list</code></b>，用来验证服务端是否真的按子集返回。
     </p>
   </div>
 </main>

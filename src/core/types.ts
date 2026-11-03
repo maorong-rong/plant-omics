@@ -1,3 +1,5 @@
+import type { CatalogServiceKey } from './catalog-services.js';
+
 /**
  * 核心契约 —— 整个仓库只有这一份「什么是源 / 什么是工具」的定义。
  *
@@ -34,7 +36,16 @@ export interface ProbeRecord {
 export interface SourceManifest {
   /** 小写短名，同时是工具名前缀，如 `wheatomics` */
   id: string;
+  /** 大众称呼，格式：`中文常用名（原名简称）`，如「小麦多组学平台（WheatOmics）」 */
   displayName: string;
+  /**
+   * 该源对外能提供的研究服务，取 `/catalog` 顶层字典里的 key（`SERVICES_CATALOG`）。
+   *
+   * **必须显式声明、不许从工具名推断**（契约 v1.2 §三.1 规则 2）：推断会造出
+   * “这个源支持变异查询”而实际只有数据集目录的假象。宁可少列——列了一个查不到的服务，
+   * 比不列更伤。
+   */
+  services: readonly CatalogServiceKey[];
   homepage: string;
   /** 不带尾斜杠，如 `https://wheatomics.sdau.edu.cn/api` */
   apiBase: string;

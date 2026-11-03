@@ -10,9 +10,11 @@ import type { SourceManifest } from '../../core/types.js';
  */
 export const manifest: SourceManifest = {
   id: 'wheatomics',
-  displayName: 'WheatOmics 小麦多组学平台',
+  displayName: '小麦多组学平台（WheatOmics）',
   homepage: 'https://wheatomics.sdau.edu.cn/',
   apiBase: 'https://wheatomics.sdau.edu.cn/api',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene', 'expression', 'variant', 'homology', 'sequence', 'id-convert'],
   tier: 'T1',
   docs: 'https://wheatomics.sdau.edu.cn/api/docs',
   auth: 'none',

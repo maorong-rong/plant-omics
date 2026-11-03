@@ -3,9 +3,11 @@ import type { SourceManifest } from '../../core/types.js';
 /** T1 evidence: official docs page /icg/api + four `/icg/api/json/*` endpoints observed 2026-10-28 (200 / JSON). */
 export const manifest: SourceManifest = {
   id: 'icg',
-  displayName: 'ICG 内参基因数据库（NGDC）',
+  displayName: '内参基因数据库（ICG）',
   homepage: 'https://ngdc.cncb.ac.cn/icg/',
   apiBase: 'https://ngdc.cncb.ac.cn/icg',
+  // 显式声明能提供的研究服务（字典 key，不推断；宁可少列）
+  services: ['gene'],
   tier: 'T1',
   docs: 'https://ngdc.cncb.ac.cn/icg/api',
   auth: 'none',

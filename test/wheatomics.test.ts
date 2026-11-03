@@ -77,7 +77,7 @@ describe('wheatomics 工具', () => {
 
     expect(urls[0]).toContain('/genes/known/search');
     expect(urls[0]).toContain('searchid=VRN1');
-    expect(result.text).toContain('源：WheatOmics');
+    expect(result.text).toContain('源：小麦多组学平台（WheatOmics）');
     // 出处必须能复现这次查询：带参数、带时刻
     expect(result.text).toContain('searchid=VRN1');
     expect(result.text).toMatch(/HTTP 200/);
@@ -194,7 +194,7 @@ describe('wheatomics 工具', () => {
 
     expect(utf8Bytes(result.text)).toBeLessThanOrEqual(4096);
     expect(result.text).toContain('已按 4 KB 上限截断');
-    expect(result.text).toContain('源：WheatOmics'); // 出处不许被截掉
+    expect(result.text).toContain('源：小麦多组学平台（WheatOmics）'); // 出处不许被截掉
   });
 
   it('search_papers：sinceDays 映射成上游的 since_days 参数', async () => {
@@ -335,7 +335,7 @@ describe('wheatomics_cross_species_homologs', () => {
     // 不区分直系/旁系，必须在正文里说清，否则用户会当成 ortholog 用
     expect(result.text).toContain('不区分直系/旁系同源');
     expect(result.text).toContain('水稻与拟南芥');
-    expect(result.text).toContain('源：WheatOmics');
+    expect(result.text).toContain('源：小麦多组学平台（WheatOmics）');
     expect(result.meta.request).toContain('max_targets=3');
   });
 
@@ -561,7 +561,7 @@ describe('wheatomics_variant_query', () => {
     );
 
     expect(utf8Bytes(result.text)).toBeLessThanOrEqual(4096);
-    expect(result.text).toContain('源：WheatOmics');
+    expect(result.text).toContain('源：小麦多组学平台（WheatOmics）');
     expect(result.text).toContain('HTTP 200');
     // 未展示的条目必须如实计数，且不能出现负数
     expect(result.text).not.toContain('另有 -');
@@ -702,7 +702,7 @@ describe('wheatomics_variant_query', () => {
     expect(result.text).toContain('请缩小区间后重查');
     expect(utf8Bytes(result.text)).toBeLessThanOrEqual(4096);
     // 出处仍完整
-    expect(result.text).toContain('源：WheatOmics');
+    expect(result.text).toContain('源：小麦多组学平台（WheatOmics）');
   });
 
   it('对外描述不写内部字节常数；共享常量保留给"后拼省略句"的调用点', async () => {

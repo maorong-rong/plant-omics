@@ -1,0 +1,8 @@
+# PlantOmics Hub 每日巡检（CHECK-01）
+# 内容：服务 /healthz 与源·工具数、首页与静态资源字节数、证书剩余天数（<21 天算失败）、
+#       certbot.timer 是否 enabled+active、端口、磁盘内存、域名解析。
+# 结果追加到 /var/log/plantomics-check.log；有 FAIL 时非零退出，cron 会记 journal/syslog。
+# 说明：本机没有邮件与机器人通道，"告警"目前 = 写日志 + 非零退出，不投递到人。
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+17 3 * * * root /usr/local/sbin/plantomics-daily.sh

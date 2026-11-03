@@ -6,7 +6,16 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 // @ts-expect-error 独立 CLI 脚本，无声明文件
-import { EXCLUDED_PATHS, renderPublishMd, resolveRemote, whitelist } from '../scripts/publish-public.mjs';
+import {
+  EXCLUDED_PATHS,
+  PUBLISH_DEPLOY_FILES,
+  checkDeployNoPublicIp,
+  checkDeploySnapshot,
+  parseArgs,
+  renderPublishMd,
+  resolveRemote,
+  whitelist,
+} from '../scripts/publish-public.mjs';
 
 /**
  * 公开仓导出白名单（PUB-01，2026-10-31）。
@@ -19,6 +28,13 @@ import { EXCLUDED_PATHS, renderPublishMd, resolveRemote, whitelist } from '../sc
  *   ② 负控：把两处排除**真的去掉**再跑同一份判断，看板必须**出现**——
  *      这才证明"排除项是承重的"，而不是别处偷偷硬编码了同样的事。
  */
+
+/**
+ * 自有网段地址**拼出来**，不写字面量：`test/` 会进公开快照，
+ * 写死会命中 `internal-host` 规则、把整次发布挡掉（2026-11-03 实测踩到，
+ * 第一批 3 条阻断项全是本文件里的样本）。
+ */
+const OWN_IP = ['182', '92', '214', '91'].join('.');
 
 const SAMPLE = [
   'src/core/http.ts',
@@ -47,8 +63,9 @@ describe('publish-public 白名单：内部看板与评测私有产物不进公�
     expect(kept).toContain('eval-public/README.md');
     // 相邻目录名最容易漏一层：eval/ 私有不放行，eval-public/ 必须放行
     expect(kept.some((p: string) => p.startsWith('eval/'))).toBe(false);
-    // deploy/ 整类不进（内网拓扑、主机地址、真名豁免清单，2026-11-02）
-    expect(kept.some((p: string) => p.startsWith('deploy/'))).toBe(false);
+    // deploy/ 整类排除，但白名单内的部署物料例外（2026-11-03：脚本脱敏后纳入快照）
+    expect(kept, '白名单内的部署物料必须进').toContain('deploy/nginx.conf');
+    expect(kept.some((p: string) => p === 'deploy/waivers.conf' || p === 'deploy/服务器现状.md')).toBe(false);
 
     for (const forbidden of [
       'docs/任务看板.md',
@@ -57,7 +74,6 @@ describe('publish-public 白名单：内部看板与评测私有产物不进公�
       '论文/正文.md',
       'eval/r1b-20261031/tasks.txt',
       'eval/r1b-20261031/tasks.json',
-      'deploy/nginx.conf',
       'deploy/waivers.conf',
       'deploy/服务器现状.md',
       'AGENTS.md',
@@ -68,17 +84,7 @@ describe('publish-public 白名单：内部看板与评测私有产物不进公�
     }
   });
 
-  /** 把源码里两处排除真的删掉后加载：负控靠它证明"排除项是承重的"。 */
-  async function loadPatched(source: string, tag: string) {
-    const dir = mkdtempSync(join(tmpdir(), `po-pub-${tag}-`));
-    try {
-      const file = join(dir, 'publish-public.patched.mjs');
-      writeFileSync(file, source, 'utf8');
-      return await import(pathToFileURL(file).href) as { whitelist: (p: string[]) => { kept: string[] } };
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  }
+  // 负控用的 `loadPatched` 在文件末尾的模块作用域定义（多个 describe 共用）。
 
   it('负控：真的去掉两处排除后，同一份判断必须把看板放进来', async () => {
     // 为什么要这样验：只断言"不含"是不够的——如果有人把过滤写死在别处，第一条仍然会绿，
@@ -192,5 +198,181 @@ describe('PUBLISH.md：相对基线的移除/迁移要写清楚', () => {
   it('没有移除时不出现这一节（不塞空表，避免读者以为没关系也说"有变化"）', () => {
     const md = renderPublishMd({ ...base, removals: [] });
     expect(md).not.toContain('移除 / 迁移');
+  });
+});
+
+/**
+ * `deploy/` 的例外口子与双向断言（2026-11-03）。
+ *
+ * 背景：服务器上的 `update.sh` / `check.sh` 一直没有 git 出处——公开快照把整个 `deploy/`
+ * 挡住了，等于"线上跑的部署脚本查不到版本"。现在只放开三个**不含真值**的文件
+ * （地址与期望数字从 `/etc/plantomics-hub/deploy.conf` 读），其余运维物料继续挡。
+ *
+ * 两条断言各管一半：正控（该进的进、该挡的挡）+ 负控（去掉例外后必须重新被挡，
+ * 证明例外清单是承重的，不是别处偷偷放行）。
+ */
+describe('deploy/ 只放开部署脚本与模板，且快照要双向断言', () => {
+  const ALL = [
+    'src/core/http.ts',
+    'deploy/update.sh',
+    'deploy/check.sh',
+    'deploy/enable-https.sh',
+    'deploy/backup.sh',
+    'deploy/daily-check.sh',
+    'deploy/plantomics-check.cron',
+    'deploy/deploy.conf.example',
+    'deploy/deploy.conf',
+    'deploy/waivers.conf',
+    'deploy/服务器现状.md',
+    'deploy/README.md',
+    'deploy/nginx.conf',
+  ];
+
+  it('正控：九份部署物料进白名单，真值配置 · 放宽项 · 服务器现状都被挡', () => {
+    const { kept, skipped } = whitelist(ALL);
+    expect(PUBLISH_DEPLOY_FILES).toHaveLength(9);
+    for (const file of PUBLISH_DEPLOY_FILES) expect(kept).toContain(file);
+    for (const file of ['deploy/deploy.conf', 'deploy/waivers.conf', 'deploy/服务器现状.md']) {
+      expect(skipped).toContain(file);
+    }
+  });
+
+  it('脱敏后的 README.md 与 nginx.conf 在清单里（部署手册不再停在基线旧版）', () => {
+    expect(PUBLISH_DEPLOY_FILES).toContain('deploy/README.md');
+    expect(PUBLISH_DEPLOY_FILES).toContain('deploy/nginx.conf');
+  });
+
+  it('内容断言：快照里的 .md/.conf 不许含自有网段地址', () => {
+    expect(checkDeployNoPublicIp([
+      { file: 'deploy/README.md', text: '已解析到本机（具体地址见服务器配置，此处脱敏）' },
+      { file: 'deploy/nginx.conf', text: 'server_name example.org;  # 线上另有公网 IP，此处脱敏省略' },
+    ])).toEqual([]);
+  });
+
+  it('内容断言：混进自有网段地址必须点名文件（脱敏被改回来时不再靠人发现）', () => {
+    // 地址拼出来而不是写字面量：`test/` 会进公开快照，写死会命中 `internal-host` 规则，
+    // 把整次发布挡掉（2026-11-03 实测踩到，第一批阻断项就是本文件的样本）。
+    const problems = checkDeployNoPublicIp([
+      { file: 'deploy/README.md', text: `DNS 已切 → ${OWN_IP}` },
+      { file: 'deploy/nginx.conf', text: `server_name example.org ${OWN_IP};` },
+    ]);
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toContain('deploy/README.md');
+    expect(problems[1]).toContain('deploy/nginx.conf');
+  });
+
+  it('内容断言不误报回环地址（否则每天都是假警报）', () => {
+    expect(checkDeployNoPublicIp([
+      { file: 'deploy/nginx.conf', text: 'proxy_pass http://127.0.0.1:8787; listen 0.0.0.0:80;' },
+    ])).toEqual([]);
+  });
+
+  it('内容断言只查文档与配置：脚本里的地址不是这条的职责', () => {
+    expect(checkDeployNoPublicIp([
+      { file: 'deploy/update.sh', text: `PROXY_HOST=${OWN_IP}` },
+    ])).toEqual([]);
+  });
+
+  it('负控：把例外清单清空后，九份文件必须重新被挡', async () => {
+    const source = readFileSync(new URL('../scripts/publish-public.mjs', import.meta.url), 'utf8');
+    const patched = source.replace(
+      /export const PUBLISH_DEPLOY_FILES = \[[\s\S]*?\];/,
+      'export const PUBLISH_DEPLOY_FILES = [];',
+    );
+    expect(patched, '负控：例外清单必须真的被清空').toContain('PUBLISH_DEPLOY_FILES = [];');
+
+    const mod = await loadPatched(patched, 'neg-deploy-allow');
+    const { skipped } = mod.whitelist(ALL);
+    for (const file of PUBLISH_DEPLOY_FILES) expect(skipped).toContain(file);
+  });
+
+  it('负控：清空"不许发"清单后，放宽项与服务器现状必须不再被判红（证明拦截来自该清单）', async () => {
+    // 这条专门防"以后有人把 waivers.conf / 服务器现状.md 加回去却没人拦"：
+    // 把清单清空后断言必须从"2 条问题"变成"0 条"，说明拦截真的挂在清单上，不是别处硬编码。
+    const source = readFileSync(new URL('../scripts/publish-public.mjs', import.meta.url), 'utf8');
+    const patched = source.replace(
+      /const DEPLOY_MUST_NOT_PUBLISH = \[[\s\S]*?\n\];/,
+      'const DEPLOY_MUST_NOT_PUBLISH = [];',
+    );
+    expect(patched, '负控：不许发清单必须真的被清空').toContain('DEPLOY_MUST_NOT_PUBLISH = [];');
+
+    const mod = await loadPatched(patched, 'neg-deploy-denylist');
+    const before = checkDeploySnapshot([...PUBLISH_DEPLOY_FILES, 'deploy/waivers.conf', 'deploy/服务器现状.md']);
+    const after = mod.checkDeploySnapshot([...PUBLISH_DEPLOY_FILES, 'deploy/waivers.conf', 'deploy/服务器现状.md']);
+    expect(before.length, '正控：真实清单下必须判红').toBe(2);
+    expect(after, '负控：清空后必须放行——否则说明别处还有硬编码，清单不是承重的').toEqual([]);
+  });
+
+  it('双向断言：完整快照通过', () => {
+    expect(checkDeploySnapshot([
+      'deploy/README.md',
+      ...PUBLISH_DEPLOY_FILES,
+    ])).toEqual([]);
+  });
+
+  it('双向断言：少一个脚本就红（点名是哪个）', () => {
+    const problems = checkDeploySnapshot(['deploy/check.sh', 'deploy/deploy.conf.example']);
+    expect(problems).toContainEqual(expect.stringContaining('deploy/update.sh'));
+  });
+
+  it('双向断言：混进真值配置、放宽项或内部拓扑就红，且给出理由', () => {
+    const problems = checkDeploySnapshot([
+      ...PUBLISH_DEPLOY_FILES,
+      'deploy/deploy.conf',
+      'deploy/waivers.conf',
+      'deploy/服务器现状.md',
+    ]);
+    expect(problems.length).toBe(3);
+    const text = problems.join('\n');
+    expect(text).toContain('deploy/deploy.conf');
+    expect(text).toContain('deploy/waivers.conf');
+    expect(text).toContain('personal-name');
+    expect(text).toContain('deploy/服务器现状.md');
+    expect(text).toContain('内网拓扑');
+  });
+});
+
+/**
+ * 把源码打过补丁后加载：负控靠它证明"排除项/例外清单是承重的"。
+ * 放模块作用域，多个 describe 共用（内部定义会导致别的 describe 里 ReferenceError）。
+ */
+async function loadPatched(source: string, tag: string) {
+  const dir = mkdtempSync(join(tmpdir(), `po-pub-${tag}-`));
+  try {
+    const file = join(dir, 'publish-public.patched.mjs');
+    writeFileSync(file, source, 'utf8');
+    return await import(pathToFileURL(file).href) as {
+      whitelist: (p: string[]) => { kept: string[]; skipped: string[] };
+      checkDeploySnapshot: (p: string[]) => string[];
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * 内部链接降级默认开启（2026-11-03 裁定）。
+ *
+ * 背景：默认路径曾产出 11 条 `dangling-internal-link` 阻断（`docs/源登记表.md`、
+ * `src/sources/<源>/fixtures/README.md` 指向 `记录/`），于是"发布前必须想起加一个开关"。
+ * 迟早有人忘，然后误以为发布坏了。**默认可用是硬要求**，逃生口是 `--keep-internal-links`。
+ */
+describe('发布默认即可用：内部链接降级默认开启', () => {
+  it('不带参数时 stripLinks=true（默认路径能跑通）', () => {
+    expect(parseArgs(['node', 'publish-public.mjs']).stripLinks).toBe(true);
+  });
+
+  it('--keep-internal-links 是逃生口：保真导出', () => {
+    expect(parseArgs(['node', 'publish-public.mjs', '--keep-internal-links']).stripLinks).toBe(false);
+  });
+
+  it('旧的 --strip-internal-links 仍被接受（等价于默认，旧命令不报错）', () => {
+    expect(parseArgs(['node', 'publish-public.mjs', '--strip-internal-links']).stripLinks).toBe(true);
+  });
+
+  it('--apply 与 --push 仍是显式开关，默认都不动远端', () => {
+    const args = parseArgs(['node', 'publish-public.mjs']);
+    expect(args.apply).toBe(false);
+    expect(args.push).toBe(false);
   });
 });

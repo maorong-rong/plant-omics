@@ -1,29 +1,69 @@
 /**
- * 落地页交互：语言切换、构建期数据填充、代码复制。
+ * 落地页交互：语言切换、运行时取数、复制按钮。
  *
- * 原则：页面上的**数字不写死在 HTML 里**。所有源数/工具数来自
- * site/data/catalog.js（由 site/scripts/build-data.mjs 从注册表生成）。
- * 数据缺失时页面显示提示，而不是显示一个可能过期的数字。
+ * 三条硬规矩（2026-11-03 起，FE-07 / FE-09）：
+ *
+ * 1. **会漂的东西一个都不许进快照**。源清单、能力标签、数据时刻全部运行时向 `GET /catalog` 取；
+ *    本文件**不读** `site/data/catalog.js`，也不含任何源数/工具数/源 id 字面量。
+ *    静态文件只剩 `data/copy.js`（人工写的源名、发布口径、包版本）与图标。
+ *
+ * 2. **取不到就说取不到**。404 / 超时 / 非 JSON / 网络失败各有各的文案，页面上没有任何数字，
+ *    **绝不**拿构建期快照顶上——「旧数字冒充现状」是这页最严重的错误。
+ *
+ * 3. **按契约 v1.2 渲染给人看的字段**：`displayName` / `services`（引用顶层 `servicesCatalog` 的 key）/
+ *    `species`（中文常用名）。`toolCount` / `coverage` / `blindSpots` / `tools` 虽然还在响应里，
+ *    页面一个字都不展示，也**不**在缺字段时拿它们兜底。
  */
 
 (function () {
   'use strict';
 
-  var catalog = window.__PLANTOMICS_CATALOG__;
   var root = document.documentElement;
+  var copyData = window.__PMH_COPY__ || null;
+  var icons = window.__PMH_SOURCE_ICONS__ || {};
+  /**
+   * 取数地址默认 `/catalog`（同源）。`?catalog=` 只用于本地与审查的**负控**：
+   * 指向一个 404 路径、一个非 JSON 资源，或一个不响应的地址，验三种降级。
+   * 线上不会带这个参数；带不带它，走的都是同一段 `fetch` 与同一套分支。
+   */
+  var CATALOG_URL = (function () {
+    var override = new URLSearchParams(window.location.search).get('catalog');
+    return override && override.trim() ? override.trim() : '/catalog';
+  })();
+  var TIMEOUT_MS = 8000;
 
-  /* ── 主题（可选覆盖，仅用于截图核对/嵌入）──────────────────────────── */
+  var TITLES = {
+    zh: 'PlantOmics Hub · 植物组学枢纽 — 让 AI 直接查植物组学公开数据',
+    en: 'PlantOmics Hub — public plant-omics tools an AI can actually call',
+  };
+
+  function $(sel) { return document.querySelector(sel); }
+  function el(tag, cls, children) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    var list = Array.isArray(children) ? children : (children == null ? [] : [children]);
+    list.forEach(function (child) {
+      node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    });
+    return node;
+  }
+  function text(zh, en) {
+    var zhSpan = document.createElement('span');
+    zhSpan.lang = 'zh';
+    zhSpan.textContent = zh;
+    var enSpan = document.createElement('span');
+    enSpan.lang = 'en';
+    enSpan.textContent = en;
+    return [zhSpan, enSpan];
+  }
+
+  /* ── 主题（仅截图核对与嵌入用） ─────────────────────────────────────── */
   (function applyTheme() {
     var q = new URLSearchParams(window.location.search).get('theme');
     if (q === 'light' || q === 'dark') root.dataset.theme = q;
   })();
 
   /* ── 语言 ─────────────────────────────────────────────────────────── */
-  var TITLES = {
-    zh: 'PlantOmics Hub · 植物组学枢纽 — 让 AI 直接查植物组学公开数据',
-    en: 'PlantOmics Hub — public plant-omics tools an AI can actually call',
-  };
-
   function detectLang() {
     var q = new URLSearchParams(window.location.search).get('lang');
     if (q === 'en' || q === 'zh') return q;
@@ -44,278 +84,296 @@
     try { window.localStorage.setItem('pmh-lang', lang); } catch (e) { /* 忽略 */ }
   }
 
-  document.getElementById('lang-toggle').addEventListener('click', function () {
-    applyLang(root.lang === 'zh' ? 'en' : 'zh');
-  });
-
+  var langToggle = document.getElementById('lang-toggle');
+  if (langToggle) {
+    langToggle.addEventListener('click', function () { applyLang(root.lang === 'zh' ? 'en' : 'zh'); });
+  }
   applyLang(detectLang());
 
-  /* ── 数据缺失 ─────────────────────────────────────────────────────── */
-  if (!catalog) {
-    var missing = document.getElementById('data-missing');
-    if (missing) missing.hidden = false;
-    var grid = document.getElementById('source-grid');
-    if (grid) grid.innerHTML = '';
-    return;
-  }
-
-  var budget = catalog.budget || {};
-  var metaTools = catalog.metaTools || [];
-  var tiers = catalog.tiers || {};
-
-  function text(zh, en) {
-    var spanZh = document.createElement('span');
-    spanZh.lang = 'zh';
-    spanZh.textContent = zh;
-    var spanEn = document.createElement('span');
-    spanEn.lang = 'en';
-    spanEn.textContent = en;
-    return [spanZh, spanEn];
-  }
-
-  function el(tag, className, children) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    (children || []).forEach(function (child) {
-      node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
-    });
-    return node;
-  }
-
-  /* ── 顶部与页脚数字 ───────────────────────────────────────────────── */
-  function fillStat(key, value) {
-    document.querySelectorAll('[data-stat="' + key + '"]').forEach(function (node) {
-      node.textContent = String(value);
-    });
-  }
-
-  fillStat('sources', budget.sources);
-  fillStat('tools', budget.tools);
-  fillStat('t1', tiers.T1 == null ? 0 : tiers.T1);
-  fillStat('t2', tiers.T2 == null ? 0 : tiers.T2);
-
-  var stamp = catalog.generatedAt ? new Date(catalog.generatedAt) : null;
-  var stampText = stamp
-    ? stamp.toISOString().slice(0, 16).replace('T', ' ') + 'Z'
-    : '未知';
-  var commit = catalog.gitCommit ? catalog.gitCommit : '—';
-  var version = (catalog.package && catalog.package.version) || '—';
-
-  var snapMeta = document.getElementById('snapshot-meta');
-  var build = catalog.build || null;
-  // 两个时间要分开写：读数据的时刻（generatedAt）与产物来自哪次构建（sourceRev / builtAt）。
-  var buildText = build && build.sourceRev ? 'build ' + build.sourceRev : 'build 未知';
-  if (snapMeta) snapMeta.textContent = 'commit ' + commit + ' · ' + stampText + ' · ' + buildText + ' · v' + version;
-
-  /* 脏构建防线：build-data.mjs 默认拒绝在 -dirty 构建上生成；走 --allow-dirty 逃生口时
-     数据里会写 build.dirty，页面必须自己说出来——不能让一份看着正常的快照冒充发布口径。 */
-  if (build && build.dirty) {
-    var dirtyBox = document.getElementById('build-dirty');
-    if (dirtyBox) {
-      dirtyBox.hidden = false;
-      dirtyBox.querySelectorAll('[data-build-rev]').forEach(function (node) {
-        node.textContent = build.sourceRev || '—';
+  /* ── 静态文案（copy.js）：人工写的名字与发布口径，不参与「现在有几个源」 ── */
+  function fillCopy() {
+    if (!copyData) return;
+    var published = copyData.published || null;
+    var spec = document.getElementById('published-note');
+    if (published) {
+      document.querySelectorAll('[data-pub="spec"]').forEach(function (node) { node.textContent = published.spec || '—'; });
+      document.querySelectorAll('[data-pub="missing"]').forEach(function (node) {
+        var lang = node.getAttribute('data-pub-lang') === 'en' ? 'en' : 'zh';
+        var missing = published.missingSources || [];
+        if (missing.length === 0) { node.textContent = lang === 'en' ? 'none' : '无'; return; }
+        node.textContent = missing.map(function (source) { return lang === 'en' ? (source.nameEn || source.name) : source.name; }).join(lang === 'en' ? ', ' : '、');
       });
+    } else if (spec) {
+      spec.querySelectorAll('[lang]').forEach(function (node) {
+        node.textContent = node.lang === 'en'
+          ? 'Published-package figures not loaded (data/copy.js missing): run node site/scripts/build-data.mjs.'
+          : '发布口径未取数（缺 data/copy.js）：跑 node site/scripts/build-data.mjs 生成。';
+      });
+    }
+    document.querySelectorAll('[data-install-spec]').forEach(function (node) {
+      node.textContent = (published && published.spec) || 'plantomics-hub';
+    });
+    var version = (copyData.package && copyData.package.version) || '—';
+    document.querySelectorAll('[data-version]').forEach(function (node) { node.textContent = version; });
+  }
+
+  /* ── 状态机：唯一允许写「数据暂不可用」的地方 ───────────────────────── */
+  function setState(kind, message) {
+    var box = $('#data-state');
+    var node = $('#data-state-text');
+    var retry = $('#data-retry');
+    if (!box || !node) return;
+    box.setAttribute('data-state', kind);
+    node.innerHTML = '';
+    node.appendChild(document.createTextNode(message || ''));
+    if (retry) retry.hidden = kind !== 'error' && kind !== 'no-service';
+  }
+
+  /**
+   * 把失败翻译成人话，且**每一种都点到具体原因**（这是审查要核的三种降级）：
+   * - http-404：接口没提供（旧版本或未部署）
+   * - timeout：8 秒没响应
+   * - bad-json：不是 JSON（多半是代理/网关的 HTML 错误页）
+   * - http-error：其它非 2xx
+   * - network：请求根本没发出去（离线 / 同源没配）
+   */
+  function describeFailure(kind, detail) {
+    switch (kind) {
+      case 'http-404':
+        return '接口未提供：GET /catalog 返回 404。这个部署版本还没有该接口，页面不使用任何构建期快照顶替。';
+      case 'timeout':
+        return '请求超时：GET /catalog ' + Math.round(TIMEOUT_MS / 1000) + ' 秒内没有响应。服务可能在启动或网络不通。';
+      case 'bad-json':
+        return '响应格式异常：GET /catalog 返回的不是 JSON（' + detail + '），多半是网关或反向代理的错误页。';
+      case 'http-error':
+        return '服务返回错误：GET /catalog ' + detail + '。';
+      case 'no-service':
+        return '服务信息暂不可用：这一次响应里没有 servicesCatalog / displayName / services / species，页面不拿 name、coverage、blindSpots 或工具名去猜能力。';
+      default:
+        return '请求失败：GET /catalog 没有成功（' + detail + '）。';
     }
   }
 
-  document.querySelectorAll('[data-version]').forEach(function (node) {
-    node.textContent = version;
-  });
-
-  /* ── 已发布包口径（装上能拿到什么） ───────────────────────────────────
-     数字来自 market/copy.json，由 market/scripts/build-copy.mjs 联网解包 npm tarball 算出；
-     页面不写死，也不在浏览器里现算——没有这份数据就明说「未取数」，不猜。 */
-  var published = catalog.published || null;
-  function fillPublished(key, value) {
-    document.querySelectorAll('[data-pub="' + key + '"]').forEach(function (node) {
-      node.textContent = value;
+  /* ── 渲染 ─────────────────────────────────────────────────────────── */
+  function renderCapabilities(catalog, services) {
+    var box = $('#cap-chips');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!services || services.length === 0) {
+      box.appendChild(el('span', 'cap-pending', '服务信息暂不可用'));
+      return;
+    }
+    services.forEach(function (service) {
+      var chip = el('span', 'cap-chip', service.label);
+      if (service.hint) chip.title = service.hint;
+      chip.setAttribute('data-key', service.key);
+      box.appendChild(chip);
     });
   }
-  if (published) {
-    fillPublished('spec', published.spec || '—');
-    fillPublished('sources', published.sources);
-    fillPublished('tools', published.tools);
-    var missing = published.missingSources || [];
-    document.querySelectorAll('[data-pub="missing"]').forEach(function (node) {
-      var lang = node.getAttribute('data-pub-lang') === 'en' ? 'en' : 'zh';
-      if (missing.length === 0) {
-        node.textContent = lang === 'en' ? 'none' : '无';
-        return;
+
+  function servicesById(catalog) {
+    var map = {};
+    (catalog.servicesCatalog || []).forEach(function (item) { map[item.key] = item; });
+    return map;
+  }
+
+  function renderSources(catalog) {
+    var grid = $('#source-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    var dict = servicesById(catalog);
+    var sources = Array.isArray(catalog.sources) ? catalog.sources : [];
+
+    sources.forEach(function (source) {
+      var card = el('article', 'source-card');
+      var iconMeta = icons[source.id];
+      if (iconMeta) card.style.setProperty('--src', iconMeta.color);
+
+      var head = el('header');
+      var chip = document.createElement('span');
+      chip.className = 'src-icon';
+      if (iconMeta && iconMeta.svg) {
+        chip.style.color = iconMeta.color;
+        chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + iconMeta.svg + '</svg>';
+      } else {
+        chip.className = 'src-icon missing';
+        chip.textContent = '?';
       }
-      node.textContent = missing
-        .map(function (source) { return lang === 'en' ? source.nameEn : source.name; })
-        .join(lang === 'en' ? ', ' : '、');
+      head.appendChild(chip);
+      var h3 = el('h3', null, [source.displayName || '（未命名数据源）']);
+      head.appendChild(h3);
+      card.appendChild(head);
+
+      var svcRow = el('div', 'svc-row');
+      var keys = Array.isArray(source.services) ? source.services : [];
+      if (keys.length === 0) {
+        svcRow.appendChild(el('span', 'svc-tag muted', '服务信息暂不可用'));
+      } else {
+        keys.forEach(function (key) {
+          var entry = dict[key];
+          var tag = el('span', 'svc-tag', entry ? entry.label : key);
+          if (entry && entry.hint) tag.title = entry.hint;
+          svcRow.appendChild(tag);
+        });
+      }
+      card.appendChild(svcRow);
+
+      var species = Array.isArray(source.species) ? source.species : [];
+      if (species.length > 0) {
+        var spRow = el('div', 'sp-row');
+        species.forEach(function (name) { spRow.appendChild(el('span', 'sp-tag', name)); });
+        card.appendChild(spRow);
+      }
+
+      grid.appendChild(card);
     });
-  } else {
-    // 没有发布口径数据就整段换掉，别留下「已发布的 — 实际包含 — 个源」这种残缺句子骗人。
-    var note = document.getElementById('published-note');
-    if (note) {
-      note.querySelectorAll('[lang]').forEach(function (node) {
-        node.textContent = node.getAttribute('lang') === 'en'
-          ? 'Published-package figures not loaded (market/copy.json missing): run node market/scripts/build-copy.mjs.'
-          : '发布口径未取数（缺 market/copy.json）：跑 node market/scripts/build-copy.mjs 生成。';
+
+    if (sources.length === 0) {
+      grid.appendChild(el('p', 'card-missing', '这次响应里没有数据源清单——服务可能在初始化，稍后重试。'));
+    }
+  }
+
+  function renderMeta(catalog) {
+    var grid = document.getElementById('meta-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    var labels = (copyData && copyData.metaLabels) || {};
+    var count = (catalog.totals && typeof catalog.totals.metaTools === 'number') ? catalog.totals.metaTools : null;
+
+    // 只讲「能做什么」，不点内部工具名、不报数量（契约 v1.2：页面不展示工具名与工具数）
+    // 固定两句人话：不带内部工具名、不带数量、不引用注册表里的技术描述
+    // （注册表描述里会提到 blindSpots 这类内部概念，按契约 v1.2 不该出现在这个页面上）。
+    var texts = [
+      { zh: '按研究意图找到合适的数据源：不知道该问哪个库时，先问它。', en: 'Find the source that fits a research question — ask this when you do not know which database to query.' },
+      { zh: '查看当前服务状态：有哪些源、各自覆盖什么、还剩多少预算。', en: 'Show current service status: which sources exist, what they cover, and how much budget is left.' }
+    ];
+    texts.forEach(function (entry) {
+      var card = el('article', 'meta-card');
+      card.appendChild(el('p', null, text(entry.zh, entry.en)));
+      grid.appendChild(card);
+    });
+    if (count !== null) grid.setAttribute('data-meta-count', String(count));
+  }
+
+  function renderCatalog(catalog) {
+    var services = Array.isArray(catalog.servicesCatalog) ? catalog.servicesCatalog : null;
+    var sources = Array.isArray(catalog.sources) ? catalog.sources : [];
+    var hasServiceInfo = Boolean(services) && sources.every(function (source) {
+      return typeof source.displayName === 'string' && Array.isArray(source.services) && Array.isArray(source.species);
+    });
+
+    renderCapabilities(catalog, services);
+    renderMeta(catalog);
+
+    var stamp = catalog.generatedAt ? new Date(catalog.generatedAt) : null;
+    var stampText = stamp && !isNaN(stamp.getTime())
+      ? stamp.toISOString().slice(0, 16).replace('T', ' ') + 'Z'
+      : '未知';
+    var version = catalog.version || '未知';
+    var meta = $('#snapshot-meta');
+    if (meta) meta.textContent = stampText + ' · 服务 ' + version;
+
+    var footer = document.getElementById('footer-snapshot');
+    if (footer) footer.textContent = '数据时刻 ' + stampText + '（取自 /catalog；不是本页构建时间）';
+
+    var limitCap = document.querySelectorAll('[data-limit="cap"]');
+    var limitWarn = document.querySelectorAll('[data-limit="warn"]');
+    var budget = catalog.budget || {};
+    limitCap.forEach(function (node) { node.textContent = typeof budget.subsetToolsHardMax === 'number' ? String(budget.subsetToolsHardMax) : '—'; });
+    limitWarn.forEach(function (node) { node.textContent = typeof budget.defaultSetSoftMax === 'number' ? String(budget.defaultSetSoftMax) : '—'; });
+
+    if (!hasServiceInfo) {
+      var grid = $('#source-grid');
+      if (grid) {
+        grid.innerHTML = '';
+        grid.appendChild(el('p', 'card-missing',
+          '服务信息暂不可用：这次响应还没有给人看的字段（servicesCatalog / displayName / services / species）。' +
+          '页面不会用 name、coverage、blindSpots 或工具名去猜一个能力列表——那些是内部字段，不是用户能看懂的能力。'));
+      }
+      setState('no-service', describeFailure('no-service'));
+      return;
+    }
+
+    renderSources(catalog);
+    setState('ok', '已从 /catalog 取到源清单与能力（数据时刻见下方）。');
+  }
+
+  /* ── 取数 ─────────────────────────────────────────────────────────── */
+  function fetchCatalog() {
+    var controller = new AbortController();
+    var timer = window.setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+
+    return fetch(CATALOG_URL, { headers: { accept: 'application/json' }, signal: controller.signal })
+      .then(function (res) {
+        if (res.status === 404) {
+          var notFound = new Error('404');
+          notFound.kind = 'http-404';
+          throw notFound;
+        }
+        if (!res.ok) {
+          var bad = new Error('HTTP ' + res.status);
+          bad.kind = 'http-error';
+          bad.detail = 'HTTP ' + res.status;
+          throw bad;
+        }
+        var type = res.headers.get('content-type') || '';
+        return res.text().then(function (body) {
+          var parsed = null;
+          try { parsed = JSON.parse(body); } catch (e) { /* 下面按格式错误报 */ }
+          if (!parsed || typeof parsed !== 'object') {
+            var badJson = new Error('not json');
+            badJson.kind = 'bad-json';
+            badJson.detail = type ? 'content-type: ' + type : '没有 content-type';
+            throw badJson;
+          }
+          return parsed;
+        });
+      })
+      .then(function (catalog) {
+        window.clearTimeout(timer);
+        return catalog;
+      })
+      .catch(function (error) {
+        window.clearTimeout(timer);
+        if (error && error.name === 'AbortError') {
+          var timeout = new Error('timeout');
+          timeout.kind = 'timeout';
+          throw timeout;
+        }
+        if (!error.kind) error.kind = 'network';
+        throw error;
       });
-    }
   }
 
-  /* 安装命令钉的是**已发布 spec**，不是源码里的开发版本号。
-     起因（2026-11-03 实测）：npm 上 latest = 0.1.0，而 package.json 已是 0.1.1，
-     照源码版本号写命令会让用户 `npm install plantomics-hub@0.1.1` 直接失败。
-     缺 market/copy.json 时不猜版本，退回不带版本号的包名，由发布口径那块说明缺数。 */
-  var installSpec = published && published.spec ? published.spec : 'plantomics-hub';
-  document.querySelectorAll('[data-install-spec]').forEach(function (node) {
-    node.textContent = installSpec;
-  });
+  function load() {
+    setState('loading', '正在向 GET /catalog 取源清单与能力…');
+    var grid = $('#source-grid');
+    if (grid) grid.innerHTML = '<p class="loading">正在读取服务信息…</p>';
 
-  var footerSnap = document.getElementById('footer-snapshot');
-  if (footerSnap) {
-    footerSnap.textContent =
-      '数据快照 commit ' + commit + ' · ' + stampText + ' · package ' + version +
-      ' · 源 ' + budget.sources + ' · 工具 ' + budget.tools + '（全库不设上限）';
-  }
-
-  /* ── 源卡片 ───────────────────────────────────────────────────────── */
-  var grid = document.getElementById('source-grid');
-  grid.innerHTML = '';
-
-  catalog.sources.forEach(function (source) {
-    var card = el('article', 'source-card');
-    if (source.pinned) card.className += ' is-pinned';
-
-    // 每源一枚手写 SVG 图标 + 主色（site/assets/source-icons.js）。
-    // 缺图标不静默：画一个带问号的占位块，一眼能看出漏了哪一条。
-    var iconMeta = (window.__PMH_SOURCE_ICONS__ || {})[source.id];
-    if (iconMeta) card.style.setProperty('--src', iconMeta.color);
-    var iconChip = document.createElement('span');
-    iconChip.className = 'src-icon';
-    if (iconMeta) {
-      iconChip.style.color = iconMeta.color;
-      iconChip.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
-        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + iconMeta.svg + '</svg>';
-      iconChip.setAttribute('role', 'img');
-      iconChip.setAttribute('aria-label', source.label.zh.name);
-    } else {
-      iconChip.className = 'src-icon missing';
-      iconChip.textContent = '?';
-      iconChip.title = '缺图标：在 site/assets/source-icons.js 里补 ' + source.id;
-    }
-
-    var head = el('header');
-    var h3 = el('h3', null, text(source.label.zh.name, source.label.en.name));
-    var tier = el('span', 'tier ' + (source.tier === 'T1' ? 'tier-t1' : 'tier-t2'), [source.tier]);
-    head.appendChild(iconChip);
-    head.appendChild(h3);
-    head.appendChild(tier);
-    if (source.pinned) {
-      var pin = el('span', 'pin-badge');
-      pin.title = '置顶 / pinned';
-      pin.innerHTML = '<span lang="zh">置顶</span><span lang="en">Pinned</span>';
-      head.appendChild(pin);
-    }
-    card.appendChild(head);
-
-    card.appendChild(el('p', 'blurb', text(source.label.zh.blurb, source.label.en.blurb)));
-
-    var metaRow = el('p', 'meta-row');
-    var toolsLabel = document.createElement('span');
-    toolsLabel.textContent = String(source.toolCount);
-    var toolWord = document.createElement('span');
-    toolWord.lang = 'zh';
-    toolWord.textContent = source.toolCount === 1 ? ' 个工具' : ' 个工具';
-    var toolWordEn = document.createElement('span');
-    toolWordEn.lang = 'en';
-    toolWordEn.textContent = source.toolCount === 1 ? ' tool' : ' tools';
-    var species = document.createElement('span');
-    species.className = 'species';
-    species.textContent = (source.species || []).join(' · ');
-    // 物种是 manifest.species 的原文，不是「该源收的全部范围」——加标签和 tooltip，免得被读成排他清单
-    if (species.textContent) species.title = '来自 manifest.species（原文），不等于该源的收录范围；收录口径见该源盲区';
-    metaRow.appendChild(toolsLabel);
-    metaRow.appendChild(toolWord);
-    metaRow.appendChild(toolWordEn);
-    if (species.textContent) {
-      var speciesLabel = document.createElement('span');
-      speciesLabel.className = 'species-label';
-      speciesLabel.lang = 'zh';
-      speciesLabel.textContent = 'manifest 物种：';
-      metaRow.appendChild(speciesLabel);
-      var speciesLabelEn = document.createElement('span');
-      speciesLabelEn.className = 'species-label';
-      speciesLabelEn.lang = 'en';
-      speciesLabelEn.textContent = 'manifest species: ';
-      metaRow.appendChild(speciesLabelEn);
-      metaRow.appendChild(species);
-    }
-    card.appendChild(metaRow);
-
-    // 工具清单
-    var toolDetails = el('details');
-    var toolSummary = el('summary', null, text('工具清单（' + source.toolCount + '）', 'Tools (' + source.toolCount + ')'));
-    toolDetails.appendChild(toolSummary);
-    var toolList = el('ul');
-    (source.tools || []).forEach(function (tool) {
-      var item = el('li');
-      var code = document.createElement('code');
-      code.textContent = tool.name;
-      item.appendChild(code);
-      if (tool.summary) item.title = tool.summary;
-      toolList.appendChild(item);
-    });
-    toolDetails.appendChild(toolList);
-    card.appendChild(toolDetails);
-
-    // 盲区：原样转述 manifest.caveats
-    if ((source.caveats || []).length > 0) {
-      var caveatDetails = el('details');
-      var caveatSummary = el('summary', null, text('盲区（' + source.caveats.length + '）', 'Blind spots (' + source.caveats.length + ')'));
-      caveatDetails.appendChild(caveatSummary);
-      var caveatList = el('ul', 'caveats');
-      source.caveats.forEach(function (caveat) {
-        var li = el('li');
-        li.lang = 'zh';
-        li.textContent = caveat;
-        caveatList.appendChild(li);
-      });
-      var note = el('p', 'caveat-note');
-      note.lang = 'en';
-      note.textContent = 'Quoted verbatim from the source manifest (Chinese). Not translated.';
-      caveatDetails.appendChild(caveatList);
-      caveatDetails.appendChild(note);
-      card.appendChild(caveatDetails);
-    }
-
-    grid.appendChild(card);
-  });
-
-  /* ── 元工具 ───────────────────────────────────────────────────────── */
-  var metaGrid = document.getElementById('meta-grid');
-  metaGrid.innerHTML = '';
-
-  metaTools.forEach(function (tool) {
-    var card = el('article', 'meta-card');
-    var h4 = document.createElement('h4');
-    h4.textContent = tool.name;
-    card.appendChild(h4);
-    card.appendChild(el('p', null, text(tool.summary, tool.label.en)));
-    metaGrid.appendChild(card);
-  });
-
-  /* ── 健康检查示例（形状来自本机真实响应，数字来自注册表）───────────── */
-  var healthSample = document.getElementById('healthz-sample');
-  if (healthSample) {
-    healthSample.textContent = JSON.stringify({
-      status: 'ok',
-      version: version,
-      package: version,
-      sources: budget.sources,
-      tools: budget.tools,
-      metaTools: metaTools.length,
+    fetchCatalog().then(function (catalog) {
+      renderCatalog(catalog);
+    }).catch(function (error) {
+      var kind = error.kind || 'network';
+      var message = describeFailure(kind, error.detail || error.message || '');
+      setState(kind === 'no-service' ? 'no-service' : 'error', message);
+      if (grid) grid.innerHTML = '';
+      var meta = $('#snapshot-meta');
+      if (meta) meta.textContent = '数据暂不可用';
+      var footer = document.getElementById('footer-snapshot');
+      if (footer) footer.textContent = '数据时刻不可用（/catalog 未取到）';
+      var capChips = $('#cap-chips');
+      if (capChips) capChips.innerHTML = '<span class="cap-pending">数据暂不可用</span>';
+      var metaGrid = document.getElementById('meta-grid');
+      if (metaGrid) metaGrid.innerHTML = '';
+      document.querySelectorAll('[data-limit="cap"], [data-limit="warn"]').forEach(function (node) { node.textContent = '—'; });
     });
   }
 
-  /* ── 复制按钮 ─────────────────────────────────────────────────────── */
+  var retry = document.getElementById('data-retry');
+  if (retry) retry.addEventListener('click', load);
+
+  /* ── 复制按钮（与数据无关，保持可用） ───────────────────────────────── */
   function copyText(value, button) {
     var done = function () {
       button.classList.add('copied');
@@ -354,4 +412,7 @@
       if (code) copyText(code.textContent, button);
     });
   });
+
+  fillCopy();
+  load();
 })();
