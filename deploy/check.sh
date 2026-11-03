@@ -189,6 +189,40 @@ say "[8] 域名解析"
 dns="$(getent ahostsv4 "$PROXY_HOST" | awk 'NR==1{print $1}')"
 [ "$dns" = "$EXPECTED_IP" ] && ok "$PROXY_HOST → $dns" || bad "$PROXY_HOST 解析到 ${dns:-无}，不是本机 $EXPECTED_IP"
 
+# 出处链的机器检查：仓库 deploy/ 里的脚本必须与 /usr/local/sbin 里跑的那份逐字节相同。
+# 为什么不靠人记得：只改安装位不改仓库，脚本就重新变成"没有 git 出处"；
+# 只改仓库不装，线上跑的又是旧逻辑。两种都不会自己报错，只能靠每天主动比。
+# 这组不联网、只读本地文件，成本几毫秒。
+say "[9] 部署脚本出处（仓库 deploy/ = /usr/local/sbin）"
+DEPLOY_DIR="${DEPLOY_DIR:-$REPO/deploy}"
+SCRIPT_PAIRS="${SCRIPT_PAIRS:-update.sh:plantomics-update.sh check.sh:plantomics-check.sh enable-https.sh:plantomics-enable-https.sh backup.sh:plantomics-backup.sh daily-check.sh:plantomics-daily.sh}"
+for pair in $SCRIPT_PAIRS; do
+  rel="${pair%%:*}"
+  inst="/usr/local/sbin/${pair#*:}"
+  src="$DEPLOY_DIR/$rel"
+  if [ ! -f "$src" ]; then bad "仓库缺 deploy/$rel（$inst 没有出处）"; continue; fi
+  if [ ! -f "$inst" ]; then bad "安装位缺 $inst（deploy/$rel 未安装）"; continue; fi
+  if cmp -s "$src" "$inst"; then
+    ok "deploy/$rel = ${inst##*/}（$(sha256sum "$src" | cut -c1-12)）"
+    stale="$(awk -F'|' -v p="script-sync:$rel:" 'NF>=5 && index($1,p)==1 {print $1; exit}' "$WAIVERS" 2>/dev/null)"
+    [ -n "$stale" ] && say "  · 放宽项 $stale 已不再需要，可从 $WAIVERS 删除"
+  else
+    # 不一致时分三种情况，不能靠"谁新谁旧"去猜（安装位没有 commit 元数据，猜出来就是新假信号）：
+    #   ① 登记过且未到期 → ⚠「发布窗口内，待下一版快照」
+    #   ② 没登记         → ✗
+    #   ③ 登记了但过期   → ✗（提示续期或修复）
+    # id 里钉死两边的 sha，任何一边再变，旧条目就自动失效——放宽不会"解释一次永久合法"。
+    _repo_sha="$(sha256sum "$src" | cut -c1-12)"
+    _inst_sha="$(sha256sum "$inst" | cut -c1-12)"
+    _wid="script-sync:$rel:$_repo_sha:$_inst_sha"
+    if [ -n "$(waiver_of "$_wid")" ]; then
+      relaxed "$_wid" "deploy/$rel ≠ ${inst##*/}：仓库 $_repo_sha / 安装 $_inst_sha（发布窗口内，待下一版快照）"
+    else
+      bad "deploy/$rel ≠ ${inst##*/}：仓库 $_repo_sha / 安装 $_inst_sha（未登记发布窗口，按失败计）"
+    fi
+  fi
+done
+
 say ""
 if [ "$FAILS" -eq 0 ] && [ "$WARNS" -eq 0 ]; then
   say "结论：全部通过"

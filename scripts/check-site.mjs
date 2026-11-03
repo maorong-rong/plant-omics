@@ -11,7 +11,19 @@
  * 只允许出现在配置示例与注释里，不允许进正文。为什么：源 id 是内部标识，页面应显示
  * 给人看的中文名（`displayName`），而不是把 id 漏给用户。
  *
- * ⚠️ 两个实测过的坑，改规则前先读：
+ * 规则三 · 数据数字面量：渲染路径（`site/index.html` 剥离 `<pre>/<code>/注释/script` 之后、
+ * `site/assets/app.js`）不许出现「N 个源」「N 个工具」「工具 N」这类**会漂的数字**。
+ * 为什么：数字是运行时的事实，写进静态文件就一定会落后（漏掉的正好是 M3.1 第③条后半句
+ * 「塞一个工具数字面量 → 必须变红」）。阈值（80/40）不属于此类，它在 `budget` 里且由接口给。
+ *
+ * 规则四 · 已发布包数字必须等于唯一真相：`site/data/copy.js` 的 `published.{sources,tools,metaTools,spec}`
+ * 必须逐字等于 `market/copy.json` 的 `counts.{sources,tools,metaTools}` 与 `installed.spec`。
+ * 为什么：`copy.js` 不在快照白名单里，页面却真的渲染它（「已发布包」说明段），于是它成了
+ * 手改 `999` 也无人察觉的盲区。`market/copy.json` 本来就是生成器读的那份
+ * （`site/scripts/build-data.mjs` 的 `readPublishedScope`），拿它当锚点不新增第二份真相；
+ * 它自己的数由 `npm run counts:published`（联网解包 npm tarball）负责核准。
+ *
+ * ⚠️ 三个实测过的坑，改规则前先读：
  *
  * 1. **`site/assets/source-icons.js` 的键就是源 id**（id → { svg, color }）。整份文件必须放行，
  *    否则每次都是误报。它是字典文件，不是渲染文本。
@@ -19,6 +31,10 @@
  *    豁免「关键词型 id」的裸词匹配；**但 `index.html` 正文里出现 `string` 这个源 id 照样要报**。
  *    豁免范围不许扩散：以后撞名了不要顺手往 EXEMPT_KEYWORD_IDS 里加，那等于把这个闸关掉。
  *    记一笔设计债：源 id 用 JS 类型名本身就是隐患（改名是破坏性变更，现在只做豁免）。
+ * 3. **`site/assets/market.js` 里有一句「`/catalog` 返回了 0 个源」**，那是**运行时措辞**
+ *    （描述“接口返回空数组”这种异常态），不是对数据规模的断言。所以规则三只覆盖
+ *    `index.html` 与 `app.js`；把它一并纳入会立刻误报。要扩范围，先分清「陈述事实的数字」
+ *    与「描述异常的数字」——第一次就跑红的检查，下一个会直接关掉。
  *
  * 用法：node scripts/check-site.mjs        （离线；需要先 npm run build，读 dist 注册表取源 id）
  * 退出码：任一规则不过 → 1。
@@ -53,6 +69,23 @@ const SNAPSHOT_FILES = [
   { file: 'site/data/catalog.json', kind: 'json' },
   { file: 'site/data/catalog.js', kind: 'js-data' },
 ];
+
+/** 规则三覆盖的文件（坑 3：`market.js` 故意不在内）。 */
+export const DATA_NUMBER_FILES = [
+  { file: 'site/index.html', kind: 'html' },
+  { file: 'site/assets/app.js', kind: 'js' },
+];
+
+/** 会漂的数据数字面量。阈值（80/40）不在此列：它由 `/catalog` 的 budget 给。 */
+export const DATA_NUMBER_PATTERNS = [
+  { re: /\d+\s*(?:个源|个工具|个元工具)/, label: '「N 个源/工具」式数字面量' },
+  { re: /(?:个源|个工具|个元工具)\s*\d+/, label: '「源/工具 N」式数字面量' },
+  { re: /工具\s*\d+/, label: '「工具 N」式数字面量' },
+];
+
+/** 规则四：页面渲染的「已发布包」事实，锚点是生成器自己的输入。 */
+export const PUBLISHED_COPY_FILE = 'site/data/copy.js';
+export const PUBLISHED_ANCHOR_FILE = 'market/copy.json';
 
 function read(rel) {
   return readFileSync(path.join(ROOT, rel), 'utf8');
@@ -159,11 +192,97 @@ export function checkRenderPath(root = ROOT, registry = createRegistry()) {
 }
 
 /* ------------------------------------------------------------------ *
+ * 规则三：数据数字面量
+ * ------------------------------------------------------------------ */
+
+/** 返回问题串：渲染文本里出现「N 个源/N 个工具」这类会漂的数字（行号即原文件行号）。 */
+export function checkDataNumbers(root = ROOT) {
+  const problems = [];
+  for (const { file, kind } of DATA_NUMBER_FILES) {
+    let text;
+    try {
+      text = readFileSync(path.join(root, file), 'utf8');
+    } catch (error) {
+      problems.push(`${file} 读不到（${error.message}）`);
+      continue;
+    }
+    const lines = stripNonRendered(text, kind).split('\n');
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      // 每行报一条即可：同一行的「34 个工具」会同时命中两条规则，重复报只会淹没清单
+      for (const { re, label } of DATA_NUMBER_PATTERNS) {
+        const hit = line.match(re);
+        if (!hit) continue;
+        problems.push(`data-number: ${file} 第 ${index + 1} 行出现${label}「${hit[0].trim()}」`);
+        break;
+      }
+    }
+  }
+  return problems;
+}
+
+/* ------------------------------------------------------------------ *
+ * 规则四：已发布包数字必须等于 market/copy.json
+ * ------------------------------------------------------------------ */
+
+/** 取 `site/data/copy.js` 里的对象（`window.__PMH_COPY__ = {...};`，不求值、无副作用）。 */
+export function readCopyObject(root = ROOT) {
+  const text = readFileSync(path.join(root, PUBLISHED_COPY_FILE), 'utf8');
+  const match = text.match(/window\.__PMH_COPY__\s*=\s*([\s\S]*?);\s*$/);
+  if (!match) throw new Error('找不到 `window.__PMH_COPY__ = {...};` 形式的赋值');
+  return JSON.parse(match[1]);
+}
+
+export function checkPublishedNumbers(root = ROOT) {
+  let copy;
+  try {
+    copy = readCopyObject(root);
+  } catch (error) {
+    return [`${PUBLISHED_COPY_FILE} 解析失败：${error.message}`];
+  }
+
+  let anchor;
+  try {
+    anchor = JSON.parse(readFileSync(path.join(root, PUBLISHED_ANCHOR_FILE), 'utf8'));
+  } catch (error) {
+    return [`${PUBLISHED_ANCHOR_FILE} 读不到（${error.message}）：发布数字的唯一真相是它，缺失就无法比对`];
+  }
+
+  const published = copy.published;
+  if (!published) {
+    return [`published-copy: ${PUBLISHED_COPY_FILE} 没有 published 块（页面「已发布包」说明会失去数据）`];
+  }
+
+  const expected = {
+    spec: anchor.installed?.spec ?? null,
+    sources: anchor.counts?.sources ?? null,
+    tools: anchor.counts?.tools ?? null,
+    metaTools: anchor.counts?.metaTools ?? null,
+  };
+  const problems = [];
+  for (const key of ['spec', 'sources', 'tools', 'metaTools']) {
+    if (published[key] !== expected[key]) {
+      problems.push(
+        `published-copy: ${key} 与 ${PUBLISHED_ANCHOR_FILE} 不一致`
+          + `（copy.js=${JSON.stringify(published[key]) ?? '缺'}，锚点=${JSON.stringify(expected[key]) ?? '缺'}）`
+          + '——发布数字只能来自该锚点，手改必红',
+      );
+    }
+  }
+  return problems;
+}
+
+/* ------------------------------------------------------------------ *
  * CLI
  * ------------------------------------------------------------------ */
 
 function main() {
-  const problems = [...checkSnapshot(), ...checkRenderPath()];
+  const problems = [
+    ...checkSnapshot(),
+    ...checkRenderPath(),
+    ...checkDataNumbers(),
+    ...checkPublishedNumbers(),
+  ];
   const registry = createRegistry();
   const ids = registry.listSources().length;
 
@@ -171,7 +290,9 @@ function main() {
     process.stdout.write(
       `✅ 站点闸通过：快照无数据面字段（${SNAPSHOT_FILES.length} 个文件），`
         + `渲染路径无源 id（${RENDER_FILES.length} 个文件 / ${ids} 个源 id；`
-        + `字典文件 ${DICTIONARY_FILES.length} 个放行，关键词型 id 仅 .js 豁免）\n`,
+        + `字典文件 ${DICTIONARY_FILES.length} 个放行，关键词型 id 仅 .js 豁免），`
+        + `渲染路径无数据数字面量（${DATA_NUMBER_FILES.length} 个文件 / ${DATA_NUMBER_PATTERNS.length} 条规则），`
+        + `已发布包数字等于 ${PUBLISHED_ANCHOR_FILE}\n`,
     );
     return;
   }
