@@ -1,3 +1,5 @@
+import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
+
 import { describe, expect, it, afterEach } from 'vitest';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -145,11 +147,47 @@ describe('GET /catalog：边界与禁止项', () => {
     for (const key of keys) expect(/token|secret|password|authorization/i.test(key) && !/tokens/i.test(key)).toBe(false);
   });
 
-  it('#6 POST /catalog → 405 且带 allow: GET', async () => {
+  it('#6 POST /catalog → 405 且带 allow: GET, HEAD', async () => {
     const instance = await start();
     const response = await fetch(new URL('/catalog', instance.url).toString(), { method: 'POST', body: '{}' });
     expect(response.status).toBe(405);
-    expect(response.headers.get('allow')).toBe('GET');
+    expect(response.headers.get('allow')).toBe('GET, HEAD');
+  });
+
+  /**
+   * RFC 9110 §9.3.2：HEAD 与 GET 同语义，只是响应不带内容。
+   * 用原始 http 请求而不是 fetch：fetch 对 HEAD 会按规范丢弃 body，
+   * 即服务端真的写了 body 也看不出来；原始响应才能证明线上没有 body 字节。
+   */
+  it('#6b HEAD /catalog → 200、无 body，响应头与 GET 一致', async () => {
+    const instance = await start();
+    const probe = (method: 'GET' | 'HEAD') => new Promise<{
+      status: number; headers: IncomingHttpHeaders; body: string;
+    }>((resolve) => {
+      const target = new URL(instance.url);
+      const request = httpRequest({
+        host: target.hostname,
+        port: target.port,
+        path: '/catalog',
+        method,
+      }, (response) => {
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk: string) => { body += chunk; });
+        response.on('end', () => resolve({ status: response.statusCode ?? 0, headers: response.headers, body }));
+      });
+      request.on('error', () => resolve({ status: -1, headers: {}, body: '' }));
+      request.end();
+    });
+
+    const get = await probe('GET');
+    const head = await probe('HEAD');
+    expect(get.status).toBe(200);
+    expect(head.status).toBe(200);
+    expect(head.body, 'HEAD 响应必须没有 body 字节').toBe('');
+    for (const name of ['content-type', 'cache-control', 'etag']) {
+      expect(head.headers[name], `${name} 必须与 GET 一致`).toBe(get.headers[name]);
+    }
   });
 
   it('#8 带不带 x-plantomics-sources，输出完全相同（本端点不看订阅头）', async () => {
