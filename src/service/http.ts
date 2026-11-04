@@ -252,6 +252,24 @@ function originHost(headerValue: string): string | undefined {
   }
 }
 
+/**
+ * `If-None-Match` 是否命中（RFC 9110 §13.1.2）。
+ *
+ * 两条语义都必须照着做，缺一条就会在实际链路上丢 304：
+ *   1. **弱比较**：比较前去掉可选的 `W/` 前缀，`W/"x"` 与 `"x"` 是同一个校验器。
+ *      反向代理和 CDN 常把强 ETag 降级成弱校验器，只做逐字比较的话降级后 `max-age` 一过就永远回源；
+ *   2. `*`：只要目标资源当前存在，条件就不成立。`/catalog` 无状态、永远存在，所以命中。
+ * 字段值是逗号分隔的校验器列表，**任一项**命中即可；空项（畸形列表）不算命中。
+ */
+function ifNoneMatchHits(headerValue: string, etag: string): boolean {
+  const value = headerValue.trim();
+  if (value === '*') return true;
+  const withoutWeakPrefix = (tag: string): string => (tag.startsWith('W/') ? tag.slice(2) : tag);
+  const target = withoutWeakPrefix(etag.trim());
+  if (target === '') return false;
+  return value.split(',').some((item) => withoutWeakPrefix(item.trim()) === target);
+}
+
 
 export interface ServiceOptions {
   readonly registry: ToolRegistry;
@@ -377,6 +395,9 @@ export function createService(options: ServiceOptions): {
            * 关键在于 `generatedAt`——它是"本次响应生成的时刻"，每请求都不同。直接哈希整个 payload 会让
            * ETag 每次都变、304 永远不发生（2026-11-03 检索负责人实测的 M2 缺陷）。所以哈希时把它排除，
            * 响应体里仍保留它（契约 §六 #7 要求 Date 与 generatedAt 相差 < 2s）。
+           *
+           * 匹配按 RFC 9110 §13.1.2 的**弱比较**并认 `*`，见 `ifNoneMatchHits()`：代理把 ETag 降级成
+           * `W/"…"` 之后仍要命中 304，否则 `max-age=60` 一过每次都回源。
            */
           const cacheable = JSON.stringify(catalog, (key, value) => (key === 'generatedAt' ? undefined : value));
           const etag = `"${createHash('sha256').update(cacheable, 'utf8').digest('hex').slice(0, 32)}"`;
@@ -386,7 +407,7 @@ export function createService(options: ServiceOptions): {
             'cache-control': 'public, max-age=60',
             etag,
           };
-          if (typeof ifNoneMatch === 'string' && ifNoneMatch.split(',').some((v) => v.trim() === etag)) {
+          if (typeof ifNoneMatch === 'string' && ifNoneMatchHits(ifNoneMatch, etag)) {
             res.writeHead(304, headers).end();
             finish(304);
             return;
