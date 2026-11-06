@@ -1,4 +1,4 @@
-import { request as httpRequest } from 'node:http';
+import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
 import { connect } from 'node:net';
 
 import { readFileSync } from 'node:fs';
@@ -707,10 +707,43 @@ describe('健康检查（上云探针）', () => {
     expect(status.body).not.toContain('wheatomics_');
   });
 
-  it('POST /healthz → 405（只读探针）', async () => {
+  /** HEAD 与 GET 同语义（RFC 9110 §9.3.2）；用原始 http 请求才能证明线上没有 body 字节。 */
+  it('HEAD /healthz → 200、无 body，响应头与 GET 一致', async () => {
+    const instance = await startService({}, 'a'.repeat(24));
+    const target = new URL(instance.url);
+    const probe = (method: 'GET' | 'HEAD') => new Promise<{
+      code: number; headers: IncomingHttpHeaders; body: string;
+    }>((resolve) => {
+      const request = httpRequest({
+        host: target.hostname,
+        port: target.port,
+        path: '/healthz',
+        method,
+        // 与 GET 用例相同：模拟平台探针，Host 是内部名且没有 token
+        headers: { host: 'container-internal' },
+      }, (response) => {
+        let text = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk: string) => { text += chunk; });
+        response.on('end', () => resolve({ code: response.statusCode ?? 0, headers: response.headers, body: text }));
+      });
+      request.on('error', () => resolve({ code: -1, headers: {}, body: '' }));
+      request.end();
+    });
+
+    const get = await probe('GET');
+    const head = await probe('HEAD');
+    expect(get.code).toBe(200);
+    expect(head.code).toBe(200);
+    expect(head.body, 'HEAD 响应必须没有 body 字节').toBe('');
+    expect(head.headers['content-type']).toBe(get.headers['content-type']);
+  });
+
+  it('POST /healthz → 405（只读探针），Allow 同时列出 GET 与 HEAD', async () => {
     const instance = await startService();
     const response = await fetch(new URL('/healthz', instance.url), { method: 'POST' });
     expect(response.status).toBe(405);
+    expect(response.headers.get('allow')).toBe('GET, HEAD');
   });
 
   it('PORT 兼容：未设专用变量时读取平台注入的 PORT', () => {

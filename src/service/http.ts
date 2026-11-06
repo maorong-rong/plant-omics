@@ -350,6 +350,9 @@ export function createService(options: ServiceOptions): {
         }
 
         const isPost = req.method === 'POST';
+        // HEAD 与 GET 是同一个读取语义（RFC 9110 §9.3.2）：响应头相同，只是不带内容。
+        // Node 对 HEAD 会自动丢弃写出的 body，所以分支里照常写 payload 即可。
+        const isGetOrHead = req.method === 'GET' || req.method === 'HEAD';
 
         /**
          * 健康检查：**不做鉴权、不做 Host/Origin 校验**。
@@ -359,8 +362,8 @@ export function createService(options: ServiceOptions): {
          * 它也不泄露工具清单，只回答"活着、版本是多少、规模多大"。
          */
         if (pathname === '/healthz') {
-          if (req.method !== 'GET') {
-            res.writeHead(405, { 'content-type': 'application/json; charset=utf-8', allow: 'GET' })
+          if (!isGetOrHead) {
+            res.writeHead(405, { 'content-type': 'application/json; charset=utf-8', allow: 'GET, HEAD' })
               .end(JSON.stringify({ error: 'method not allowed' }));
             finish(405);
             return;
@@ -380,8 +383,8 @@ export function createService(options: ServiceOptions): {
          * 这里刻意用 `registry`（服务端全集）而不是 requestRegistry：带不带订阅头输出必须完全相同。
          */
         if (pathname === '/catalog') {
-          if (req.method !== 'GET') {
-            res.writeHead(405, { 'content-type': 'application/json; charset=utf-8', allow: 'GET' })
+          if (!isGetOrHead) {
+            res.writeHead(405, { 'content-type': 'application/json; charset=utf-8', allow: 'GET, HEAD' })
               .end(JSON.stringify({ error: 'method not allowed' }));
             finish(405);
             return;
