@@ -167,8 +167,11 @@ describe('GET /catalog：边界与禁止项', () => {
  * ETag 与 304（契约 §二：`ETag: "<内容哈希>"`）。
  *
  * 2026-11-03 检索负责人实测的 M2：ETag 每次都变、304 从未发生。根因是 `generatedAt`
- * 是"本次响应的时刻"，被算进了哈希。下面三条把"内容哈希"钉住：同内容同 ETag、命中返 304 空体、
+ * 是"本次响应的时刻"，被算进了哈希。下面几条把"内容哈希"钉住：同内容同 ETag、命中返 304 空体、
  * 不命中的 If-None-Match 不许被误判成 304。
+ *
+ * 2026-11-04：`If-None-Match` 以前只做逐字比较，`W/"…"` 与 `*` 都拿不到 304。按 RFC 9110 §13.1.2
+ * 改为弱比较并认 `*`，三条命中用例（强校验器 / 弱校验器 / `*`）分别钉住这三种写法。
  */
 describe('GET /catalog：ETag 是内容哈希，能命中 304', () => {
   it('同一注册表状态下两次请求 ETag 相同', async () => {
@@ -180,7 +183,7 @@ describe('GET /catalog：ETag 是内容哈希，能命中 304', () => {
       .toBe(first.response.headers.get('etag'));
   });
 
-  it('If-None-Match 命中 → 304 且空体，缓存头仍在', async () => {
+  it('强校验器命中 → 304 且空体，缓存头仍在', async () => {
     const instance = await start();
     const first = await getCatalog(instance.url);
     const etag = first.response.headers.get('etag') ?? '';
@@ -192,10 +195,38 @@ describe('GET /catalog：ETag 是内容哈希，能命中 304', () => {
     expect(hit.headers.get('cache-control')).toBe('public, max-age=60');
   });
 
+  it('弱校验器 W/"…" 命中 → 304（代理把强 ETag 降级后仍要能命中）', async () => {
+    const instance = await start();
+    const first = await getCatalog(instance.url);
+    const etag = first.response.headers.get('etag') ?? '';
+    // 列表形态一起钉住：任一校验器命中即 304，且 W/ 前缀不参与比较
+    for (const value of [`W/${etag}`, `"deadbeefdeadbeefdeadbeefdeadbeef", W/${etag}`]) {
+      const hit = await fetch(new URL('/catalog', instance.url).toString(), { headers: { 'if-none-match': value } });
+      expect(hit.status, `If-None-Match: ${value} 应命中 304`).toBe(304);
+      expect(await hit.text(), '304 不许带响应体').toBe('');
+      expect(hit.headers.get('etag')).toBe(etag);
+      expect(hit.headers.get('cache-control')).toBe('public, max-age=60');
+    }
+  });
+
+  it('`*` 命中 → 304（资源存在即命中，不再看校验器）', async () => {
+    const instance = await start();
+    const first = await getCatalog(instance.url);
+    const etag = first.response.headers.get('etag') ?? '';
+    const hit = await fetch(new URL('/catalog', instance.url).toString(), { headers: { 'if-none-match': '*' } });
+    expect(hit.status).toBe(304);
+    expect(await hit.text(), '304 不许带响应体').toBe('');
+    expect(hit.headers.get('etag')).toBe(etag);
+    expect(hit.headers.get('cache-control')).toBe('public, max-age=60');
+  });
+
   it('负控：不匹配的 If-None-Match 必须回 200 带体，不许误判成 304', async () => {
     const instance = await start();
-    const miss = await getCatalog(instance.url, { 'if-none-match': '"deadbeefdeadbeefdeadbeefdeadbeef"' });
-    expect(miss.response.status).toBe(200);
-    expect(miss.text.length).toBeGreaterThan(0);
+    const misses = ['"deadbeefdeadbeefdeadbeefdeadbeef"', 'W/"deadbeefdeadbeefdeadbeefdeadbeef"'];
+    for (const value of misses) {
+      const miss = await getCatalog(instance.url, { 'if-none-match': value });
+      expect(miss.response.status, `If-None-Match: ${value} 不匹配时不许回 304`).toBe(200);
+      expect(miss.text.length).toBeGreaterThan(0);
+    }
   });
 });
