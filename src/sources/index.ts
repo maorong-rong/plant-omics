@@ -13,6 +13,7 @@ import { ToolRegistry } from '../core/registry.js';
 import type { SourceBundle } from '../core/types.js';
 import { manifest as wheatomicsManifest } from './wheatomics/manifest.js';
 import { tools as wheatomicsTools } from './wheatomics/tools.js';
+import { validateProbe as validateWheatomicsProbe } from './wheatomics/probe.js';
 import { manifest as strawberryManifest } from './strawberry/manifest.js';
 import { tools as strawberryTools } from './strawberry/tools.js';
 import { validateProbe as validateStrawberryProbe } from './strawberry/probe.js';
@@ -34,16 +35,19 @@ import { tools as scodTools } from './scod/tools.js';
 import { validateProbe as validateScodProbe } from './scod/probe.js';
 import { manifest as ensemblPlantsManifest } from './ensemblplants/manifest.js';
 import { tools as ensemblPlantsTools } from './ensemblplants/tools.js';
+import { validateProbe as validateEnsemblPlantsProbe } from './ensemblplants/probe.js';
 import { manifest as stringManifest } from './string/manifest.js';
 import { tools as stringTools } from './string/tools.js';
+import { validateProbe as validateStringProbe } from './string/probe.js';
 import { manifest as uniprotManifest } from './uniprot/manifest.js';
 import { tools as uniprotTools } from './uniprot/tools.js';
+import { validateProbe as validateUniprotProbe } from './uniprot/probe.js';
 import { createHubTools } from '../retrieval/index.js';
 import { assertSubsetBudget } from '../service/budget.js';
 import { speciesNameZh } from '../service/species-names.js';
 
 const bundles: SourceBundle[] = [
-  { manifest: wheatomicsManifest, tools: wheatomicsTools },
+  { manifest: wheatomicsManifest, tools: wheatomicsTools, validateProbe: validateWheatomicsProbe },
   { manifest: strawberryManifest, tools: strawberryTools, validateProbe: validateStrawberryProbe },
   { manifest: gwhManifest, tools: gwhTools, validateProbe: validateGwhProbe },
   { manifest: icgManifest, tools: icgTools, validateProbe: validateIcgProbe },
@@ -53,13 +57,13 @@ const bundles: SourceBundle[] = [
   // Ensembl Plants：本批只接 3 个（lookup / sequence / xrefs）。
   // 批量 `POST /lookup/id` 未接——公共层目前只发 GET，需要先开非 GET 的口子，
   // 详见 manifest.caveats 与「已知缺口」。
-  { manifest: ensemblPlantsManifest, tools: ensemblPlantsTools },
+  { manifest: ensemblPlantsManifest, tools: ensemblPlantsTools, validateProbe: validateEnsemblPlantsProbe },
   // STRING：T1，probe 用 /json/version；只接 resolve_ids 与 interaction_partners 两个入口。
   // 未接 interactions（/api/json/interactions 只处理 1 个标识符、1 个物种），见 manifest.caveats。
-  { manifest: stringManifest, tools: stringTools },
+  { manifest: stringManifest, tools: stringTools, validateProbe: validateStringProbe },
   // UniProt：T1，probe 用 /rest/.../search 的固定查询。首批两个工具
   // （uniprot_search_proteins / uniprot_get_entry）；R11 审查通过，绑定 tools.ts `0115D15F…`。
-  { manifest: uniprotManifest, tools: uniprotTools },
+  { manifest: uniprotManifest, tools: uniprotTools, validateProbe: validateUniprotProbe },
 ];
 
 export interface RegistryOptions {
