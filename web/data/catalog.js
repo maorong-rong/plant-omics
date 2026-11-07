@@ -1,16 +1,16 @@
 /* 由 site/scripts/build-data.mjs 生成，勿手改。源：dist/ 注册表。 */
 window.__PLANTOMICS_CATALOG__ = {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-03T05:18:19.903Z",
-  "gitCommit": "e326f4a",
+  "generatedAt": "2026-11-07T12:38:34.239Z",
+  "gitCommit": "88f8da1",
   "package": {
     "name": "plantomics-hub",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "build": {
-    "sourceRev": "e326f4a",
-    "builtAt": "2026-11-03T13:16:37+08:00",
-    "packageVersion": "0.1.1",
+    "sourceRev": "88f8da1",
+    "builtAt": "2026-11-07T20:38:32+08:00",
+    "packageVersion": "0.1.2",
     "dirty": false
   },
   "budget": {
@@ -23,9 +23,9 @@ window.__PLANTOMICS_CATALOG__ = {
     "T3": 0
   },
   "published": {
-    "spec": "plantomics-hub@0.1.0",
-    "sources": 7,
-    "tools": 34,
+    "spec": "plantomics-hub@0.1.1",
+    "sources": 10,
+    "tools": 41,
     "metaTools": 2,
     "sourceIds": [
       "wheatomics",
@@ -34,26 +34,13 @@ window.__PLANTOMICS_CATALOG__ = {
       "icg",
       "ic4r",
       "gramene",
-      "scod"
+      "scod",
+      "ensemblplants",
+      "string",
+      "uniprot"
     ],
-    "missingSources": [
-      {
-        "id": "ensemblplants",
-        "name": "Ensembl Plants（EMBL-EBI）",
-        "nameEn": "Ensembl Plants (EMBL-EBI)"
-      },
-      {
-        "id": "string",
-        "name": "STRING 蛋白互作数据库（ELIXIR）",
-        "nameEn": "STRING — protein interactions (ELIXIR)"
-      },
-      {
-        "id": "uniprot",
-        "name": "UniProt 蛋白知识库",
-        "nameEn": "UniProt"
-      }
-    ],
-    "snapshotAt": "2026-10-31T02:52:09.482Z"
+    "missingSources": [],
+    "snapshotAt": "2026-11-07T12:36:49.900Z"
   },
   "sources": [
     {
