@@ -14,7 +14,7 @@ import type { SourceBundle, ToolDefinition } from '../src/core/types.js';
 import { assertBudget, assertSubsetBudget, BudgetError } from '../src/service/budget.js';
 import { buildCatalog } from '../src/service/catalog.js';
 import { parseServiceConfig, ServiceConfigError } from '../src/service/config.js';
-import { DEFAULT_SET_SOURCES, DEFAULT_SET_TOOLS_SOFT_MAX } from '../src/service/budget.js';
+import { DEFAULT_SET_SOURCES, DEFAULT_SET_TOOLS_SOFT_MAX, countDefaultSetTools } from '../src/service/budget.js';
 import { SERVICE_IDENTITY, readBuildRev, serviceVersion } from '../src/service/version.js';
 import { createService, MAX_REQUEST_BODY_BYTES, type RunningService, type ServiceLogEntry } from '../src/service/http.js';
 import { registry as defaultRegistry } from '../src/sources/index.js';
@@ -95,25 +95,21 @@ describe('启动期预算门禁（v2.3 源市场制）', () => {
     // v2.3：全库只统计；硬阈值挂在订阅集上
     expect(report.subsetToolsHardMax).toBe(80);
     expect(report.defaultSetToolsSoftMax).toBe(40);
-    // 全库 41 但默认推荐集是**清单口径**（7 个源 + 2 元工具 = 35）→ 不触发软建议警示。
-    // 2026-11-03 负责人定：默认集不再等于全库，否则软建议会永远报警、等于没有。
-    expect(report.defaultSetTools).toBe(35);
-    expect(report.warnings).toEqual([]);
+    // P1/0.1.2（D2=A）：默认集暂保持全库 41，因此会触发软建议警示（只警示、不拒绝）。
+    expect(report.defaultSetTools).toBe(report.tools);
+    expect(report.defaultSetTools).toBe(41);
+    expect(report.warnings.join()).toContain('软建议 40');
   });
 
-  it('默认集是清单口径：清单内的源超 40 才警示，清单外的源加多少都不进默认集', () => {
-    // 清单内的源撑到 41 工具 → 警示
-    const inList = syntheticRegistry({ tools: Array.from({ length: 41 }, (_, i) => `t${i}`), ids: ['wheatomics'] });
-    const warned = assertBudget(inList, 'plantomics-hub');
-    expect(warned.defaultSetTools).toBe(41);
-    expect(warned.warnings.join()).toContain('软建议 40');
+  it('默认集算法仍按清单过滤（P2b 真过滤时复用）：清单外的源不计入', () => {
+    // P1/0.1.2 的清单必须覆盖全部已登记源，否则 /catalog 会与 tools/list 分叉。
+    const ids = new Set(defaultRegistry.listSources().map((bundle) => bundle.manifest.id));
+    expect(new Set(DEFAULT_SET_SOURCES)).toEqual(ids);
 
-    // 同一份 41 工具挂到**清单外**的源上 → 默认集仍是 0（元工具也没有）→ 不警示
-    const outList = syntheticRegistry({ tools: Array.from({ length: 41 }, (_, i) => `t${i}`), ids: ['uniprot'] });
-    const quiet = assertBudget(outList, 'plantomics-hub');
-    expect(quiet.tools).toBe(41);
-    expect(quiet.defaultSetTools).toBe(0);
-    expect(quiet.warnings, '新接的源不许自动进默认集').toEqual([]);
+    // 算法本身仍是「清单 ∩ 源 + 元工具」：清单外的源不计入，P2b 只需改清单即可收紧到 35。
+    // 用构造数据直接测算法，不需要先造一个不在清单里的真实源（那会破坏上面的覆盖断言）。
+    expect(countDefaultSetTools([{ id: 'not-in-default-set', toolCount: 41 }], 0)).toBe(0);
+    expect(countDefaultSetTools([{ id: 'wheatomics', toolCount: 11 }], 2)).toBe(13);
   });
 
   /**
@@ -133,18 +129,16 @@ describe('启动期预算门禁（v2.3 源市场制）', () => {
       .filter((source) => catalog.budget.defaultSources.includes(source.id))
       .reduce((total, source) => total + source.toolCount, 0);
     expect(catalog.budget.defaultSetTools).toBe(sum + catalog.totals.metaTools);
-    // 默认集必须是全库的真子集：不写死数字，比大小即可
-    expect(catalog.budget.defaultSetTools).toBeLessThan(catalog.totals.tools);
+    // P1/0.1.2：默认集暂等于全库（41），不是真子集；P2b/0.2.0 才收紧到 35。
+    expect(catalog.budget.defaultSetTools).toBe(catalog.totals.tools);
   });
 
-  it('默认推荐集：清单 ⊆ 全库、且 ≤ 软建议', () => {
+  it('默认推荐集 41 超软建议 40：只警示、不拒绝（D2=A）', () => {
     const report = assertBudget(defaultRegistry, 'plantomics-hub');
-    const ids = new Set(defaultRegistry.listSources().map((bundle) => bundle.manifest.id));
-    for (const id of DEFAULT_SET_SOURCES) {
-      expect(ids.has(id), `默认集清单里的 ${id} 不在注册表里：清单元数据过期`).toBe(true);
-    }
-    expect(report.defaultSetTools).toBeLessThanOrEqual(DEFAULT_SET_TOOLS_SOFT_MAX);
-    expect(report.defaultSetTools).toBeLessThan(report.tools); // 默认集是子集，不是全库
+    expect(report.defaultSetTools).toBe(41);
+    expect(report.defaultSetTools).toBeGreaterThan(DEFAULT_SET_TOOLS_SOFT_MAX);
+    expect(report.warnings).toHaveLength(1);
+    expect(report.warnings[0]).toContain('不拒绝启动');
   });
 
   it('全库 21 源：**不拒绝**（v2.3 源数不设上限）', () => {

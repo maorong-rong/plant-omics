@@ -24,26 +24,42 @@ export const SUBSET_TOOLS_HARD_MAX = 80;
 export const DEFAULT_SET_TOOLS_SOFT_MAX = 40;
 
 /**
- * **默认推荐集的源清单**（2026-11-03 后端负责人定）。
+ * **默认推荐集的源清单**（默认集口径的唯一来源）。
  *
- * 为什么不再"默认集 = 全库"：全库已经 41 个工具、越过软建议 40，而且随接源只会继续涨——
- * 那样软建议就永远在报警，等于没有。所以默认集是**显式列出的源**：新接一个源不会自动进默认集，
- * 要进就得改这张表，改动可被审阅、可被 diff。
+ * 2026-11-07 P1「契约单一真相」（D2=A）：0.1.2 的默认集**暂保持全库 41 工具**，
+ * 因此清单必须列出全部 10 个源——清单外的源会被 `defaultSetToolCount()` 排除，
+ * 那样 `/catalog` 的读数就会与不带订阅头时实际下发的 `tools/list` 再次分叉。
  *
- * 取舍口径：T1 主源 + 元工具；`scod`（单一作物甘蔗）、`string`（蛋白互作）、
- * `uniprot`（蛋白条目）留给用户在市场上自行订阅。
+ * 2026-11-03 的后端决定仍然有效，但属于 0.2.0（P2b，D1=A）：真过滤到 7 源 / 35 工具，
+ * 届时把 `scod`（单一作物甘蔗）、`string`（蛋白互作）、`uniprot`（蛋白条目）从本清单移出。
+ * 本阶段**不要提前改**；读数统一到 41 不等于改变实际下发的工具集合。
  */
 export const DEFAULT_SET_SOURCES: readonly string[] = [
-  'wheatomics', 'gramene', 'ensemblplants', 'ic4r', 'strawberry', 'gwh', 'icg',
+  'wheatomics', 'gramene', 'ensemblplants', 'ic4r', 'strawberry', 'gwh', 'icg', 'scod', 'string', 'uniprot',
 ];
 
-/** 默认推荐集的工具数 = 清单内各源的工具 + 元工具（元工具不属于任何源，随默认集一起下发）。 */
-export function defaultSetToolCount(registry: ToolRegistry): number {
+/**
+ * 默认推荐集工具数的**唯一算法**：清单内各源的工具 + 元工具（元工具不属于任何源，随默认集一起下发）。
+ *
+ * 抽成纯函数是为了让 `hub_status` 用同一套算法（它手里只有快照，没有注册表实例），
+ * 而不是各自再把「清单 ∩ 源 + 元工具」写一遍——两套算法必然漂。
+ */
+export function countDefaultSetTools(
+  sources: readonly { readonly id: string; readonly toolCount: number }[],
+  metaToolCount: number,
+): number {
   const wanted = new Set(DEFAULT_SET_SOURCES);
-  const sourceTools = registry.listSources()
-    .filter((bundle) => wanted.has(bundle.manifest.id))
-    .reduce((sum, bundle) => sum + bundle.tools.length, 0);
-  return sourceTools + registry.listMetaTools().length;
+  return sources
+    .filter((source) => wanted.has(source.id))
+    .reduce((sum, source) => sum + source.toolCount, 0) + metaToolCount;
+}
+
+/** 默认推荐集的工具数 = 清单内各源的工具 + 元工具。 */
+export function defaultSetToolCount(registry: ToolRegistry): number {
+  return countDefaultSetTools(
+    registry.listSources().map((bundle) => ({ id: bundle.manifest.id, toolCount: bundle.tools.length })),
+    registry.listMetaTools().length,
+  );
 }
 /** 历史值：v2.3 起**不再作为拦截条件**，仅保留导出供统计/展示对照。 */
 export const HISTORICAL_SOURCE_LIMIT = 20;

@@ -36,14 +36,14 @@ GET /catalog
   "version": "0.1.0+svc.6.g6a7a7ff",   // 服务端版本，与 /healthz 的 version 一致
   "generatedAt": "2026-11-01T04:12:00.000Z",  // ISO8601 UTC
 
-  "totals": { "sources": 8, "tools": 37, "metaTools": 2 },
+  "totals": { "sources": 10, "tools": 41, "metaTools": 2 },
 
   "budget": {
-    "defaultSources": ["wheatomics", "gramene", "ensemblplants", "ic4r", "strawberry", "gwh", "icg"],
+    "defaultSources": ["wheatomics", "gramene", "ensemblplants", "ic4r", "strawberry", "gwh", "icg", "scod", "string", "uniprot"],
                                         // 默认推荐集包含的源 id，顺序即推荐顺序；页面初始选中必须照它
-    "defaultSetTools": 35,              // 不带订阅头时实际下发的工具数（= 清单内源工具 + 元工具）
+    "defaultSetTools": 41,              // 不带订阅头时实际下发的工具数（= 清单内源工具 + 元工具）
     "defaultSetSoftMax": 40,            // 软建议；超了只警示
-    "defaultSetOverSoftMax": false,     // 上一条的直接结论，页面直接用，别自己比
+    "defaultSetOverSoftMax": true,      // 上一条的直接结论，页面直接用，别自己比
     "subsetToolsHardMax": 80,           // 唯一硬阈值；超了服务端 400
     "estTokensPerTool": 280,            // 实测 37 工具 10,274 token 折算
     "subsetToolsHardMaxTokens": 22400   // 80 × 280，给页面预估用
@@ -121,7 +121,7 @@ GET /catalog
 1. **工具集合逐一相等**：`union(sources[].tools) ∪ metaToolNames` **必须等于** `tools/list` 返回的全集。元工具（`hub_find_sources`、`hub_status`）不进任何 `sources[]`，只计入 `totals.metaTools`——所以「选 2 个源的 4 个工具」实际下发 **6 个**，页面算 token 必须把元工具算进去。
 2. **三处数字同源**：`/catalog.totals` = `/healthz` 的 `sources/tools/metaTools` = `npm run stats` 的读数。
 3. **阈值只有一个来源**：`subsetToolsHardMax` 必须直接取 `budget.ts` 的 `SUBSET_TOOLS_HARD_MAX`，`defaultSetSoftMax` 取 `DEFAULT_SET_TOOLS_SOFT_MAX`。**禁止在 catalog 里写字面量 80/40**。
-4. **默认集可被页面复算**：`budget.defaultSources` 必须逐项来自 `budget.ts` 的 `DEFAULT_SET_SOURCES`（顺序照抄），且 `defaultSetTools` **必须等于**「这些源的工具数之和 + `totals.metaTools`」。页面初始选中态、全选态一律照 `defaultSources` 来，**不许自己全选所有源**——全库 41 而默认 35，页面若全选就必然谎报"默认会报警"。
+4. **默认集可被页面复算**：`budget.defaultSources` 必须逐项来自 `budget.ts` 的 `DEFAULT_SET_SOURCES`（顺序照抄），且 `defaultSetTools` **必须等于**「这些源的工具数之和 + `totals.metaTools`」。页面初始选中态、全选态一律照 `defaultSources` 来，**不许自己全选所有源**——P1/0.1.2 的默认集暂为全库（10 源 41 工具，`defaultSources` 即全部源），P2b/0.2.0 才收紧到 7 源 35 工具；无论哪个阶段，两个字段都必须能相互复算。
 
 > 前端注意：**作用范围是 `web/` 与 `site/`（所有页面源，以实际发布的那份为准）**——此前只写 `web/`，结果"检查挡的是不发布的那份，放过真正上线的那份"（`site/assets/market.js` 带 `40`/`80`/`280` 字面量而 `web/` 干净，按旧条文核反而判合规）。
 >
@@ -165,3 +165,4 @@ GET /catalog
 | 2026-11-03 | v1.1：新增 `budget.defaultSources`（默认清单源 id，顺序即推荐顺序），一致性铁律加第 4 条「默认集可被页面复算」；明确 `web/` 不得写阈值字面量与读已取消的 `budget.tools` | 默认推荐集改为显式清单（7 源 35 工具、全库 41）后，页面否则无法知道"默认"是哪些源；由后端负责人定 |
 | 2026-11-03 | v1.2：服务字典补 `genome`（基因组与装配）、`sample-meta`（项目与样本），gwh 不再无处归类；`species` 明确「真相是 manifest 拉丁名、中文是单文件映射、缺映射拒绝启动」；验收第 7 条改为「`generatedAt` 恒定」，取消「与 `Date` 相差 < 2 s」这条自相矛盾的要求 | 源适配者实测 `SourceManifest` 无 `publicName`、gwh 无字典项；对抗审查者指出冻结的 `generatedAt` 不可能永远贴近响应 `Date`；由后端负责人定 |
 | 2026-11-03 | v1.3：前端注意的作用范围从 `web/` 扩到 `web/` 与 `site/`，判据从"字符串是否出现"改为"页面实际取值从哪里来"；明确字段缺失必须进入显式不可判定态，不许用自带常量兜底 | 前端审查者实测：`site/assets/market.js:22-24` 有 `40/80/280` 字面量、`web/` 已清干净，而旧条文只写 `web/`，等于挡了不发布的那份；线上 `/catalog` 三个兜底字段与响应取值恰好相同，属静默失效；由后端负责人定 |
+| 2026-11-07 | v1.4（P1 契约单一真相）：`defaultSources` 改为全部 10 源、`defaultSetTools` 统一为 41（与 `tools/list`、`hub_status` 同值）；示例与铁律 4 说明同步。P2b/0.2.0 才收紧到 7 源 35 工具 | 本涛 D1=A / D2=A：0.1.2 默认集暂保持 41，P1 只消除读数分叉；由 issue #24 派发 |

@@ -8,10 +8,10 @@
  *    契约 §四.3 明令禁止。现在取 `budget.subsetToolsHardMax` 与 `budget.defaultSetSoftMax`；
  *    **读不到就不猜**：数字位显示「待 /catalog」，超限判定整体停用（不红不黄、也不假装没超）。
  *
- * 2. **默认集照 `budget.defaultSources`，不是「全部源」**。
- *    全库 41 而默认 35（契约 §四.3 第 4 条）。页面若初始全选，就等于向用户谎报
- *    「默认会报警」——与服务器不带头时的真实行为相反。所以初始选中 = `defaultSources`，
- *    「全选（全库）」是另一个按钮，不是「默认」。
+ * 2. **默认集照 `budget.defaultSources`，不自己全选**。
+ *    P1/0.1.2 的默认集暂为全库（`defaultSources` 即全部源，41 工具），P2b/0.2.0 才收紧到 7 源 35；
+ *    无论哪个阶段，初始选中 = `defaultSources`；否则页面会向用户谎报
+ *    「默认会报警」——与服务器不带头时的真实行为相反。「全选（全库）」是另一个按钮，不是「默认」。
  *
  * 3. **全库大小取 `totals.tools`**。`budget.tools` 已从契约里取消（§三），
  *    以前 `(catalog.budget && catalog.budget.tools) || 0` 恒为 0，凡是用它的显示都是假数——

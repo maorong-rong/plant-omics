@@ -44,6 +44,7 @@
     "stats": "node scripts/stats.mjs",
     "counts": "node scripts/counts.mjs",
     "check:counts": "node scripts/counts.mjs --check",
+    "check:contracts": "node scripts/check-contracts.mjs",
     "check:site": "node scripts/check-site.mjs",
     "check:wording": "node web/scripts/check-wording.mjs",
     "counts:published": "node scripts/counts.mjs --published",
@@ -52,7 +53,7 @@
     "check:market": "node scripts/check-market.mjs",
     "doctor": "node scripts/doctor.mjs",
     "install:dsh": "node scripts/install-dsh.mjs",
-    "check": "npm run typecheck && npm run test && npm run build && npm run check:counts && npm run check:site && npm run check:wording && npm run stats",
+    "check": "npm run typecheck && npm run test && npm run build && npm run check:counts && npm run check:site && npm run check:wording && npm run stats && npm run check:contracts",
     "mcp": "node dist/mcp/cli.js",
     "serve": "node dist/service/cli.js"
   },
