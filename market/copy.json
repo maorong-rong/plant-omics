@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "scope": "published",
-  "generatedAt": "2026-11-07T12:36:49.900Z",
-  "gitCommit": "e768680",
+  "generatedAt": "2026-11-07T13:07:20.377Z",
+  "gitCommit": "903e580",
   "installed": {
-    "spec": "plantomics-hub@0.1.1",
-    "tarball": "https://registry.npmjs.org/plantomics-hub/-/plantomics-hub-0.1.1.tgz",
-    "integrity": "sha512-WG47fM2JVQuXX+jaD4OFaddacU5SfH+xTsIHswTE1jaayCzHcQ8jqbh0eWtlQB8P6DX3QA3fmvIjZUGUmi+TnQ==",
-    "latest": "0.1.1",
-    "builtFrom": "6437d98",
-    "builtAt": "2026-11-03T15:39:01+08:00"
+    "spec": "plantomics-hub@0.1.2",
+    "tarball": "https://registry.npmjs.org/plantomics-hub/-/plantomics-hub-0.1.2.tgz",
+    "integrity": "sha512-vujnG5AnD1qLkxLGD1f7ieMW+Rleej7htoYIueGdY4tTdHEp2GIvsq2weWi921Im1VvcRST87Eg+zLVdoeR8mQ==",
+    "latest": "0.1.2",
+    "builtFrom": "903e580",
+    "builtAt": "2026-11-07T21:03:43+08:00"
   },
   "counts": {
     "sources": 10,
