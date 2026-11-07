@@ -1,6 +1,6 @@
 {
   "name": "plantomics-hub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "PlantOmics Hub：把国内植物组学数据库的公开接口聚合成一套工具，一次维护、两个出口：stdio MCP server（Claude Code / Codex / Reasonix 可用）与 DSH 原生插件。",
   "type": "module",
   "license": "MIT",

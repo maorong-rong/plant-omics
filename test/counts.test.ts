@@ -409,14 +409,15 @@ describe('源图标唯一来源（checkSourceIcons）', () => {
 });
 
 describe('发布口径：市场描述必须等于 tarball 真实数量', () => {
-  const market = (zh: string, en: string) => ({
-    plugins: [{ name: 'plantomics-hub', description: { zh, en } }],
+  const entry = (version: string, type = 'npm') => ({ version, source: { type } });
+  const market = (zh: string, en: string, versions: unknown[] = []) => ({
+    plugins: [{ name: 'plantomics-hub', description: { zh, en }, versions }],
   });
+  const clause = renderDescriptionClause(counts);
+  const matching = market(`含 ${clause.zh}，覆盖若干物种。`, `${clause.en}, plus more.`);
 
   it('短语一致时无问题', () => {
-    const clause = renderDescriptionClause(counts);
-    expect(checkPublishedScope({ counts, market: market(`含 ${clause.zh}，覆盖若干物种。`, `${clause.en}, plus more.`) }))
-      .toEqual([]);
+    expect(checkPublishedScope({ counts, market: matching })).toEqual([]);
   });
 
   it('描述写错数量时中英各报一条', () => {
@@ -427,6 +428,44 @@ describe('发布口径：市场描述必须等于 tarball 真实数量', () => {
     expect(problems.length).toBe(2);
     expect(problems[0]).toContain(renderDescriptionClause(counts).zh);
     expect(problems[1]).toContain('plant-omics databases behind');
+  });
+
+  it('市场第一条就是 npm latest → 版本闸通过', () => {
+    expect(checkPublishedScope({
+      counts,
+      market: market(`含 ${clause.zh}。`, `${clause.en}.`, [entry('0.1.1'), entry('0.1.0')]),
+      latest: '0.1.1',
+    })).toEqual([]);
+  });
+
+  it('npm latest 没登记 → 版本闸点名（负例：市场落后）', () => {
+    const problems = checkPublishedScope({
+      counts,
+      market: market(`含 ${clause.zh}。`, `${clause.en}.`, [entry('0.1.0')]),
+      latest: '0.1.1',
+    });
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toContain('没有登记 npm latest 0.1.1');
+  });
+
+  it('市场第一条领先 npm latest → 版本闸点名（负例：版本不一致）', () => {
+    const problems = checkPublishedScope({
+      counts,
+      market: market(`含 ${clause.zh}。`, `${clause.en}.`, [entry('0.1.2'), entry('0.1.1')]),
+      latest: '0.1.1',
+    });
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toContain('市场会装到与 npm latest 不一致的版本');
+  });
+
+  it('source.type 不是 npm → 点名', () => {
+    const problems = checkPublishedScope({
+      counts,
+      market: market(`含 ${clause.zh}。`, `${clause.en}.`, [entry('0.1.1', 'git')]),
+      latest: '0.1.1',
+    });
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toContain('source.type 不是 npm');
   });
 });
 
