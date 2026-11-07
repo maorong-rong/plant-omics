@@ -662,6 +662,9 @@ code {
   max-width: 100%;
 }
 .code pre code { overflow-wrap: normal; white-space: pre; }
+/* 长 JSON 正文（如 MCP 工具输出）要能整段读到：宁可折行，不让读者横向拖动 */
+.code-wrap pre { overflow-x: hidden; }
+.code-wrap pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
 .code code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
 .code-out { background: transparent; border-color: var(--line); }
 .code-out pre { color: var(--ink); padding: 14px 16px; font-size: 12.8px; }

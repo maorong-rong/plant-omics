@@ -66,8 +66,8 @@
       </h1>
 
       <p class="lead">
-        <span lang="zh">把植物组学数据库的公开接口整理成 <b>模型真能调用的工具</b>：一次维护，两个出口——远程 MCP 服务与 DSH 插件。每条结果都带可复现的出处，单次输出有界。</span>
-        <span lang="en">Public plant-omics database APIs, wrapped as <b>tools a model can actually call</b>. Built once, exposed twice: a remote MCP service and a DeepSeek Harness plugin. Every result carries reproducible provenance, and every output is bounded.</span>
+        <span lang="zh">把植物组学数据库的公开接口整理成 <b>模型真能调用的工具</b>：一次维护，两个出口——远程 MCP 服务与 DSH 插件。每个数据查询结果都带可复现的出处，单次输出有界。</span>
+        <span lang="en">Public plant-omics database APIs, wrapped as <b>tools a model can actually call</b>. Built once, exposed twice: a remote MCP service and a DeepSeek Harness plugin. Every data-query result carries reproducible provenance, and every output is bounded.</span>
       </p>
 
       <div class="cta-row">
@@ -83,8 +83,8 @@
       </div>
 
       <p class="cta-note">
-        <span lang="zh">源市场按需订阅：<b>选哪些源，模型就只看到哪些工具</b>。订阅集成本与上限都读自运行中的 <code>GET /catalog</code>，页面不写死任何一个数。</span>
-        <span lang="en">Subscribe source by source: <b>the model only sees the tools you pick</b>. Tool counts, token estimates and the subscription cap come from the live <code>GET /catalog</code>; the page hardcodes none of them.</span>
+        <span lang="zh">源市场按需订阅：<b>这一次请求选哪些源，模型就只看到哪些工具</b>；服务无状态，下一条请求不带这个头就回到全集——这是上下文预算，不是权限隔离。订阅集成本与上限都读自运行中的 <code>GET /catalog</code>，页面不写死任何一个数。</span>
+        <span lang="en">Subscribe source by source: <b>for that one request, the model only sees the tools you pick</b>; the service is stateless, so the next request without the header sees the full set — this is a context-budget control, not access control. Tool counts, token estimates and the subscription cap come from the live <code>GET /catalog</code>; the page hardcodes none of them.</span>
       </p>
         </div>
 
@@ -162,7 +162,7 @@
            不写源清单、不写工具数、不写任何具体数字——那些会漂，一律运行时向 /catalog 取。 -->
       <p class="lead-soft" id="intro-static">
         <span lang="zh">把国内植物组学数据库的查询能力聚合成一套模型能调用的工具：基因与功能注释、表达谱、变异、蛋白互作、同源与共线、编号换算、序列与物种分类，覆盖小麦、水稻、玉米、拟南芥、草莓、甘蔗等作物。</span>
-        <span lang="en">Query capabilities from Chinese plant-omics databases, aggregated into tools a model can call: genes and annotation, expression, variants, protein interactions, homology and synteny, ID conversion, sequences and taxonomy — covering wheat, rice, maize, Arabidopsis and sugarcane, among others.</span>
+        <span lang="en">Query capabilities from Chinese plant-omics databases, aggregated into tools a model can call: genes and annotation, expression, variants, protein interactions, homology and synteny, ID conversion, sequences and taxonomy — covering wheat, rice, maize, Arabidopsis, strawberries and sugarcane, among others.</span>
       </p>
 
       <!-- 能力标签：服务的全局字典来自 /catalog.servicesCatalog（唯一一份），页面不自造同义词 -->
@@ -201,16 +201,16 @@
         <article class="feature">
           <h3><span lang="zh">一套工具，两个出口</span><span lang="en">One tool set, two exits</span></h3>
           <p>
-            <span lang="zh">同一份源注册表同时产出 Streamable HTTP 的 MCP 服务与 DSH 原生插件。Claude Code、Codex 这类 stdio 客户端也走同一个 MCP 出口。</span>
-            <span lang="en">One registry feeds both a Streamable HTTP MCP service and a native DSH plugin; stdio clients such as Claude Code and Codex ride the same MCP exit.</span>
+            <span lang="zh">同一份源注册表产出同一套工具，经 Streamable HTTP 的 MCP 服务或本地 stdio 入口提供。Claude Code、Codex 等客户端两条路都能接；DSH 侧的薄插件只提供面板与 MCP 客户端配置，不重复注册工具。</span>
+            <span lang="en">One registry produces one tool set, served through either the Streamable HTTP MCP service or the local stdio entry. Claude Code, Codex and similar clients can use both; the DSH plugin is a thin shell that adds a panel and MCP-client wiring without registering tools again.</span>
           </p>
         </article>
 
         <article class="feature">
           <h3><span lang="zh">出处可复现</span><span lang="en">Reproducible provenance</span></h3>
           <p>
-            <span lang="zh">每次返回末尾都带「源 / 完整请求（含参数）/ HTTP 状态 / 耗时 / 查询时刻」，数据版本另起一行，未知就写未知，不按 ID 外观猜。</span>
-            <span lang="en">Every result ends with source, the full request including parameters, HTTP status, elapsed time and query time; data versions go on their own line, and unknown stays unknown.</span>
+            <span lang="zh">每个数据查询工具的结果末尾都带「源 / 完整请求（含参数）/ HTTP 状态 / 耗时 / 查询时刻」，数据版本另起一行，未知就写未知，不按 ID 外观猜。</span>
+            <span lang="en">Every data-query tool result ends with source, the full request including parameters, HTTP status, elapsed time and query time; data versions go on their own line, and unknown stays unknown.</span>
           </p>
         </article>
 
@@ -242,8 +242,8 @@
 
       <div class="meta-block">
         <h3>
-          <span lang="zh">先问「谁能答」，再问「它现在好吗」</span>
-          <span lang="en">Ask who can answer, then whether it is up</span>
+          <span lang="zh">先问「谁能答」，再看「服务里有什么」</span>
+          <span lang="en">Ask who can answer, then see what the service carries</span>
         </h3>
         <div class="meta-grid" id="meta-grid"></div>
       </div>
@@ -256,8 +256,8 @@
       <header class="section-head">
         <h2><span lang="zh">怎么接进来</span><span lang="en">How to connect</span></h2>
         <p>
-          <span lang="zh">有云服务了，<b>从最轻的一档开始</b>：能零安装就别装包。两档用的是同一套工具，区别只在数据走哪条路。</span>
-          <span lang="en">A cloud service exists now, so <b>start from the lightest option</b>: never install a package you do not need. Both tiers expose the same tools; they differ only in which path the data takes.</span>
+          <span lang="zh">有云服务了，<b>从最轻的一档开始</b>：能零安装就别装包。两档共用同一套工具定义；云服务随服务端更新，本地包固定在你装到的版本（见下方版本说明）。</span>
+          <span lang="en">A cloud service exists now, so <b>start from the lightest option</b>: never install a package you do not need. Both tiers share the same tool definitions; the cloud follows the server build, while the local package stays at the version you installed (see the version note below).</span>
         </p>
       </header>
 
@@ -304,8 +304,8 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
 
           <h4>DeepSeek Harness</h4>
           <p class="small">
-            <span lang="zh">在宿主的接入配置里加一条<b>远端入口</b>（不是装插件）：transport 选 <code>streamable-http</code>，地址 <code>https://datamcp.moilab.net/mcp</code>，加请求头 <code>Authorization: Bearer &lt;token&gt;</code>。装插件那条路属于下面第二档。</span>
-            <span lang="en">Add a <b>remote entry</b> in the host's MCP configuration (not a plugin): transport <code>streamable-http</code>, URL <code>https://datamcp.moilab.net/mcp</code>, header <code>Authorization: Bearer &lt;token&gt;</code>. The plugin route belongs to the local tier below.</span>
+            <span lang="zh">在宿主的接入配置里加一条<b>远端入口</b>（不是装插件）：transport 选 <code>streamable-http</code>，地址 <code>https://datamcp.moilab.net/mcp</code>，加请求头 <code>Authorization: Bearer &lt;token&gt;</code>。装插件是另一条路，不在下面两档里：它只提供面板与 MCP 客户端配置，服务地址另行配置。</span>
+            <span lang="en">Add a <b>remote entry</b> in the host's MCP configuration (not a plugin): transport <code>streamable-http</code>, URL <code>https://datamcp.moilab.net/mcp</code>, header <code>Authorization: Bearer &lt;token&gt;</code>. Installing the plugin is a separate route, not one of the two tiers below: it only adds a panel and MCP-client wiring, and takes its service address from separate configuration.</span>
           </p>
 
           <p class="tier-note">
@@ -317,6 +317,35 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
             <span lang="zh">端点形状：<code>POST https://datamcp.moilab.net/mcp</code>；服务端契约要求 <code>Content-Type: application/json</code> 与 <code>Accept: application/json, text/event-stream</code>。先在浏览器打开 <code>https://datamcp.moilab.net/healthz</code> 能直接看到服务是否活着（免鉴权）。</span>
             <span lang="en">Endpoint shape: <code>POST https://datamcp.moilab.net/mcp</code>; the server contract asks for <code>Content-Type: application/json</code> and <code>Accept: application/json, text/event-stream</code>. Check <code>https://datamcp.moilab.net/healthz</code> in a browser first — it needs no token and tells you whether the service is up.</span>
           </p>
+
+          <h4><span lang="zh">请求与响应（JSON-RPC）</span><span lang="en">Request and response (JSON-RPC)</span></h4>
+          <p class="hint small">
+            <span lang="zh">正规客户端会先 <code>initialize</code> 握手，再发 <code>tools/call</code>；服务是无状态的，自检时可以直接 POST 一次 <code>tools/call</code>。下面是同一套服务代码的一次真实调用（本地同版本实测；线上返回同样的 JSON-RPC 形状，token 换成你的，正文与耗时每次不同；末尾出处尾注始终保留，响应正文中间用 <code>…</code> 省略）。</span>
+            <span lang="en">A proper client first does an <code>initialize</code> handshake and then sends <code>tools/call</code>; the service is stateless, so a self-check can POST one <code>tools/call</code> directly. Below is one real call against the same service code (measured locally on the same version; the cloud endpoint returns the same JSON-RPC shape — use your token, and body text and timing vary; the provenance footer is always kept, and the middle of the response text is elided with <code>…</code>).</span>
+          </p>
+
+          <p class="small"><b><span lang="zh">请求体</span><span lang="en">Request body</span></b></p>
+          <div class="code" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"icg_lookup","arguments":{"entity":"species","id":"ICG00115"}}}</code></pre>
+          </div>
+
+          <p class="small"><b><span lang="zh">响应体</span><span lang="en">Response body</span></b></p>
+          <div class="code code-wrap" data-code>
+            <button class="copy" type="button" data-copy><span lang="zh">复制</span><span lang="en">Copy</span></button>
+            <pre><code>{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "物种 ICG00115：Zea mays\n- 俗名：Corn, Maize\n- 分类：Plants\n- taxonomyId：4577\n……\n——\n源：内参基因数据库（ICG）｜GET https://ngdc.cncb.ac.cn/…/species/ICG00115｜HTTP 200｜250 ms｜2026-11-07T02:40:59.113Z\n版本/口径：分类/研究数只按响应字段转述；不含联系方式"
+      }
+    ]
+  }
+}</code></pre>
+          </div>
         </li>
 
         <!-- ② 本地 stdio -->
@@ -325,7 +354,7 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
             <span class="tier-num" aria-hidden="true">2</span>
             <div>
               <h3>
-                <span lang="zh">本地 stdio：不把查询送出去</span><span lang="en">Local stdio: keep queries on your machine</span>
+                <span lang="zh">本地 stdio：查询不经过我们的服务</span><span lang="en">Local stdio: queries bypass our service</span>
               </h3>
               <p class="tier-lede">
                 <span lang="zh">客户端把工具进程直接起在本地，取数从你的机器发出。不需要自己起 HTTP 服务，也不需要 token。</span>
@@ -335,8 +364,8 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
           </div>
 
           <p class="tier-when">
-            <span lang="zh"><b>谁在用：</b>数据不宜过公网、或云服务抽风时的退路。<b>代价：</b>第一次要下载包（需要 Node.js ≥ 20）；工具清单是包里那一版，不是云上最新版。</span>
-            <span lang="en"><b>Who:</b> anyone whose data should not cross the public internet, or anyone needing a fallback when the cloud is down. <b>Cost:</b> the first run downloads the package (Node.js ≥ 20), and you get that package's tool list, which need not match the newest cloud build.</span>
+            <span lang="zh"><b>谁在用：</b>不想让查询经过我们的云服务、或云服务抽风时的退路。<b>代价：</b>第一次要下载包（需要 Node.js ≥ 20）；工具清单是包里那一版，不是云上最新版。<b>注意：</b>取数仍从你的机器直接访问各上游数据库，查询内容照样走公网。</span>
+            <span lang="en"><b>Who:</b> anyone who does not want queries to pass through our cloud service, or anyone needing a fallback when the cloud is down. <b>Cost:</b> the first run downloads the package (Node.js ≥ 20), and you get that package's tool list, which need not match the newest cloud build. <b>Note:</b> data is still fetched directly from each upstream database, so those requests also cross the public internet.</span>
           </p>
 
           <h4>Claude Code</h4>
@@ -360,8 +389,8 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
 
       <div class="callout">
         <p>
-          <span lang="zh"><b>只挂一部分源：</b>两档都支持 <code>PLANTOMICS_SOURCES=wheatomics</code> 这样的白名单；源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。<b>挑哪些源、装多少</b>先去<a href="market.html">源市场</a>勾；一次订阅装太多会超上限（硬上限 <span data-limit="cap">—</span>，软建议 <span data-limit="warn">—</span>，两个数都读自 <code>/catalog</code>）。</span>
-          <span lang="en"><b>Load a subset:</b> both tiers honour a whitelist such as <code>PLANTOMICS_SOURCES=wheatomics</code>. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools. Pick sources in the <a href="market.html">source market</a> first; one subscription can exceed the cap (hard cap <span data-limit="cap">—</span>, soft suggestion <span data-limit="warn">—</span>, both read from <code>/catalog</code>).</span>
+          <span lang="zh"><b>只挂一部分源：</b>云服务用请求头 <code>x-plantomics-sources: wheatomics</code>（只作用于这一次请求）；本地 stdio 用环境变量 <code>PLANTOMICS_SOURCES=wheatomics</code>。源 id 写错会直接报错并列出可用源，不会静默变成「零工具」。<b>挑哪些源、装多少</b>先去<a href="market.html">源市场</a>勾；一次订阅装太多会超上限（硬上限 <span data-limit="cap">—</span>，软建议 <span data-limit="warn">—</span>，两个数都读自 <code>/catalog</code>）。</span>
+          <span lang="en"><b>Load a subset:</b> the cloud tier takes a request header <code>x-plantomics-sources: wheatomics</code> (for that one request); local stdio takes the <code>PLANTOMICS_SOURCES=wheatomics</code> environment variable. A wrong source id fails loudly and lists the valid ones instead of silently loading zero tools. Pick sources in the <a href="market.html">source market</a> first; one subscription can exceed the cap (hard cap <span data-limit="cap">—</span>, soft suggestion <span data-limit="warn">—</span>, both read from <code>/catalog</code>).</span>
         </p>
       </div>
 
@@ -373,8 +402,8 @@ bearer_token_env_var = "PLANTOMICS_HUB_TOKEN"</code></pre>
           <span lang="en"><b>Tier 2 installs <code><span data-pub="spec">—</span></code> from npm</b>. That release carries fewer sources than the current service — not yet in it: <span data-pub="missing" data-pub-lang="en">—</span>. <b>Tier 1 is not bound to that version</b>: it talks to the cloud service's current build, whose capabilities are whatever the endpoint reports.</span>
         </p>
         <p class="small">
-          <span lang="zh">源码里的 <code><span data-version>—</span></code> 是<b>开发版本号，不是 npm 上的版本</b>——发布前它会大于线上可用版本，所以安装命令钉的是上面那个已发布 spec，不是源码里的数字。</span>
-          <span lang="en">The source tree's <code><span data-version>—</span></code> is a <b>development version, not the version on npm</b>: before a release it runs ahead of what is installable, so the commands above pin the published spec, not the source number.</span>
+          <span lang="zh">源码里的 <code><span data-version>—</span></code> 是 package.json 的版本号，<b>不保证等于 npm 上可安装的版本</b>；安装命令钉的是上面那个已发布 spec，不按源码里的数字猜。</span>
+          <span lang="en">The source tree's <code><span data-version>—</span></code> is the package.json version, which <b>need not match what is installable on npm</b>; the commands above pin the published spec, not the source number.</span>
         </p>
       </div>
     </div>
