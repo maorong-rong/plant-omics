@@ -1,15 +1,15 @@
 /* 由 site/scripts/build-data.mjs 生成，勿手改。只含人工文案与发布事实；不含当前服务的源数/工具数，published 下是已发布包的快照数字（随 npm 发布由生成器重算）。 */
 window.__PMH_COPY__ = {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-03T05:18:19.903Z",
+  "generatedAt": "2026-11-07T12:38:34.239Z",
   "package": {
     "name": "plantomics-hub",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "published": {
-    "spec": "plantomics-hub@0.1.0",
-    "sources": 7,
-    "tools": 34,
+    "spec": "plantomics-hub@0.1.1",
+    "sources": 10,
+    "tools": 41,
     "metaTools": 2,
     "sourceIds": [
       "wheatomics",
@@ -18,26 +18,13 @@ window.__PMH_COPY__ = {
       "icg",
       "ic4r",
       "gramene",
-      "scod"
+      "scod",
+      "ensemblplants",
+      "string",
+      "uniprot"
     ],
-    "missingSources": [
-      {
-        "id": "ensemblplants",
-        "name": "Ensembl Plants（EMBL-EBI）",
-        "nameEn": "Ensembl Plants (EMBL-EBI)"
-      },
-      {
-        "id": "string",
-        "name": "STRING 蛋白互作数据库（ELIXIR）",
-        "nameEn": "STRING — protein interactions (ELIXIR)"
-      },
-      {
-        "id": "uniprot",
-        "name": "UniProt 蛋白知识库",
-        "nameEn": "UniProt"
-      }
-    ],
-    "snapshotAt": "2026-10-31T02:52:09.482Z"
+    "missingSources": [],
+    "snapshotAt": "2026-11-07T12:36:49.900Z"
   },
   "labels": {
     "strawberry": {

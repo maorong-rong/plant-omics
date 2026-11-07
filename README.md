@@ -252,16 +252,19 @@ DSH 装插件是**插件包解包后的物理拷贝**，不是软链。所以同
 npm run build && npm run doctor     # 实质漂移 → 退出码 1
 npm run doctor -- --allow-drift     # 明知未重装，只看报告 → 退出码 0
 npm run doctor -- --json            # 机器可读
+npm run doctor -- --installed <dir> # 指定临时 profile 或插件目录（干净安装验收用）
 ```
 
 判定口径（2026-10-28 首次实跑后定）：
 
+- **按当前包名 `plantomics-hub` 查**，旧包名 `dsh-plugin-plant-omics` 保留兼容；`--installed` 既可给
+  profile 目录（含 `node_modules/plantomics-hub`），也可直接给插件目录（含 `package.json` + `dist/`）。
 - **`.js` 先剥注释再比哈希**。只改注释或注释里的引用文字不算漂移——否则每次整理注释都亮红灯，红灯一多就会被 `--skip`。
 - 只在一侧存在的文件、`.js` 实质内容不同 → 算漂移，退出码 1。
 - **刻意不进 `npm run check`**：开发期未重装是常态，把常态做成红灯等于逼人跳过检查。
 
 > **为什么不用软链省掉这一步？** desktop profile 由 pnpm 托管（`package.json` 里记本地包路径、
-> lockfile 记 integrity），手工把 `node_modules/dsh-plugin-plant-omics` 换成软链有两个后果：
+> lockfile 记 integrity），手工把 `node_modules/plantomics-hub` 换成软链有两个后果：
 > ① 等于热更新，与本项目「攒一批再装」的做法相反；② pnpm 下次 install 按 lockfile 对账，
 > 软链会被静默还原成拷贝。所以选择「不改变安装方式，但让差异可见」。
 
@@ -308,7 +311,7 @@ PLANTOMICS_SOURCES=wheatomics npx -p plantomics-hub@latest plant-omics-mcp
 - **不做数据镜像。** 要批量下载数据，请回各自的科研项目按那边规则走。
 - **⚠️ 真实 DSH 会话尚未验收。** 已验证的是：适配器能取数、MCP 协议握手正常、包能干净安装、插件装配形状正确。
   **还没验证**的是：在 DSH 里提问 → 模型自主选工具 → 取数 → 带出处作答，这条完整链路。别把前者当成后者。
-- **⚠️ 检索层是发现入口，不是按需展开。** `hub_find_sources` / `hub_status` 按「物种覆盖 ∧ 意图能力」给候选源与工具名，未命中时如实说没有覆盖；默认加载清单 10 个源、41 个工具（wheatomics、gramene、ensemblplants、ic4r、strawberry、gwh、icg、scod、string、uniprot）；清单外的源用 `x-plantomics-sources` 或 `PLANTOMICS_SOURCES` 自取（订阅集上限 80 个），「只把命中工具装进会话」的按需展开尚未实现。已发布包的工具更少，实际数量以 `npm run counts -- --published` 现查。
+- **⚠️ 检索层是发现入口，不是按需展开。** `hub_find_sources` / `hub_status` 按「物种覆盖 ∧ 意图能力」给候选源与工具名，未命中时如实说没有覆盖；默认加载清单 10 个源、41 个工具（wheatomics、gramene、ensemblplants、ic4r、strawberry、gwh、icg、scod、string、uniprot）；清单外的源用 `x-plantomics-sources` 或 `PLANTOMICS_SOURCES` 自取（订阅集上限 80 个），「只把命中工具装进会话」的按需展开尚未实现。已发布包与源码可能是不同版本（发布前源码会领先），实际数量以 `npm run counts -- --published` 现查。
 - **侧边栏面板是静态清单。** 只显示构建时的源/工具/盲区，不显示探活或调用统计，也不反映运行时的 `sources` 子集配置；它不能用来判断上游是否可用。
 - **上游限流。** Strawberry Data Hub 的公开额度是 120 请求/分钟（导出 12/分钟），超出返 429 带 `Retry-After`。本仓不内置全局限流器，密集调用需自行节流。
 - **工具输出里的上游文本按数据处理。** 数据库内容可能包含看起来像指令的文字，本仓不做过滤；请在客户端侧把工具输出当数据、不当指令。

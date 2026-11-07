@@ -922,9 +922,12 @@ export async function collectPublishedCounts({ marketPath = path.join(ROOT, 'mar
   const info = packument.versions?.[latest];
   if (!info?.dist?.tarball) throw new Error(`registry 的 ${latest} 没有 tarball 地址`);
 
-  const declared = (plugin.versions ?? []).find((entry) => entry.version === latest);
-  if (!declared) throw new Error(`market/index.json 没有登记 ${latest}（用户装不到 latest）`);
-  if ((declared.source?.type ?? 'npm') !== 'npm') throw new Error('market 里该版本的 source.type 不是 npm');
+  /**
+   * 这里**不再**要求 market 已经登记 latest：那会把「市场索引落后」报成取数失败，
+   * 使得 build-copy.mjs（靠本命令的 --json 取数）在索引落后时根本跑不起来——
+   * 而索引落后恰恰是它要修的状态。版本一致性由 checkPublishedScope 判定为
+   * 「数字 / 版本不一致」（mismatch），方向清楚。
+   */
 
   const tarball = Buffer.from(
     await (await fetch(info.dist.tarball, { signal: AbortSignal.timeout(60_000) })).arrayBuffer(),
@@ -951,8 +954,13 @@ export async function collectPublishedCounts({ marketPath = path.join(ROOT, 'mar
   }
 }
 
-/** 发布口径校验：市场描述的数量短语必须等于 tarball 里真实的数量。 */
-export function checkPublishedScope({ counts, market }) {
+/**
+ * 发布口径校验：市场描述的数量短语必须等于 tarball 里真实的数量；
+ * 市场索引第一条（用户实际安装的版本）必须就是 npm latest，且 source.type 是 npm。
+ *
+ * `latest` 由调用方从 registry 取；不传时只核描述（保留给纯函数测试）。
+ */
+export function checkPublishedScope({ counts, market, latest }) {
   const problems = [];
   const plugin = market.plugins?.[0];
   const clause = renderDescriptionClause(counts);
@@ -963,6 +971,30 @@ export function checkPublishedScope({ counts, market }) {
   }
   if (!en.includes(clause.en)) {
     problems.push(`市场英文描述缺少现行数量短语「${clause.en}」（实际 tarball 是这个数）`);
+  }
+
+  /**
+   * 版本一致性：index.json 的 `versions[0]` 是市场实际安装目标（check-index.mjs 与官方
+   * `marketInstallTarget` 都取第一条）。它必须等于 npm latest，否则市场会装到与发布包
+   * 不同的版本——这正是「四条通道版本不一致」要拦的那类问题。
+   *
+   * 注意：这里核的是**发布口径**，不是源码 `package.json`。源码版本可以先于 npm 前进
+   * （发布前必然如此）；发布后把新版本追加到 versions 第一条，这条闸才会转绿。
+   */
+  const versions = Array.isArray(plugin?.versions) ? plugin.versions : [];
+  const newest = versions[0];
+  if (latest !== undefined) {
+    if (!versions.some((entry) => entry?.version === latest)) {
+      problems.push(`market/index.json 没有登记 npm latest ${latest}（用户装不到 latest）`);
+    } else if (newest?.version !== latest) {
+      problems.push(
+        `market/index.json 第一条是 ${newest?.version ?? '（缺）'}，npm latest 是 ${latest}：`
+          + '市场会装到与 npm latest 不一致的版本',
+      );
+    }
+  }
+  if (newest && (newest.source?.type ?? 'npm') !== 'npm') {
+    problems.push('market 里该版本的 source.type 不是 npm');
   }
   return problems;
 }
@@ -1001,7 +1033,7 @@ async function main(argv) {
       return;
     }
     const market = JSON.parse(readFileSync(path.join(ROOT, 'market', 'index.json'), 'utf8'));
-    const problems = checkPublishedScope({ counts: published.counts, market });
+    const problems = checkPublishedScope({ counts: published.counts, market, latest: published.latest });
     if (asJson) {
       process.stdout.write(`${JSON.stringify({ ...published, problems }, null, 2)}\n`);
       if (problems.length > 0) process.exitCode = 1;
@@ -1014,8 +1046,14 @@ async function main(argv) {
     );
     process.stdout.write(`  tarball ${published.tarball}\n  完整性 ${published.integrityVerified}\n`);
     process.stdout.write(`  构建自 ${counts.buildInfo?.sourceRev ?? '未知'} @ ${counts.buildInfo?.builtAt ?? '未知'}\n`);
-    if (problems.length > 0) fail(problems, '❌ 市场索引描述与发布包不一致');
-    else process.stdout.write('✅ 市场索引的数量短语与发布包一致\n');
+    const sourceVersion = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+    process.stdout.write(
+      sourceVersion === published.latest
+        ? `  源码 package.json：${sourceVersion}（与 npm latest 相同）\n`
+        : `  源码 package.json：${sourceVersion}（领先 npm latest，属发布前状态；发布后把该版本追加到 market/index.json 第一条）\n`,
+    );
+    if (problems.length > 0) fail(problems, '❌ 市场索引与发布包不一致');
+    else process.stdout.write('✅ 市场索引：数量短语与版本都对得上发布包\n');
     return;
   }
 

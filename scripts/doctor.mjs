@@ -19,11 +19,17 @@
  *   那每次整理注释都会亮红灯——而红灯一旦泛滥就会被 --skip，等于没有检查。
  *   所以：.js 文件先剥注释再哈希，只有实质变化才算漂移。
  *
+ * 包名（2026-11-07 修正）：当前包是 `plantomics-hub`，旧包名 `dsh-plugin-plant-omics` 只留兼容。
+ * 早一版只拼旧包名，于是「明明装了新包却报找不到」——这个工具本身就是用来发现静默失效的，
+ * 自己静默失效最不能接受。
+ *
  * 用法：
  *   npm run build && npm run doctor          # 有实质漂移 → 退出码 1
  *   node scripts/doctor.mjs --allow-drift    # 明知未重装，只看报告 → 退出码 0
  *   node scripts/doctor.mjs --json
- *   node scripts/doctor.mjs --installed <目录>   # 指定别的已装副本
+ *   node scripts/doctor.mjs --installed <目录>
+ *       目录可以是：① 已装插件目录（含 package.json + dist/）；
+ *                   ② profile 目录（含 node_modules/plantomics-hub，如临时安装目录）。
  *
  * 退出码：
  *   0 = 实质一致（注释差异不算），或 --allow-drift
@@ -35,8 +41,9 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -48,28 +55,68 @@ const allowDrift = argv.includes('--allow-drift');
 const installedFlag = argv.indexOf('--installed');
 const installedOverride = installedFlag >= 0 ? argv[installedFlag + 1] : undefined;
 
+/** 新包名优先；旧包名保留兼容（0.5.x / 0.7.x 时代的 `dsh-plugin-plant-omics`）。 */
+export const PACKAGE_NAMES = ['plantomics-hub', 'dsh-plugin-plant-omics'];
+const LEGACY_EXAMPLE = 'C:\\path\\to\\plantomics-hub';
+
 /** `--installed` 必须带值。缺值时静默回退到默认目录 = 看着 A 却报了 B，属于静默失效。 */
 if (installedFlag >= 0 && (!installedOverride || installedOverride.startsWith('--'))) {
-  process.stderr.write('❌ --installed 后面必须跟目录路径，例如：\n   node scripts/doctor.mjs --installed "C:\\path\\to\\dsh-plugin-plant-omics"\n');
+  process.stderr.write(`❌ --installed 后面必须跟目录路径，例如：\n   node scripts/doctor.mjs --installed "${LEGACY_EXAMPLE}"\n`);
   process.exit(2);
 }
 
-/** 已装副本的默认位置：跟着 DSH 当前 profile 走，不写死用户名。 */
-function defaultInstalledDirs() {
-  const home = process.env.DSH_HOME;
-  const profileDir = process.env.DSH_PROFILE_DIR;
-  const profile = process.env.DSH_PROFILE;
+/**
+ * 判断一个目录是不是「已装插件目录」：必须有 package.json 与 dist/。
+ * 只看 package.json 不够——profile 根目录自己也有 package.json，会被误认成插件。
+ */
+export function isInstalledPluginDir(dir) {
+  return existsSync(join(dir, 'package.json')) && existsSync(join(dir, 'dist'));
+}
+
+/**
+ * 已装副本的默认位置：跟着 DSH 当前 profile 走，不写死用户名。
+ * 每个 profile 的 node_modules 下新包名、旧包名各查一次；不遍历所有 profile，
+ * 避免把别的 profile 里的旧拷贝报成「当前会话在跑的东西」。
+ */
+export function defaultInstalledDirs(env = process.env) {
+  const home = env.DSH_HOME || join(homedir(), '.dsh');
+  const profileDir = env.DSH_PROFILE_DIR;
+  const profile = env.DSH_PROFILE;
+  const roots = [];
+  if (profileDir) roots.push(profileDir);
+  if (profile) roots.push(join(home, 'profiles', profile));
+  roots.push(join(home, 'profiles', 'desktop'));
   const out = [];
-  if (profileDir) out.push(join(profileDir, 'node_modules', 'dsh-plugin-plant-omics'));
-  if (home && profile) out.push(join(home, 'profiles', profile, 'node_modules', 'dsh-plugin-plant-omics'));
-  if (home) out.push(join(home, 'profiles', 'desktop', 'node_modules', 'dsh-plugin-plant-omics'));
+  for (const root of roots) {
+    for (const name of PACKAGE_NAMES) out.push(join(root, 'node_modules', name));
+  }
   return [...new Set(out)];
 }
 
-function findInstalled() {
-  if (installedOverride) return resolve(installedOverride);
-  for (const dir of defaultInstalledDirs()) {
-    if (existsSync(join(dir, 'package.json'))) return dir;
+/**
+ * 把 `--installed` 的输入解析成真正的插件目录。
+ * 两种输入都接受：
+ *   ① profile / 临时安装目录：`<dir>/node_modules/plantomics-hub`（或旧包名）
+ *   ② 插件目录本身：`<dir>/package.json` + `<dir>/dist/`
+ * 解析不到返回 undefined，由调用方给出带候选路径的错误，绝不静默换目录。
+ */
+export function resolveInstalledDir(input) {
+  const root = resolve(input);
+  if (!existsSync(root)) return undefined;
+  const candidates = [
+    ...PACKAGE_NAMES.map((name) => join(root, 'node_modules', name)),
+    root,
+  ];
+  for (const dir of candidates) {
+    if (isInstalledPluginDir(dir)) return dir;
+  }
+  return undefined;
+}
+
+export function findInstalled(override = installedOverride, env = process.env) {
+  if (override) return resolveInstalledDir(override);
+  for (const dir of defaultInstalledDirs(env)) {
+    if (isInstalledPluginDir(dir)) return dir;
   }
   return undefined;
 }
@@ -153,15 +200,23 @@ function bail(message) {
   process.exitCode = 1;
 }
 
+function run() {
 const installed = findInstalled();
 
 if (!existsSync(REPO_DIST)) {
   bail(`仓库还没构建：找不到 ${REPO_DIST}\n   先跑 npm run build，否则无从比对。`);
-} else if (!installed || !existsSync(join(installed, 'dist'))) {
-  const tried = installedOverride ? [resolve(installedOverride)] : defaultInstalledDirs();
+} else if (!installed) {
+  const resolvedOverride = installedOverride ? resolve(installedOverride) : undefined;
+  const tried = resolvedOverride
+    ? [
+        ...PACKAGE_NAMES.map((name) => join(resolvedOverride, 'node_modules', name)),
+        resolvedOverride,
+      ]
+    : defaultInstalledDirs();
   bail(
     `找不到已装插件的 dist。\n   试过这些位置：\n${tried.map((p) => `     - ${p}`).join('\n')}\n`
-      + '   如果插件确实没装，这是正常状态；若以为装了，用 --installed <目录> 指定。',
+      + '   如果插件确实没装，这是正常状态；若以为装了，用 --installed <目录> 指定\n'
+      + '   （profile 目录或插件目录都行；新包名 plantomics-hub，旧包名仍兼容）。',
   );
 } else {
   const installedDist = join(installed, 'dist');
@@ -274,3 +329,6 @@ if (!existsSync(REPO_DIST)) {
 
   if (drift && !allowDrift) process.exitCode = 1;
 }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) run();

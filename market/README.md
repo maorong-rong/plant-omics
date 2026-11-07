@@ -9,25 +9,28 @@
 | 项 | 值 | 出处 |
 |---|---|---|
 | 插件名 | `plantomics-hub` | npm 包名 |
-| 版本 | `0.1.0`（只放这一个） | `npm view plantomics-hub version` |
-| `publishTimestamp` | `1793285202` | npm registry 的 `time["0.1.0"]` = `2026-10-29T14:46:42.487Z`，按 Unix **秒** 换算 |
-| `source.type` | `npm` | 安装目标即 `plantomics-hub@0.1.0` |
+| 版本 | `0.1.1`（第一条，市场安装目标）；其后保留 `0.1.0` | `npm view plantomics-hub dist-tags.latest` |
+| `publishTimestamp` | `1793698253` | npm registry 的 `time["0.1.1"]` = `2026-11-03T09:30:53.720Z`，按 Unix **秒** 换算 |
+| `source.type` | `npm` | 安装目标即 `plantomics-hub@0.1.1` |
 | `engines.dsh` | `>=0.2.1-rc.2` | 与 `package.json` 的 `engines.dsh` 一致 |
-| 卡片文案 | 中英两段，**数字按「发布口径」算出**（当前 `0.1.0`：7 源 34 工具） | `market/scripts/build-copy.mjs` 生成，`check-index.mjs` 核对 |
+| 卡片文案 | 中英两段，**数字按「发布口径」算出**（当前 `0.1.1`：10 源 41 工具） | `market/scripts/build-copy.mjs` 生成，`check-index.mjs` 核对 |
 | 图标 | 内联 `data:image/svg+xml;base64,…`，解码 1920 字节（上限 32 KiB） | `market/assets/icon.svg` → `build-icon.mjs` |
 
 **两个口径别混**（2026-10-31 全员定案）：
 
 | 口径 | 真相 | 用在哪 |
 |---|---|---|
-| 源码口径 | 本地 `dist/` 注册表（今天 8 源 37 工具） | 落地页 `site/`，页面上标「当前源码口径」 |
-| **发布口径** | `index.json` 的 install spec 指向的 npm tarball（`0.1.0`：7 源 34 工具，无 ensemblplants） | **市场卡片**，因为它描述「装上能拿到什么」 |
+| 源码口径 | 本地 `dist/` 注册表（今天 10 源 41 工具） | 落地页 `site/`，页面上标「当前源码口径」 |
+| **发布口径** | `index.json` 的 install spec 指向的 npm tarball（`0.1.1`：10 源 41 工具） | **市场卡片**，因为它描述「装上能拿到什么」 |
 
 两边不同不代表哪个写错：发布滞后是常态，但**索引不能承诺装不出来的能力**。数字的唯一实现在
 `scripts/counts.mjs`（`--json` 出源码口径，`--published` 联网解包 tarball 出发布口径），市场的措辞只取它算出的数，本目录不自己数数。
 
+**当前源码版本 `0.1.2` 领先于市场/npm（都是 `0.1.1`）**：这是发布前的正常状态。真正的 0.1.2 发布与
+「把 `0.1.2` 放到 `versions` 第一条」需要人工授权后执行；在此之前 `counts --published` 核的是
+**已发布**的 `0.1.1`，源码版本领先会在输出里单独说明，不算发布闸红。
 
-**为什么没有 `0.0.0-stage`**：它是早期占位版本，语义不明。放进索引会让市场里出现一个用户可能误装的版本，所以只登记 `0.1.0`。
+**为什么没有 `0.0.0-stage`**：它是早期占位版本，语义不明。放进索引会让市场里出现一个用户可能误装的版本，所以只登记 `0.1.1` 与 `0.1.0`。
 
 ## 二、校验（用官方校验器，不是自己写的规则）
 
@@ -36,7 +39,7 @@
 ```
 PARSE OK
 plugins=["plantomics-hub"]
-install spec = {"spec":"plantomics-hub@0.1.0"}
+install spec = {"spec":"plantomics-hub@0.1.1"}
 ```
 
 为了证明"通过"不是空过，同一份校验器对 6 个故意写坏的变体全部拒绝：
@@ -80,13 +83,14 @@ node market/scripts/apply-copy.mjs      # 原地写进 index.json（描述 2 段
 npm run check:market                    # 单一入口：两道闸都跑，任一道红则非零退出
 ```
 
-发布新版本后：先发 npm，再跑上面这一串 —— 卡片描述会自动变成新版本的真实数字与覆盖物种，不需要人改文案。
+发布新版本后：**先发 npm**；从 registry 的 `time` 字段取新版本时间，把新版本条目放到 `versions` 第一条
+（旧条目保留），再跑上面这一串 —— 卡片描述会自动变成新版本的真实数字与覆盖物种，不需要人改文案。
 
 **`npm run check:market` 是两道闸，不是一条**（`scripts/check-market.mjs`，两条依次 spawn、**两条都跑完**再判定）：
 
 | 闸 | 核什么 | 红了看哪 |
 |---|---|---|
-| ① 数字闸（联网） | 索引描述里的数量短语 vs npm 最新 tarball 真实数量 | 数字过期 → 重跑 `build-copy.mjs` + `apply-copy.mjs` |
+| ① 数字闸（联网） | 索引描述里的数量短语 vs npm 最新 tarball 真实数量；索引**第一条版本**必须等于 npm `latest` | 数字过期 → 重跑 `build-copy.mjs` + `apply-copy.mjs`；版本对不上 → 把 `versions` 第一条改成 npm latest（发布后才追加新版本） |
 | ② 措辞闸（离线） | 索引文案 vs `copy.json` **逐字**、官方校验器（format 1）、版本、图标同步 | 措辞被改过 → 重跑生成，别手改索引 |
 
 为什么要两道：①只锁数字，**锁不住措辞**（实测把「薄插件」改成「插件」，①仍 exit 0）；②锁得住措辞，但它不联网、不知道发布包有没有变。两道一起过才算数。
@@ -103,7 +107,7 @@ $env:PLANTOMICS_MARKET_VALIDATOR = "<路径>/@deepseek-ai/dsh-plugin-market-inde
 
 | 关 | 改坏成什么 | 实测结果 |
 |---|---|---|
-| ① 文案对账 | 描述写成源码口径 8/37 | `exit 1`，打印索引原文与期望原文 |
+| ① 文案对账 | 描述写成旧发布口径 7/34 | `exit 1`，打印索引原文与期望原文 |
 | ② 图标对账 | 图标与 `icon.svg` 不同步 | `exit 1`，提示重跑 `build-icon.mjs` |
 | ③ 图标上限 | 塞 41 KiB 的 PNG data URL | `exit 1`，官方校验器 `must not exceed 32 KiB of decoded bytes` |
 | ④ 格式 1 | `format` 写成字符串等 6 种 | 官方校验器逐条拒绝（见第二节） |
@@ -115,7 +119,11 @@ $env:PLANTOMICS_MARKET_VALIDATOR = "<路径>/@deepseek-ai/dsh-plugin-market-inde
 
 ## 五、改这个文件时要一起改什么
 
-- 发新版本 → 在 `versions` 里**追加**一条，不要替换旧条目；`publishTimestamp` 从 registry 的 `time` 字段取，不要手算日期。
+- 发新版本 → **先 `npm publish`**，再从 registry 的 `time` 字段取 `publishTimestamp`，把新版本条目放到
+  `versions` 第一条，旧的保留（市场安装目标是第一条，顺序不能反；`counts --published` 会核
+  「第一条 == npm latest」，不一致 exit 1）。
+- **0.1.2 发布是待授权项**：源码 `package.json` 已升到 `0.1.2`，但 npm 与市场仍停在 `0.1.1`；
+  授权发布后按上一条把 `0.1.2` 放到第一条，再跑 `build-copy.mjs` → `apply-copy.mjs` → `check:market`。
 - 改 `engines.dsh` → 同时改 `package.json`，两边不一致时以索引为准，用户会装不上。
 - 改 `index.json` 或改卡片文案后，**跑 `npm run check:market`**（两道闸都过才算数，输出会分别标 [1/2] 数字闸、[2/2] 措辞闸），再托管。
 - 托管后另核四条硬要求：绝对 URL、可直达、不可重定向、无 query/fragment（见第三节）。

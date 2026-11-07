@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T05:18:19.903Z",
-  "gitCommit": "e326f4a",
+  "generatedAt": "2026-11-07T12:38:34.239Z",
+  "gitCommit": "88f8da1",
   "package": {
     "name": "plantomics-hub",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "build": {
-    "sourceRev": "e326f4a",
-    "builtAt": "2026-11-03T13:16:37+08:00",
-    "packageVersion": "0.1.1",
+    "sourceRev": "88f8da1",
+    "builtAt": "2026-11-07T20:38:32+08:00",
+    "packageVersion": "0.1.2",
     "dirty": false
   },
   "note": "本文件不含源清单与任何数字：落地页运行时向 GET /catalog 取。见 site/README.md §2。"

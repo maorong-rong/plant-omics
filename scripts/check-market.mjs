@@ -47,7 +47,7 @@ export async function runNumberGate() {
     // 取不到 ≠ 数字不一致：网络/registry 问题不能报成「描述写错了」，否则人会去改本来没错的数字。
     return { ok: false, kind: 'fetch-error', problems: [error.message], counts: null };
   }
-  const problems = checkPublishedScope({ counts: published.counts, market });
+  const problems = checkPublishedScope({ counts: published.counts, market, latest: published.latest });
   return {
     ok: problems.length === 0,
     kind: problems.length === 0 ? 'ok' : 'mismatch',
