@@ -8,33 +8,6 @@
 > 本段是当前包线（`plantomics-hub`），与下方 `[0.2.0] — 2026-10-28`（旧包 `dsh-plugin-plant-omics` 时期）
 > 不是同一条版本线。本段内容**不进 0.1.x 补丁线（含 0.1.2）**；须本涛批准后才发。
 
-## [plantomics-hub 0.1.2] — 未发布（待授权发布）
-
-> P2 三通道装机闭环的**仓库内准备**。本段提交不含任何外部发布动作：没有 `npm publish`、
-> 没有打/推 tag、没有改公网服务。默认集保持 41（切 35 属于 0.2.0，见上）。
-
-### 修复
-
-- **`npm run doctor` 不再查旧包名**：按当前包名 `plantomics-hub` 查找，旧包名
-  `dsh-plugin-plant-omics` 保留兼容；`--installed <dir>` 同时接受 profile 目录
-  （含 `node_modules/plantomics-hub`）与插件目录，干净安装验收可直接指向临时 profile。
-- **市场索引从 0.1.0 更新到实际已发布的 0.1.1**：`versions` 第一条为 `0.1.1`
-  （`publishTimestamp` 取自 registry `time`），卡片描述由 `build-copy.mjs` 解包 npm tarball
-  重新生成（10 源 / 41 工具），不再写「7 源 / 34 工具」。
-- **发布闸可用**：`counts --published` 不再因「市场索引落后于 npm latest」而报成取数失败
-  （那会让 `build-copy.mjs` 在索引落后时根本跑不起来）；版本一致性改为明确的 mismatch：
-  市场第一条必须等于 npm `latest`，否则 exit 1。
-- 站点已发布口径数据随 `market/copy.json` 重新生成（已发布包：0.1.1，10 源 / 41 工具）。
-- `package-lock.json` 顶部的版本字段此前停在 `0.1.0`，已随 `package.json` 的 `0.1.2` 对齐
-  （只动版本字段，未改依赖）。
-
-### 注意
-
-- **真正的 0.1.2 发布与「把 0.1.2 放到市场 `versions` 第一条」是待授权项**：本条只把
-  npm / DSH 市场 / 云服务对齐到同一版本所需的仓库内条件准备好，四处版本读数仍会在发布前
-  显示 0.1.1（npm / 市场 / 云服务）与 0.1.2（源码）。
-- 依赖、CI 产物、`check:wording` 均未改动。
-
 ### ⚠️ 破坏性变更：默认会话的工具从「全库」变成 35 个
 
 - **默认加载集不再等于全库**：默认会话只加载 `DEFAULT_SET_SOURCES` 清单里的 7 个源
@@ -47,6 +20,37 @@
   所以按破坏性处理，并在 README 的默认加载说明里写明清单与取回方式。
 - **可检查性**：`npm run check:counts` 现在核的是 **README 里的清单与 `DEFAULT_SET_SOURCES` 逐项一致**，
   不是核一句固定措辞；清单变了而 README 没改会直接红。
+
+## [plantomics-hub 0.1.2] — 2026-11-07
+
+> P2 三通道装机闭环，2026-11-07 发布：`v0.1.2` tag 触发 `publish-npm.yml` 成功，
+> npm `latest` = 0.1.2，DSH 市场 `versions` 第一条同步到 0.1.2。默认集保持 41
+> （切 35 属于 0.2.0，见上）。公网 `datamcp.moilab.net` 仍为 0.1.1，部署待授权。
+
+### 修复
+
+- **`npm run doctor` 不再查旧包名**：按当前包名 `plantomics-hub` 查找，旧包名
+  `dsh-plugin-plant-omics` 保留兼容；`--installed <dir>` 同时接受 profile 目录
+  （含 `node_modules/plantomics-hub`）与插件目录，干净安装验收可直接指向临时 profile。
+- **市场索引与 npm 对齐**：`versions` 依次为 `0.1.2` / `0.1.1` / `0.1.0`（第一条即安装目标，
+  `publishTimestamp` 取自 registry `time`）；卡片描述由 `build-copy.mjs` 解包 npm tarball
+  生成（0.1.2：10 源 / 41 工具），不再写「7 源 / 34 工具」。
+- **发布闸可用**：`counts --published` 不再因「市场索引落后于 npm latest」而报成取数失败
+  （那会让 `build-copy.mjs` 在索引落后时根本跑不起来）；版本一致性改为明确的 mismatch：
+  市场第一条必须等于 npm `latest`，否则 exit 1。
+- **`publish-npm.yml` provenance 核对修复**：0.1.1 那次 publish 已成功（PUT 202），
+  但同一秒查 attestation 返回 404，几分钟后同一 URL 才 200 —— registry 是异步落库的。
+  改为最多 60 × 10 s 的有界轮询，并加「registry 上已有该精确版本则跳过 publish」的重跑保护；
+  检查力度不降（最终仍要求 HTTP 200 且条目非空）。
+- 站点已发布口径数据随 `market/copy.json` 重新生成（0.1.2：10 源 / 41 工具）。
+- `package-lock.json` 顶部的版本字段此前停在 `0.1.0`，已随 `package.json` 的 `0.1.2` 对齐
+  （只动版本字段，未改依赖）。
+
+### 注意
+
+- **四通道读数**：npm / DSH 市场 / 源码 = 0.1.2；公网云服务 = 0.1.1（`/healthz`），
+  其 0.1.2 部署需要服务器访问授权（见 PR 的「需要本涛给命令 / 授权」一节）。
+- 依赖与 `check:wording` 未改动；CI 只修了 `publish-npm.yml` 的 provenance 核对。
 
 ## [plantomics-hub 0.1.1] — 未发布
 

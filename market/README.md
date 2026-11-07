@@ -9,11 +9,11 @@
 | 项 | 值 | 出处 |
 |---|---|---|
 | 插件名 | `plantomics-hub` | npm 包名 |
-| 版本 | `0.1.1`（第一条，市场安装目标）；其后保留 `0.1.0` | `npm view plantomics-hub dist-tags.latest` |
-| `publishTimestamp` | `1793698253` | npm registry 的 `time["0.1.1"]` = `2026-11-03T09:30:53.720Z`，按 Unix **秒** 换算 |
-| `source.type` | `npm` | 安装目标即 `plantomics-hub@0.1.1` |
+| 版本 | `0.1.2`（第一条，市场安装目标）；其后保留 `0.1.1`、`0.1.0` | `npm view plantomics-hub dist-tags.latest` |
+| `publishTimestamp` | `1794056764` | npm registry 的 `time["0.1.2"]` = `2026-11-07T13:06:04.351Z`，按 Unix **秒** 换算 |
+| `source.type` | `npm` | 安装目标即 `plantomics-hub@0.1.2` |
 | `engines.dsh` | `>=0.2.1-rc.2` | 与 `package.json` 的 `engines.dsh` 一致 |
-| 卡片文案 | 中英两段，**数字按「发布口径」算出**（当前 `0.1.1`：10 源 41 工具） | `market/scripts/build-copy.mjs` 生成，`check-index.mjs` 核对 |
+| 卡片文案 | 中英两段，**数字按「发布口径」算出**（当前 `0.1.2`：10 源 41 工具） | `market/scripts/build-copy.mjs` 生成，`check-index.mjs` 核对 |
 | 图标 | 内联 `data:image/svg+xml;base64,…`，解码 1920 字节（上限 32 KiB） | `market/assets/icon.svg` → `build-icon.mjs` |
 
 **两个口径别混**（2026-10-31 全员定案）：
@@ -21,16 +21,16 @@
 | 口径 | 真相 | 用在哪 |
 |---|---|---|
 | 源码口径 | 本地 `dist/` 注册表（今天 10 源 41 工具） | 落地页 `site/`，页面上标「当前源码口径」 |
-| **发布口径** | `index.json` 的 install spec 指向的 npm tarball（`0.1.1`：10 源 41 工具） | **市场卡片**，因为它描述「装上能拿到什么」 |
+| **发布口径** | `index.json` 的 install spec 指向的 npm tarball（`0.1.2`：10 源 41 工具） | **市场卡片**，因为它描述「装上能拿到什么」 |
 
 两边不同不代表哪个写错：发布滞后是常态，但**索引不能承诺装不出来的能力**。数字的唯一实现在
 `scripts/counts.mjs`（`--json` 出源码口径，`--published` 联网解包 tarball 出发布口径），市场的措辞只取它算出的数，本目录不自己数数。
 
-**当前源码版本 `0.1.2` 领先于市场/npm（都是 `0.1.1`）**：这是发布前的正常状态。真正的 0.1.2 发布与
-「把 `0.1.2` 放到 `versions` 第一条」需要人工授权后执行；在此之前 `counts --published` 核的是
-**已发布**的 `0.1.1`，源码版本领先会在输出里单独说明，不算发布闸红。
+**2026-11-07 已发布 `0.1.2`**：npm `latest`、市场 `versions` 第一条与源码 `package.json` 都是 `0.1.2`。
+`counts --published` 核的是**已发布**的 0.1.2 tarball（10 源 / 41 工具）。公网云服务仍是 0.1.1，
+其 0.1.2 部署需要服务器访问授权。
 
-**为什么没有 `0.0.0-stage`**：它是早期占位版本，语义不明。放进索引会让市场里出现一个用户可能误装的版本，所以只登记 `0.1.1` 与 `0.1.0`。
+**为什么没有 `0.0.0-stage`**：它是早期占位版本，语义不明。放进索引会让市场里出现一个用户可能误装的版本，所以只登记 `0.1.2`、`0.1.1` 与 `0.1.0`。
 
 ## 二、校验（用官方校验器，不是自己写的规则）
 
@@ -39,7 +39,7 @@
 ```
 PARSE OK
 plugins=["plantomics-hub"]
-install spec = {"spec":"plantomics-hub@0.1.1"}
+install spec = {"spec":"plantomics-hub@0.1.2"}
 ```
 
 为了证明"通过"不是空过，同一份校验器对 6 个故意写坏的变体全部拒绝：
@@ -122,8 +122,10 @@ $env:PLANTOMICS_MARKET_VALIDATOR = "<路径>/@deepseek-ai/dsh-plugin-market-inde
 - 发新版本 → **先 `npm publish`**，再从 registry 的 `time` 字段取 `publishTimestamp`，把新版本条目放到
   `versions` 第一条，旧的保留（市场安装目标是第一条，顺序不能反；`counts --published` 会核
   「第一条 == npm latest」，不一致 exit 1）。
-- **0.1.2 发布是待授权项**：源码 `package.json` 已升到 `0.1.2`，但 npm 与市场仍停在 `0.1.1`；
-  授权发布后按上一条把 `0.1.2` 放到第一条，再跑 `build-copy.mjs` → `apply-copy.mjs` → `check:market`。
+- **0.1.2 已于 2026-11-07 发布**：`v0.1.2` tag 触发 `publish-npm.yml` 成功，npm `latest` = 0.1.2；
+  本索引的 `versions` 第一条已同步到 0.1.2（`publishTimestamp` 取自 registry `time`），
+  并已跑过 `build-copy.mjs` → `apply-copy.mjs` → `check:market`（正例 0、负例 1）。
+  公网云服务仍未升级（`/healthz` = 0.1.1），需要服务器访问授权。
 - 改 `engines.dsh` → 同时改 `package.json`，两边不一致时以索引为准，用户会装不上。
 - 改 `index.json` 或改卡片文案后，**跑 `npm run check:market`**（两道闸都过才算数，输出会分别标 [1/2] 数字闸、[2/2] 措辞闸），再托管。
 - 托管后另核四条硬要求：绝对 URL、可直达、不可重定向、无 query/fragment（见第三节）。

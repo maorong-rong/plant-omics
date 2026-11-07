@@ -59,8 +59,24 @@ jobs:
             echo "tag=$tag 与 package.json version=$ver 不一致，拒绝发布"; exit 1
           fi
 
+      # 重跑保护：npm 版本不可重用。若上一次 run 已经把包发出去、却卡在后面的 attestation
+      # 核对（registry 异步落库）而红，重跑时不能再 publish 一次（会 "cannot publish over"）。
+      # 这里只判「registry 上这个精确版本是否已存在」，存在才跳过 publish；provenance 仍然由
+      # 下一步独立核对。正常首发时 exists=false，走的还是原来那条 publish。
+      - name: 检查该版本是否已在 registry（仅重跑恢复用）
+        id: already_published
+        run: |
+          ver="$(node -p "require('./package.json').version")"
+          if npm view "plantomics-hub@$ver" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "registry 上已有 plantomics-hub@$ver：跳过 publish，仅核对 provenance"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # 把发布日志同时落盘：失败时日志下载需要鉴权，写进 job summary 就能直接看
       - name: 发布到 npm
+        if: steps.already_published.outputs.exists != 'true'
         run: |
           set -o pipefail
           npm publish --provenance --access public --loglevel=verbose 2>&1 | tee "$RUNNER_TEMP/publish.log"
@@ -76,14 +92,28 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # 发布成功后独立核对 attestation 是否真的存进了 registry：
-      # 0.1.0 那次包发出去了但 attestation 404，而 publish 的退出码没体现出来
-      - name: 核对 provenance 已附上
+      # 0.1.0 那次包发出去了但 attestation 404；0.1.1 也在 publish 返回 202 后同一秒查到 404，
+      # 几分钟后同一个 URL 变成 200 —— registry 的 attestation 是**异步落库**的。
+      # 所以这里做**有界轮询**而不是发完立刻断言：检查力度不降（最终仍要求 HTTP 200 且条目非空），
+      # 只是把「传播延迟」与「provenance 真缺失」分开。上限 60 × 10 s = 10 分钟。
+      - name: 核对 provenance 已附上（有界轮询 registry）
         run: |
           ver="$(node -p "require('./package.json').version")"
           url="https://registry.npmjs.org/-/npm/v1/attestations/plantomics-hub@$ver"
-          code="$(curl -s -o "$RUNNER_TEMP/attest.json" -w '%{http_code}' "$url")"
-          echo "attestations HTTP $code"
+          code=000
+          for attempt in $(seq 1 60); do
+            code="$(curl -s -o "$RUNNER_TEMP/attest.json" -w '%{http_code}' "$url")"
+            echo "attestations 第 ${attempt}/60 次：HTTP $code"
+            if [ "$code" = "200" ]; then break; fi
+            sleep 10
+          done
           if [ "$code" != "200" ]; then
-            echo "provenance 缺失：$url 返回 $code"; exit 1
+            echo "provenance 缺失：$url 轮询 10 分钟后仍返回 $code"; exit 1
           fi
-          node -e 'const a=require(process.argv[1]);console.log("attestations="+a.attestations.length)' "$RUNNER_TEMP/attest.json"
+          node -e '
+            const a = require(process.argv[1]);
+            if (!Array.isArray(a.attestations) || a.attestations.length === 0) {
+              console.error("attestation 文档里没有条目"); process.exit(1);
+            }
+            console.log("attestations=" + a.attestations.length);
+          ' "$RUNNER_TEMP/attest.json"

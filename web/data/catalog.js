@@ -1,15 +1,15 @@
 /* 由 site/scripts/build-data.mjs 生成，勿手改。源：dist/ 注册表。 */
 window.__PLANTOMICS_CATALOG__ = {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-07T12:38:34.239Z",
-  "gitCommit": "88f8da1",
+  "generatedAt": "2026-11-07T13:09:05.419Z",
+  "gitCommit": "903e580",
   "package": {
     "name": "plantomics-hub",
     "version": "0.1.2"
   },
   "build": {
-    "sourceRev": "88f8da1",
-    "builtAt": "2026-11-07T20:38:32+08:00",
+    "sourceRev": "903e580",
+    "builtAt": "2026-11-07T21:03:43+08:00",
     "packageVersion": "0.1.2",
     "dirty": false
   },
@@ -23,7 +23,7 @@ window.__PLANTOMICS_CATALOG__ = {
     "T3": 0
   },
   "published": {
-    "spec": "plantomics-hub@0.1.1",
+    "spec": "plantomics-hub@0.1.2",
     "sources": 10,
     "tools": 41,
     "metaTools": 2,
@@ -40,7 +40,7 @@ window.__PLANTOMICS_CATALOG__ = {
       "uniprot"
     ],
     "missingSources": [],
-    "snapshotAt": "2026-11-07T12:36:49.900Z"
+    "snapshotAt": "2026-11-07T13:07:20.377Z"
   },
   "sources": [
     {
