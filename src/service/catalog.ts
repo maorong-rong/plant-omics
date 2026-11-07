@@ -164,8 +164,9 @@ export function buildCatalog(
     };
   });
 
-  // 默认集 = 不带订阅头时实际下发的工具数（含元工具：它们真的会进模型上下文）
-  // 默认推荐集按**显式清单**算，不是全库（2026-11-03 负责人定）：新接源不会自动进默认集。
+  // 默认集 = 不带订阅头时实际下发的工具数（含元工具：它们真的会进模型上下文）。
+  // 唯一真相是 `budget.ts` 的 `defaultSetToolCount()`（清单 + 元工具）：P1/0.1.2 默认集
+  // 暂保持全库 41，所以这里必须与 `tools/list` 相同；P2b/0.2.0 真过滤到 35 时也只改清单。
   const defaultSetTools = defaultSetToolCount(registry);
 
   /**
@@ -192,6 +193,7 @@ export function buildCatalog(
     budget: {
       // 契约 v1.1 铁律 4：逐项来自 DEFAULT_SET_SOURCES，顺序照抄；defaultSetTools 必须等于
       // 「这些源的工具数之和 + totals.metaTools」——页面据此复算，不许自己全选所有源。
+      // P1/0.1.2 的清单 = 全库 10 源（默认集暂保持 41）；P2b 才收紧到 7 源 35 工具。
       defaultSources: [...DEFAULT_SET_SOURCES],
       defaultSetTools,
       defaultSetSoftMax: DEFAULT_SET_TOOLS_SOFT_MAX,

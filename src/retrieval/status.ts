@@ -25,7 +25,7 @@ import { InvalidArgumentError } from '../core/errors.js';
 import { validateArgs } from '../core/invoke.js';
 // v2.3「源市场制」：**全库不设上限**，唯一硬阈值是单次订阅集 ≤80，默认集 ≤40 只是软建议。
 // 旧的 MAX_SOURCES/MAX_TOOLS（20/40）只为 `raw.budget` 兼容字段仍在导出，**不参与任何判定**。
-import { DEFAULT_SET_TOOLS_SOFT_MAX, MAX_SOURCES, MAX_TOOLS, SUBSET_TOOLS_HARD_MAX } from '../service/budget.js';
+import { countDefaultSetTools, DEFAULT_SET_TOOLS_SOFT_MAX, MAX_SOURCES, MAX_TOOLS, SUBSET_TOOLS_HARD_MAX } from '../service/budget.js';
 import type { ToolDefinition, ToolResult } from '../core/types.js';
 import {
   INTENT_BY_ID,
@@ -192,12 +192,15 @@ export function buildStatusReport(snapshot: StatusSnapshot, at: string): StatusR
    *   - 默认推荐集 ≤40 是**软建议**，超了只警示；
    *   - **不再出现"剩余额度 N"**——那是旧口径的产物，会让人以为"再铺就到顶了"。
    */
-  const overSoftMax = totalTools > DEFAULT_SET_TOOLS_SOFT_MAX;
-  const defaultSetGap = totalTools - DEFAULT_SET_TOOLS_SOFT_MAX;
+  // 默认集数字与 `/catalog.budget.defaultSetTools` 用**同一个算法**（budget.ts 的 countDefaultSetTools），
+  // 不再用 totalTools 顶替：P1 阶段两者恰好相等（默认集暂保持全库 41），但 P2b 真过滤后必须分开。
+  const defaultSetTools = countDefaultSetTools(snapshot.sources, metaTools);
+  const overSoftMax = defaultSetTools > DEFAULT_SET_TOOLS_SOFT_MAX;
+  const defaultSetGap = defaultSetTools - DEFAULT_SET_TOOLS_SOFT_MAX;
   lines.push(`规模（全库，不设上限）：源 ${snapshot.sources.length}；工具 ${sourceTools}＋元工具 ${metaTools}＝${totalTools}`);
   lines.push(overSoftMax
-    ? `默认推荐集：${totalTools} 个工具，已超软建议 ${DEFAULT_SET_TOOLS_SOFT_MAX} 共 ${defaultSetGap} 个（只警示、不拒绝；32K 上下文会明显拥挤，建议按需订阅）`
-    : `默认推荐集：${totalTools} 个工具，软建议 ≤ ${DEFAULT_SET_TOOLS_SOFT_MAX}（超出只警示、不拒绝）；当前在软建议内`);
+    ? `默认推荐集：${defaultSetTools} 个工具，已超软建议 ${DEFAULT_SET_TOOLS_SOFT_MAX} 共 ${defaultSetGap} 个（只警示、不拒绝；32K 上下文会明显拥挤，建议按需订阅）`
+    : `默认推荐集：${defaultSetTools} 个工具，软建议 ≤ ${DEFAULT_SET_TOOLS_SOFT_MAX}（超出只警示、不拒绝）；当前在软建议内`);
   lines.push(`订阅集（唯一硬阈值）：单次 ≤ ${SUBSET_TOOLS_HARD_MAX} 个工具 ≈ ${(SUBSET_TOOLS_HARD_MAX * EST_TOKENS_PER_TOOL).toLocaleString('en-US')} token`
     + `（按约 ${EST_TOKENS_PER_TOOL} token/工具折算；128K 上下文约 17%，32K 上下文约 70%）；按需订阅，全库多大都不影响单次上下文`);
 
@@ -294,7 +297,7 @@ export function buildStatusReport(snapshot: StatusSnapshot, at: string): StatusR
       market: {
         librarySources: snapshot.sources.length,
         libraryTools: totalTools,
-        defaultSetTools: totalTools,
+        defaultSetTools,
         defaultSetSoftMax: DEFAULT_SET_TOOLS_SOFT_MAX,
         defaultSetOverSoftMax: overSoftMax,
         subsetToolsHardMax: SUBSET_TOOLS_HARD_MAX,

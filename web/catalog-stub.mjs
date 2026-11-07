@@ -53,9 +53,12 @@ function toolNamesFor(source, count) {
 /**
  * 默认推荐集（契约 v1.1 §四.3 第 4 条）：顺序即推荐顺序，`defaultSetTools` 必须等于
  * 「这些源的工具数之和 + 元工具数」，页面会自己复算一遍来核。
+ * P1/0.1.2 的默认集暂为全库（10 源 41 工具），P2b/0.2.0 才收紧到 7 源 35。
  * `?defaults=none` 可以故意不给这两个字段，用来验「页面不猜默认集」。
  */
-const DEFAULT_SET_SOURCES = ['wheatomics', 'gramene', 'ensemblplants', 'ic4r', 'strawberry', 'gwh', 'icg'];
+const DEFAULT_SET_SOURCES = [
+  'wheatomics', 'gramene', 'ensemblplants', 'ic4r', 'strawberry', 'gwh', 'icg', 'scod', 'string', 'uniprot',
+];
 
 /**
  * 契约 v1.2 的「给人看」的字段（§三.1）：服务字典全局唯一，源只引用 key。
