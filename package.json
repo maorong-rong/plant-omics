@@ -47,6 +47,8 @@
     "check:site": "node scripts/check-site.mjs",
     "check:wording": "node web/scripts/check-wording.mjs",
     "counts:published": "node scripts/counts.mjs --published",
+    "status:report": "node scripts/status-report.mjs",
+    "status:check": "node scripts/status-report.mjs --check",
     "check:market": "node scripts/check-market.mjs",
     "doctor": "node scripts/doctor.mjs",
     "install:dsh": "node scripts/install-dsh.mjs",
