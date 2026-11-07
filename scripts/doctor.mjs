@@ -57,7 +57,7 @@ const installedOverride = installedFlag >= 0 ? argv[installedFlag + 1] : undefin
 
 /** 新包名优先；旧包名保留兼容（0.5.x / 0.7.x 时代的 `dsh-plugin-plant-omics`）。 */
 export const PACKAGE_NAMES = ['plantomics-hub', 'dsh-plugin-plant-omics'];
-const LEGACY_EXAMPLE = 'C:\\\\path\\\\to\\\\plantomics-hub';
+const LEGACY_EXAMPLE = 'C:\\path\\to\\plantomics-hub';
 
 /** `--installed` 必须带值。缺值时静默回退到默认目录 = 看着 A 却报了 B，属于静默失效。 */
 if (installedFlag >= 0 && (!installedOverride || installedOverride.startsWith('--'))) {
