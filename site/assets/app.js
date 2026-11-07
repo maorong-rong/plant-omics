@@ -246,7 +246,7 @@
     // （注册表描述里会提到 blindSpots 这类内部概念，按契约 v1.2 不该出现在这个页面上）。
     var texts = [
       { zh: '按研究意图找到合适的数据源：不知道该问哪个库时，先问它。', en: 'Find the source that fits a research question — ask this when you do not know which database to query.' },
-      { zh: '查看当前服务状态：有哪些源、各自覆盖什么、还剩多少预算。', en: 'Show current service status: which sources exist, what they cover, and how much budget is left.' }
+      { zh: '查看当前服务里有什么：有哪些源、各自覆盖什么、单次订阅的硬上限是多少。', en: 'Show what the service carries: sources, their coverage, and the hard cap for one subscription.' }
     ];
     texts.forEach(function (entry) {
       var card = el('article', 'meta-card');
