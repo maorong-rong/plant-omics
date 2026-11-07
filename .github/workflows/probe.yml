@@ -1,0 +1,95 @@
+# 定时探活：每天跑一次 10 个**源级**探活端点，产出并上传 probe-report.json。
+#
+# 口径（本涛 D3=B，2026-11-07 拍板）：
+#   - 每日只跑 10 个源级探活（`scripts/probe.mjs` 的默认行为就是逐源打 manifest.probe 端点）；
+#   - **不做** 39/39 工具级全量实测（那是 P3 的 `probe --tools`）。
+#
+# 为什么要有连续历史：ensemblplants 2026-11-06 连续 5 次失败、第 6 次才成功；2026-11-07
+# 第 1 次 CONNECT_TIMEOUT、第 2 次 31.4 s 才 200。只跑一次无法区分“链路降级”与“这次运气不好”。
+#
+# 全部免鉴权：不读 secrets、不放 token；公开仓只给 contents: read。
+# cron 是 **GitHub Actions 的 schedule**，不涉及任何机器上的 crontab / systemd。
+
+name: probe
+
+on:
+  schedule:
+    # UTC 20:17 = 北京时间次日 04:17。避开整点（GitHub 定时任务在整点最拥挤，实际触发常延迟）。
+    # 注意：schedule 只在默认分支上生效，本 PR 合并前不会按 cron 自动跑。
+    - cron: '17 20 * * *'
+  # 手动触发：合并后可用；也能在上游抖动后随时补跑一次。
+  # 注意：workflow_dispatch 同样要求工作流已存在于默认分支，所以合并前不可用。
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: 10 源级探活
+    runs-on: ubuntu-latest
+    # 最坏情况：10 源 × 连接层 6 次 × 20 s 超时 ≈ 20 分钟；给足余量但不放任挂死。
+    timeout-minutes: 30
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: npm
+
+      - name: npm ci（按 lock 复现）
+        run: npm ci
+
+      # probe 读 dist 注册表取每个源的 manifest.probe，必须先构建
+      - name: 构建
+        run: npm run build
+
+      # 退出码语义：任一源探活不符合预期 → 1（断言铁律，不用 warn 糊过去）。
+      # --json 会把机器可读报告同时写到 stdout 与 ./probe-report.json。
+      # pipefail 必须显式打开：否则整条流水线的退出码是 tee 的 0，probe 的失败会被吞掉。
+      - name: 运行 10 源级探活
+        run: |
+          set -o pipefail
+          node scripts/probe.mjs --json | tee probe-report.stdout.json
+
+      # 无论探活成功与否都要留下证据：失败时更需要在 artifact 里看到 attempts 与逐次轨迹
+      - name: 上传探活报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-report
+          path: |
+            probe-report.json
+            probe-report.stdout.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      # 把结果摘要写进 job summary：失败时日志下载要鉴权，摘要页可直接看
+      - name: 写入摘要
+        if: always()
+        run: |
+          node --input-type=module -e '
+          import { readFileSync, appendFileSync } from "node:fs";
+          let report;
+          try { report = JSON.parse(readFileSync("probe-report.json", "utf8")); }
+          catch { process.exit(0); }
+          const lines = [`### 源级探活 ${report.date}`, "", "| 源 | HTTP | 尝试 | 耗时 | 结论 |", "|---|---|---|---|---|"];
+          for (const r of report.results) {
+            lines.push(`| ${r.id} | ${r.status} | ${r.attempts} | ${r.ms} ms | ${r.ok ? "✅" : "❌"} |`);
+          }
+          const failed = report.results.filter((r) => !r.ok);
+          lines.push("", failed.length
+            ? `❌ ${failed.length}/${report.results.length} 个源未通过`
+            : `✅ ${report.results.length}/${report.results.length} 个源通过`);
+          lines.push("", "> 只证明所列探活端点通过，不代表全部工具可用；逐次 attempts 轨迹见 probe-report.json。");
+          const text = lines.join("\n") + "\n";
+          process.stdout.write(text);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
+          '

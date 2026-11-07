@@ -1,0 +1,47 @@
+# PR 离线全检：把本地 `npm run check` 变成合并前必须过的闸。
+#
+# 为什么需要它（P0 证据链）：`.github/workflows/` 原来只有 tag 触发的 publish-npm.yml，
+# 1196 个离线用例、数量闸、站点闸、措辞闸全靠人记得跑；PR #18 的 `gh pr checks` 报
+# "no checks reported"。这个工作流只跑**同一个** `npm run check`，不新增、不放宽任何检查项。
+#
+# 边界：`npm run check` 全程离线（fixture 回放，不联网），所以这里不设 token、不读 secrets。
+# 联网的 probe / counts --published / check:market 另由 probe.yml 与人工发布流程负责。
+
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+
+# 公开仓、只读检出：不给写权限，所以 fork PR 也能跑（不需要 secrets）。
+permissions:
+  contents: read
+
+# 同一 PR 的新提交推送后，取消上一轮还在跑的任务，避免排队浪费额度。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: npm ci && npm run check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          # 与 publish-npm.yml 同版本：CI 与发布线不能各用一套 Node 口径
+          node-version: '22.14.0'
+          cache: npm
+
+      # 严格按 lock 复现依赖；不跑 npm install，避免 CI 悄悄改 package-lock.json
+      - name: npm ci（按 lock 复现）
+        run: npm ci
+
+      # 与本地完全同一条命令：typecheck / test / build / check:counts / check:site / check:wording / stats
+      - name: npm run check
+        run: npm run check
